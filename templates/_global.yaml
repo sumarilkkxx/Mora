@@ -23,7 +23,7 @@ subtitles:
   source: tts_srt
   style:
     font: "Microsoft YaHei"
-    font_size: 42
+    font_size: 24
     color: "#FFFFFF"
     outline_color: "#000000"
     outline_width: 2

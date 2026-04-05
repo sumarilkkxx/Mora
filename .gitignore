@@ -23,9 +23,7 @@ venv/
 Thumbs.db
 .DS_Store
 
-# 大文件素材（不纳入版本管理）
-assets/bgm/*.mp3
-assets/bgm/*.wav
+# 大文件素材（用户添加的不纳入版本管理）
 assets/watermarks/*.png
 assets/intros/*
 reference_videos/*

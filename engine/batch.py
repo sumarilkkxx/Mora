@@ -147,9 +147,18 @@ class BatchProcessor:
                             filename_prefix=f"tts_{task.id}",
                         )
 
-                # 2. 获取 BGM 路径
+                # 2. 获取 BGM 路径（支持绝对路径和相对于项目根目录的路径）
                 bgm_file = task.template.get("audio", {}).get("bgm", {}).get("file")
-                bgm_path = Path(bgm_file) if bgm_file and Path(bgm_file).exists() else None
+                bgm_path = None
+                if bgm_file:
+                    p = Path(bgm_file)
+                    if p.is_absolute() and p.exists():
+                        bgm_path = p
+                    else:
+                        project_root = Path(__file__).resolve().parent.parent
+                        p2 = project_root / bgm_file
+                        if p2.exists():
+                            bgm_path = p2
 
                 # 3. 构建 FFmpeg 命令
                 cmd = self.renderer.build_command(

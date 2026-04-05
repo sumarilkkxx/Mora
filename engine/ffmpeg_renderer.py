@@ -158,7 +158,9 @@ class FFmpegRenderer:
         srt_source = subtitle_config.get("source", "")
         if srt_source == "tts_srt" and tts and tts.srt_path.exists():
             style = subtitle_config.get("style", {})
-            sub_filter = self._build_subtitle_filter(tts.srt_path, style)
+            sub_filter = self._build_subtitle_filter(
+                tts.srt_path, style, target_w, target_h
+            )
             filter_parts.append(f"{current_v}{sub_filter}[v_sub]")
             current_v = "[v_sub]"
 
@@ -298,12 +300,34 @@ class FFmpegRenderer:
         }
         return grades.get(grade, "")
 
-    def _build_subtitle_filter(self, srt_path: Path, style: dict) -> str:
+    def _adapt_subtitle_size(
+        self, font_size: int, outline_width: int, canvas_w: int, canvas_h: int
+    ) -> tuple[int, int, int]:
+        """根据画布分辨率自适应字幕大小、描边和底部边距。
+
+        以 1080x1920 为基准分辨率，按短边比例缩放。
+        """
+        reference_short = 1080
+        actual_short = min(canvas_w, canvas_h)
+        scale = actual_short / reference_short
+
+        adapted_size = max(16, round(font_size * scale))
+        adapted_outline = max(1, round(outline_width * scale))
+        adapted_margin = max(20, round(60 * scale))
+        return adapted_size, adapted_outline, adapted_margin
+
+    def _build_subtitle_filter(
+        self, srt_path: Path, style: dict, canvas_w: int, canvas_h: int
+    ) -> str:
         font = style.get("font", "Microsoft YaHei")
         font_size = style.get("font_size", 42)
         color = style.get("color", "#FFFFFF").lstrip("#")
         outline_color = style.get("outline_color", "#000000").lstrip("#")
         outline_width = style.get("outline_width", 2)
+
+        font_size, outline_width, margin_v = self._adapt_subtitle_size(
+            font_size, outline_width, canvas_w, canvas_h
+        )
 
         # FFmpeg ASS 颜色格式: &HBBGGRR (BGR 顺序)
         primary = f"&H{color[4:6]}{color[2:4]}{color[0:2]}"
@@ -316,7 +340,7 @@ class FFmpegRenderer:
             f"PrimaryColour={primary},"
             f"OutlineColour={outline},"
             f"OutlineWidth={outline_width},"
-            f"MarginV=60"
+            f"MarginV={margin_v}"
         )
         return f"subtitles='{srt_escaped}':force_style='{force_style}'"
 
