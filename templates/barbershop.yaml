@@ -1,12 +1,12 @@
-# 理发店推荐模板 — 适用于理发店/发型推荐、造型展示类视频
+# 理发店推荐模板 — 面向女性顾客的发型推荐、造型展示类视频
 
 meta:
   name: "barbershop"
-  description: "适用于理发店推荐、发型展示、造型变化类短视频"
-  version: "1.0"
+  description: "面向女性顾客的理发店推荐、发型展示、造型变化类短视频"
+  version: "1.1"
   author: "AI_clip"
   is_default: true
-  tags: ["理发店", "发型", "造型", "美发"]
+  tags: ["理发店", "发型", "造型", "美发", "女性"]
 
 extends: _global
 
@@ -18,7 +18,7 @@ canvas:
 timeline:
   intro:
     type: title_card
-    duration: 2.0
+    duration: 0.8
     background: "#1a1a1a"
     text: "{{ headline }}"
     text_style:
@@ -37,7 +37,7 @@ timeline:
 
   outro:
     type: title_card
-    duration: 2.5
+    duration: 1.0
     text: "{{ cta }}"
     text_style:
       font_size: 46
@@ -73,8 +73,6 @@ effects:
   color_grade: high_contrast
   vignette: 0.2
 
-# === 剪辑手法 ===
-# 系统会随机选取一种手法，将视频时长适配到文案（TTS）时长
 editing:
   techniques:
     - name: loop
@@ -86,62 +84,66 @@ editing:
     - name: trim_fade
       description: "素材过长时裁剪尾部并淡出"
 
+# === 文案配置 ===
+# shop_name / shop_location 完全支持自定义，通过 --vars 传入即可覆盖默认值
+# 示例: --vars shop_name="XX造型" shop_location="杭州市西湖区文三路88号"
+# 后续可接入 AI 生成文案，当前通过 preset 随机组合过渡
 copy:
   variables:
     - name: shop_name
       required: false
       default: "我们店"
-      description: "店铺名称"
+      description: "店铺名称（完全自定义，如「XX造型」「锦瑟美发」）"
+    - name: shop_location
+      required: false
+      default: ""
+      description: "店铺地址/位置（完全自定义，如「杭州市西湖区文三路88号」，留空则不出现在文案中）"
     - name: style_name
       required: false
       default: "这款发型"
       description: "发型/造型名称"
     - name: feature
       required: false
-      default: "时尚又帅气"
+      default: "洋气又好看"
       description: "发型卖点/特色"
-    - name: selling_point
-      required: false
-      default: "不挑脸型，谁剪谁帅"
-      description: "附加卖点"
 
   script_template: |
-    {{ headline }}
-    {{ detail }}
-    {{ shop_name }}推荐{{ style_name }}，{{ feature }}。
-    {{ selling_point }}。
-    {{ bridge }}
+    {{ hook }}
+    {{ story }}
+    {{ shop_name }}{{ recommend }}{{ style_name }}，{{ feature }}。
+    {% if shop_location %}我们就在{{ shop_location }}，随时欢迎来坐坐。{% endif %}
     {{ cta }}
 
   presets:
-    headline:
-      - "换个发型换个心情！"
-      - "今天这位顾客的变化绝了"
-      - "帅哥都在剪这款发型"
-      - "最近超火的发型来了"
-      - "理发师强烈推荐！"
-      - "剪完直接帅一个档次"
-      - "改变从头开始！"
-    detail:
-      - "很多顾客一进店就指名要这款，真的太火了。"
-      - "这款发型最大的特点就是打理起来特别方便，早上起来随便抓一抓就很有型。"
-      - "不管你是圆脸方脸还是长脸，这款发型都能完美驾驭。"
-      - "这个造型最近在各大平台都爆了，来店里剪的人特别多。"
-      - "剪完之后整个人的气质都不一样了，精神了好几个档次。"
-      - "这款发型的重点在于层次感，看起来特别自然不做作。"
-    bridge:
-      - "真的，好的发型就是最好的化妆品。"
-      - "换个发型比换件衣服效果还明显。"
-      - "发型选对了，颜值直接翻倍。"
-      - "一款好发型，能让你自信一整个月。"
-      - "不信你看，剪完前后对比差距太大了。"
+    hook:
+      - "今天这位姐姐的变化，你们一定想看看。"
+      - "她说想换个心情，没想到效果这么好。"
+      - "做完之后她自己都愣住了，太好看了。"
+      - "好多姐妹点名要这款，拍给你们看看效果。"
+      - "本来只是想修一下，结果越做越惊喜。"
+      - "最近问得最多的发型，就是这个。"
+      - "这位姐姐进店的时候还犹豫，做完笑得停不下来。"
+    story:
+      - "加了点层次和弧度，整个人一下精致了好多。"
+      - "特别好打理，随便吹一吹就能出门。"
+      - "什么脸型都能驾驭，显脸小还上镜。"
+      - "蓬松度上来了，整个人看着轻盈了不少。"
+      - "做完她照了半天镜子，说早该来了。"
+      - "这个造型网上特别火，好多人拿着视频来找我。"
+      - "属于懒人款，不用怎么打理就很好看。"
+      - "换了个造型之后，气质一下就不一样了。"
+    recommend:
+      - "家的发型师特别推荐"
+      - "最近主推的就是"
+      - "的招牌款就是"
+      - "好多老客户都做过"
     cta:
-      - "想剪同款的来找我，私信预约不排队"
-      - "你适合什么发型？评论区告诉我，帮你参考一下"
-      - "到店报暗号享8折优惠，名额有限先到先得"
-      - "关注我，每天分享最新潮流发型，不让你踩雷"
-      - "点赞收藏，下次剪发不迷路，想剪的时候翻出来就行"
-      - "私信预约，到店免排队，还能免费做造型咨询"
+      - "想做同款直接私信我。"
+      - "适合什么发型？评论区告诉我。"
+      - "私信预约到店有优惠。"
+      - "关注我，每天分享最新造型。"
+      - "点赞收藏，下次做头发翻出来就行。"
+      - "新朋友到店有优惠，私信预约免排队。"
 
 match_rules:
   filename_contains: ["理发", "发型", "造型", "美发", "barber", "hair", "剪发", "烫发", "染发"]

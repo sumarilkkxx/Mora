@@ -165,6 +165,8 @@ class FFmpegRenderer:
         if outro_config:
             outro_d = outro_config.get("duration", 1.0)
             fade_d = min(outro_d, 1.0)
+            fade_start = max(0, target_duration - fade_d)
+            vf_chain.append(f"fade=t=out:st={fade_start:.2f}:d={fade_d}")
 
         # 合并视频滤镜
         if vf_chain:
@@ -282,11 +284,15 @@ class FFmpegRenderer:
     # ---- 内部辅助方法 ----
 
     def _calc_target_duration(self, tts: TTSResult | None, timeline: dict) -> float:
-        """计算目标视频总时长：TTS 时长 + intro + outro。"""
+        """计算目标视频总时长：TTS 时长 + 尾部缓冲。
+
+        intro 与 TTS 开头重叠（淡入），不额外占用时长；
+        outro 在 TTS 结束后保留短暂淡出缓冲。
+        """
         base = tts.duration if tts and tts.duration > 0 else 10.0
-        intro_d = timeline.get("intro", {}).get("duration", 0)
         outro_d = timeline.get("outro", {}).get("duration", 0)
-        return base + intro_d + outro_d
+        tail_buffer = min(outro_d, 1.5)
+        return base + tail_buffer
 
     def _pick_editing_technique(
         self, editing_config: dict, asset: MediaAsset, target_duration: float
