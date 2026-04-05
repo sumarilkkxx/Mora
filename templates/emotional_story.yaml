@@ -1,0 +1,104 @@
+# 情感故事模板 — 适用于情感类、故事类视频
+
+meta:
+  name: "emotional_story"
+  description: "适用于情感故事、心灵鸡汤类短视频"
+  version: "1.0"
+  author: "AI_clip"
+  tags: ["情感", "故事", "治愈"]
+
+extends: _global
+
+canvas:
+  width: 1080
+  height: 1920
+  fps: 30
+
+timeline:
+  intro:
+    type: title_card
+    duration: 2.5
+    background: "#1a0a2e"
+    text: "{{ headline }}"
+    text_style:
+      font_size: 52
+      color: "#E8C4FF"
+      animation: fade_up
+
+  body:
+    type: media_sequence
+    source: "$input_media"
+    duration: auto
+    fit_mode: cover_center
+    transition:
+      type: dissolve
+      duration: 0.8
+
+  outro:
+    type: title_card
+    duration: 3.0
+    text: "{{ cta }}"
+    text_style:
+      font_size: 44
+      color: "#FFFFFF"
+      animation: fade
+
+audio:
+  voice:
+    engine: edge-tts
+    voice_id: zh-CN-XiaoyiNeural
+    rate: "-5%"
+    volume: 1.0
+  bgm:
+    volume: 0.20
+    ducking:
+      enabled: true
+      target_volume: 0.08
+      fade_duration: 0.5
+
+subtitles:
+  source: tts_srt
+  style:
+    font: "Microsoft YaHei"
+    font_size: 44
+    color: "#FFFFFF"
+    outline_color: "#1a0a2e"
+    outline_width: 2
+    position: bottom_third
+
+effects:
+  color_grade: warm_boost
+  vignette: 0.4
+
+copy:
+  variables:
+    - name: story_theme
+      required: false
+      default: "生活"
+      description: "故事主题"
+
+  script_template: |
+    {{ headline }}
+    关于{{ story_theme }}，想和你说几句心里话。
+    {{ cta }}
+
+  presets:
+    headline:
+      - "深夜emo了"
+      - "有些话不知道跟谁说"
+      - "你有没有这样的时刻"
+      - "这段话送给正在努力的你"
+      - "看完真的破防了"
+    cta:
+      - "如果你也有同感，点个赞吧"
+      - "把这段话送给你最想念的人"
+      - "你有什么想说的，评论区聊聊"
+      - "关注我，听更多走心故事"
+
+match_rules:
+  filename_contains: ["情感", "故事", "emotion", "story", "治愈", "心灵"]
+  folder_name: ["emotion", "情感", "故事", "story"]
+  aspect_ratio: portrait
+  min_duration: 5
+  max_duration: 300
+  priority: 7

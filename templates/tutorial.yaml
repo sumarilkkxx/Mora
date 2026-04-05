@@ -1,0 +1,107 @@
+# 教程模板 — 适用于知识分享、操作教程类视频
+
+meta:
+  name: "tutorial"
+  description: "适用于知识分享、操作教程类短视频"
+  version: "1.0"
+  author: "AI_clip"
+  tags: ["教程", "知识", "解说"]
+
+extends: _global
+
+canvas:
+  width: 1080
+  height: 1920
+  fps: 30
+
+timeline:
+  intro:
+    type: title_card
+    duration: 2.0
+    background: "#0a1628"
+    text: "{{ headline }}"
+    text_style:
+      font_size: 56
+      color: "#00D4FF"
+      animation: fade_up
+
+  body:
+    type: media_sequence
+    source: "$input_media"
+    duration: auto
+    fit_mode: cover_center
+    transition:
+      type: fade
+      duration: 0.3
+
+  outro:
+    type: title_card
+    duration: 2.0
+    text: "{{ cta }}"
+    text_style:
+      font_size: 42
+      color: "#FFFFFF"
+      animation: fade
+
+audio:
+  voice:
+    engine: edge-tts
+    voice_id: zh-CN-YunxiNeural
+    rate: "+0%"
+    volume: 1.0
+  bgm:
+    volume: 0.10
+    ducking:
+      enabled: true
+      target_volume: 0.03
+      fade_duration: 0.3
+
+subtitles:
+  source: tts_srt
+  style:
+    font: "Microsoft YaHei"
+    font_size: 40
+    color: "#FFFFFF"
+    outline_color: "#000000"
+    outline_width: 2
+    position: bottom_third
+
+effects:
+  color_grade: none
+  vignette: 0
+
+copy:
+  variables:
+    - name: topic
+      required: true
+      description: "教程主题"
+    - name: step_summary
+      required: false
+      default: "一起来看看"
+      description: "步骤概要"
+
+  script_template: |
+    {{ headline }}
+    今天教大家{{ topic }}。
+    {{ step_summary }}。
+    {{ cta }}
+
+  presets:
+    headline:
+      - "干货来了！"
+      - "一分钟学会"
+      - "手把手教你"
+      - "这个技巧你一定要知道"
+    cta:
+      - "学会了吗？评论区告诉我"
+      - "关注我学更多技巧"
+      - "觉得有用就分享给朋友吧"
+      - "下期你想学什么？"
+
+match_rules:
+  filename_contains: ["教程", "tutorial", "教学", "攻略", "技巧", "tips"]
+  folder_name: ["tutorial", "教程", "教学"]
+  aspect_ratio: portrait
+  min_duration: 5
+  max_duration: 180
+  priority: 8
