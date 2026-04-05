@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import math
 import random
 import subprocess
 from dataclasses import dataclass, field
@@ -66,19 +67,30 @@ class FFmpegRenderer:
         inputs: list[str] = []
         filter_parts: list[str] = []
         input_idx = 0
-        # raw input indices — brackets added only for filter_complex expressions
-        _raw_inputs: dict[str, int] = {}
 
         editing_config = template.get("editing", {})
         target_duration = self._calc_target_duration(tts, timeline_config)
 
-        # --- 选择剪辑手法 ---
         technique = self._pick_editing_technique(
             editing_config, asset, target_duration
         )
 
+        is_cinematic = (
+            technique == "cinematic"
+            and asset.type == "video"
+            and asset.duration
+            and asset.duration > 0
+        )
+
         # --- 主素材输入 ---
-        if asset.type == "video":
+        if is_cinematic:
+            video_input_label, audio_from_video_idx, input_idx = (
+                self._build_cinematic_input(
+                    asset, inputs, filter_parts, input_idx,
+                    effects_config, target_duration, target_fps,
+                )
+            )
+        elif asset.type == "video":
             if technique == "loop":
                 inputs.extend(["-stream_loop", "-1", "-i", str(asset.path)])
             else:
@@ -124,26 +136,34 @@ class FFmpegRenderer:
         current_v = video_input_label
         vf_chain: list[str] = []
 
-        # 缩放 + 裁剪
-        fit_mode = timeline_config.get("body", {}).get("fit_mode", "cover_center")
-        vf_chain.append(self._build_scale_filter(
-            asset, target_w, target_h, target_fps, fit_mode
-        ))
-
-        # Ken Burns 效果（图片素材）
-        if asset.type == "image":
-            frames = int(target_duration * target_fps)
+        if is_cinematic:
+            vf_chain.append(self._build_cinematic_scale_filter(
+                target_w, target_h, effects_config
+            ))
+            beat_expr = self._build_beat_brightness_expr(target_duration)
             vf_chain.append(
-                f"zoompan=z='min(zoom+0.001,1.3)':d={frames}:s={target_w}x{target_h}:fps={target_fps}"
+                f"eq=brightness='{beat_expr}+0.015*sin(t*0.7)'"
+                f":saturation='1+0.03*sin(t*0.5)'"
             )
+        else:
+            fit_mode = timeline_config.get("body", {}).get("fit_mode", "cover_center")
+            vf_chain.append(self._build_scale_filter(
+                asset, target_w, target_h, target_fps, fit_mode
+            ))
 
-        # --- 视频时长适配（仅视频素材） ---
-        if asset.type == "video" and asset.duration and tts:
-            adapt_filter = self._build_duration_adapt_filter(
-                asset.duration, target_duration, target_fps, technique
-            )
-            if adapt_filter:
-                vf_chain.append(adapt_filter)
+            if asset.type == "image":
+                frames = int(target_duration * target_fps)
+                vf_chain.append(
+                    f"zoompan=z='min(zoom+0.001,1.3)':d={frames}"
+                    f":s={target_w}x{target_h}:fps={target_fps}"
+                )
+
+            if asset.type == "video" and asset.duration and tts:
+                adapt_filter = self._build_duration_adapt_filter(
+                    asset.duration, target_duration, target_fps, technique
+                )
+                if adapt_filter:
+                    vf_chain.append(adapt_filter)
 
         # 色彩效果
         color_grade = effects_config.get("color_grade", "none")
@@ -219,6 +239,7 @@ class FFmpegRenderer:
 
         encoder = self.hw_accel if self.hw_accel else self.video_codec
         cmd.extend(["-c:v", encoder])
+        cmd.extend(["-pix_fmt", "yuv420p"])
         cmd.extend(["-preset", self.preset])
         cmd.extend(["-crf", str(self.crf)])
         cmd.extend(["-c:a", self.audio_codec])
@@ -297,12 +318,15 @@ class FFmpegRenderer:
     def _pick_editing_technique(
         self, editing_config: dict, asset: MediaAsset, target_duration: float
     ) -> str:
-        """从模板的 editing.techniques 中随机选取一种适用的剪辑手法。"""
+        """选择剪辑手法，优先使用 cinematic。"""
         techniques = editing_config.get("techniques", [])
         available_names = [t.get("name") for t in techniques if t.get("name")]
 
         if not available_names or asset.type != "video" or not asset.duration:
             return "trim_fade"
+
+        if "cinematic" in available_names:
+            return "cinematic"
 
         video_dur = asset.duration
         ratio = video_dur / target_duration if target_duration > 0 else 1.0
@@ -324,6 +348,121 @@ class FFmpegRenderer:
             return "trim_fade"
 
         return random.choice(suitable)
+
+    def _build_cinematic_input(
+        self,
+        asset: MediaAsset,
+        inputs: list[str],
+        filter_parts: list[str],
+        input_idx: int,
+        effects_config: dict,
+        target_duration: float,
+        target_fps: int,
+    ) -> tuple[str, int | None, int]:
+        """cinematic 手法：自适应慢放 + 回弹播放，绝不重复也不冻结。
+
+        策略：
+        1. 计算刚好填满目标时长的速度（最低 0.6x）；
+        2. 若 0.6x 仍不够，将源视频末段反向播放（bounce），
+           通过 crossfade 无缝衔接正向与反向片段，消除冻结帧。
+        """
+        min_speed = 0.6
+        auto_speed = asset.duration / target_duration
+        slowdown = max(min_speed, auto_speed)
+        pts_factor = 1.0 / slowdown
+        effective_dur = asset.duration * pts_factor
+
+        inputs.extend(["-i", str(asset.path)])
+        audio_idx = input_idx if asset.has_audio else None
+        vid = f"[{input_idx}:v]"
+
+        if effective_dur >= target_duration:
+            filter_parts.append(
+                f"{vid}setpts={pts_factor:.4f}*PTS,"
+                f"fps={target_fps},"
+                f"trim=duration={target_duration:.2f},"
+                f"setpts=PTS-STARTPTS[v_cin]"
+            )
+        else:
+            xfade_dur = 0.5
+            remaining = target_duration - effective_dur
+            rev_dur_needed = remaining + xfade_dur
+            rev_source_dur = min(rev_dur_needed * slowdown,
+                                 asset.duration * 0.85)
+            rev_dur_actual = rev_source_dur * pts_factor
+            trim_start = max(0, asset.duration - rev_source_dur)
+            xfade_offset = max(0.1, effective_dur - xfade_dur)
+
+            filter_parts.append(f"{vid}split=2[_fwd_in][_rev_in]")
+            filter_parts.append(
+                f"[_fwd_in]setpts={pts_factor:.4f}*PTS,"
+                f"fps={target_fps}[_fwd]"
+            )
+            filter_parts.append(
+                f"[_rev_in]trim=start={trim_start:.4f},"
+                f"setpts=PTS-STARTPTS,reverse,"
+                f"setpts={pts_factor:.4f}*PTS,"
+                f"fps={target_fps}[_rev]"
+            )
+            filter_parts.append(
+                f"[_fwd][_rev]xfade=transition=fade:"
+                f"duration={xfade_dur:.2f}:"
+                f"offset={xfade_offset:.2f}[v_cin]"
+            )
+
+        return "[v_cin]", audio_idx, input_idx + 1
+
+    def _build_cinematic_scale_filter(
+        self, tw: int, th: int, effects_config: dict
+    ) -> str:
+        """缩放 + 复合 Ken Burns 运镜（多频叠加，轨迹更自然）。"""
+        kb = effects_config.get("ken_burns", {})
+        zoom_range = kb.get("zoom_range", 0.08)
+        drift_speed = kb.get("drift_speed", 0.15)
+
+        overshoot = 1 + zoom_range
+        sw = int(tw * overshoot)
+        sh = int(th * overshoot)
+        sw += sw % 2
+        sh += sh % 2
+
+        mx = (sw - tw) // 2
+        my = (sh - th) // 2
+        dx = max(1, mx // 2)
+        dy = max(1, my // 2)
+        dx2 = max(1, dx // 3)
+        dy2 = max(1, dy // 3)
+        sp1 = drift_speed
+        sp2 = round(drift_speed * 2.6, 4)
+        sp3 = round(drift_speed * 0.7, 4)
+        sp4 = round(drift_speed * 2.1, 4)
+
+        return (
+            f"scale={sw}:{sh}:force_original_aspect_ratio=increase,"
+            f"crop={tw}:{th}"
+            f":x='{mx}+{dx}*sin(t*{sp1})+{dx2}*sin(t*{sp2})'"
+            f":y='{my}+{dy}*cos(t*{sp3})+{dy2}*cos(t*{sp4})'"
+        )
+
+    def _build_beat_brightness_expr(
+        self, target_duration: float, n_beats: int = 2
+    ) -> str:
+        """生成节奏性明暗脉冲的 eq brightness 表达式。
+
+        用 sin 半波在每个 beat 点短暂压暗再恢复，避免 fade 滤镜
+        的永久黑屏副作用。
+        """
+        pulse_dur = 0.5
+        depth = -0.45
+        parts: list[str] = []
+        interval = target_duration / (n_beats + 1)
+        for i in range(1, n_beats + 1):
+            t = interval * i
+            parts.append(
+                f"if(between(t,{t:.2f},{t + pulse_dur:.2f}),"
+                f"{depth}*sin((t-{t:.2f})*{math.pi / pulse_dur:.4f}),0)"
+            )
+        return "+".join(parts) if parts else "0"
 
     def _build_duration_adapt_filter(
         self,
@@ -393,49 +532,123 @@ class FFmpegRenderer:
         }
         return grades.get(grade, "")
 
-    def _adapt_subtitle_size(
-        self, font_size: int, outline_width: int, canvas_w: int, canvas_h: int
-    ) -> tuple[int, int, int]:
-        """根据画布分辨率自适应字幕大小、描边和底部边距。
+    def _hex_to_ass_color(self, hex_color: str, alpha: int = 0) -> str:
+        """#RRGGBB → &HAABBGGRR (ASS 格式)。"""
+        c = hex_color.lstrip("#")
+        r, g, b = c[0:2], c[2:4], c[4:6]
+        return f"&H{alpha:02X}{b}{g}{r}"
 
-        以 1080x1920 为基准分辨率，按短边比例缩放。
-        """
-        reference_short = 1080
+    @staticmethod
+    def _wrap_text(text: str, max_chars: int) -> str:
+        """将中文长文本按最大字符数自动折行（\\N 分隔）。"""
+        if len(text) <= max_chars:
+            return text
+        lines: list[str] = []
+        while text:
+            if len(text) <= max_chars:
+                lines.append(text)
+                break
+            cut = max_chars
+            for punct in "，。、！？；：）」》】":
+                idx = text.rfind(punct, 0, max_chars)
+                if idx > max_chars // 3:
+                    cut = idx + 1
+                    break
+            lines.append(text[:cut])
+            text = text[cut:]
+        return "\\N".join(lines)
+
+    def _srt_to_styled_ass(
+        self, srt_path: Path, style: dict, canvas_w: int, canvas_h: int
+    ) -> Path:
+        """将 SRT 转换为 ASS，注入丰富样式和逐行淡入淡出动画。"""
+        import re
+
+        font = style.get("font", "Microsoft YaHei")
+        font_size = style.get("font_size", 68)
+        color = style.get("color", "#FFFFFF")
+        outline_color = style.get("outline_color", "#000000")
+        outline_w = style.get("outline_width", 3.5)
+        shadow_depth = style.get("shadow", 2.5)
+        bold = 1 if style.get("bold", True) else 0
+        spacing = style.get("spacing", 1.5)
+        margin_v = style.get("margin_v", 90)
+        margin_h = style.get("margin_h", 50)
+        border_style = style.get("border_style", 1)
+        back_alpha = style.get("back_alpha", 120)
+        fade_in = style.get("fade_in", 220)
+        fade_out = style.get("fade_out", 120)
+        alignment = style.get("alignment", 2)
+
+        ref_short = 1080
         actual_short = min(canvas_w, canvas_h)
-        scale = actual_short / reference_short
+        scale = actual_short / ref_short
+        font_size = max(12, round(font_size * scale))
+        outline_w = round(outline_w * scale, 1)
+        shadow_depth = round(shadow_depth * scale, 1)
+        margin_v = max(15, round(margin_v * scale))
+        margin_h = max(10, round(margin_h * scale))
 
-        adapted_size = max(16, round(font_size * scale))
-        adapted_outline = max(1, round(outline_width * scale))
-        adapted_margin = max(20, round(60 * scale))
-        return adapted_size, adapted_outline, adapted_margin
+        usable_w = canvas_w - margin_h * 2
+        max_chars = max(6, int(usable_w / (font_size * 0.95)))
+
+        primary = self._hex_to_ass_color(color, 0)
+        outline_c = self._hex_to_ass_color(outline_color, 0)
+        back_c = self._hex_to_ass_color("#000000", back_alpha)
+        secondary = self._hex_to_ass_color("#00FFFF", 0)
+
+        header = (
+            "[Script Info]\n"
+            "ScriptType: v4.00+\n"
+            f"PlayResX: {canvas_w}\n"
+            f"PlayResY: {canvas_h}\n"
+            "WrapStyle: 0\n"
+            "ScaledBorderAndShadow: yes\n\n"
+            "[V4+ Styles]\n"
+            "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, "
+            "OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, "
+            "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
+            "Alignment, MarginL, MarginR, MarginV, Encoding\n"
+            f"Style: Default,{font},{font_size},{primary},{secondary},"
+            f"{outline_c},{back_c},{bold},0,0,0,100,100,{spacing},0,"
+            f"{border_style},{outline_w},{shadow_depth},"
+            f"{alignment},{margin_h},{margin_h},{margin_v},1\n\n"
+            "[Events]\n"
+            "Format: Layer, Start, End, Style, Name, "
+            "MarginL, MarginR, MarginV, Effect, Text\n"
+        )
+
+        srt_text = srt_path.read_text(encoding="utf-8")
+        pattern = re.compile(
+            r"(\d+)\s*\n"
+            r"(\d{2}:\d{2}:\d{2})[,.](\d{3})\s*-->\s*"
+            r"(\d{2}:\d{2}:\d{2})[,.](\d{3})\s*\n"
+            r"(.*?)(?=\n\n|\n\d+\s*\n|\Z)",
+            re.DOTALL,
+        )
+
+        dialogues: list[str] = []
+        for m in pattern.finditer(srt_text):
+            start = f"{m.group(2)}.{m.group(3)[:2]}"
+            end = f"{m.group(4)}.{m.group(5)[:2]}"
+            raw = m.group(6).strip().replace("\n", "")
+            text = self._wrap_text(raw, max_chars)
+            anim = f"{{\\fad({fade_in},{fade_out})}}"
+            dialogues.append(
+                f"Dialogue: 0,{start},{end},Default,,0,0,0,,{anim}{text}"
+            )
+
+        ass_content = header + "\n".join(dialogues) + "\n"
+        ass_path = srt_path.with_suffix(".ass")
+        ass_path.write_text(ass_content, encoding="utf-8-sig")
+        return ass_path
 
     def _build_subtitle_filter(
         self, srt_path: Path, style: dict, canvas_w: int, canvas_h: int
     ) -> str:
-        font = style.get("font", "Microsoft YaHei")
-        font_size = style.get("font_size", 42)
-        color = style.get("color", "#FFFFFF").lstrip("#")
-        outline_color = style.get("outline_color", "#000000").lstrip("#")
-        outline_width = style.get("outline_width", 2)
-
-        font_size, outline_width, margin_v = self._adapt_subtitle_size(
-            font_size, outline_width, canvas_w, canvas_h
-        )
-
-        # FFmpeg ASS 颜色格式: &HBBGGRR (BGR 顺序)
-        primary = f"&H{color[4:6]}{color[2:4]}{color[0:2]}"
-        outline = f"&H{outline_color[4:6]}{outline_color[2:4]}{outline_color[0:2]}"
-
-        srt_escaped = str(srt_path).replace("\\", "/").replace(":", "\\:")
-        force_style = (
-            f"FontName={font},"
-            f"FontSize={font_size},"
-            f"PrimaryColour={primary},"
-            f"OutlineColour={outline},"
-            f"OutlineWidth={outline_width},"
-            f"MarginV={margin_v}"
-        )
-        return f"subtitles='{srt_escaped}':force_style='{force_style}'"
+        ass_path = self._srt_to_styled_ass(srt_path, style, canvas_w, canvas_h)
+        ass_escaped = str(ass_path).replace("\\", "/").replace(":", "\\:")
+        return f"ass='{ass_escaped}'"
 
     def _watermark_position(
         self, position: str, tw: int, th: int

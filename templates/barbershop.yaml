@@ -62,23 +62,34 @@ subtitles:
   source: tts_srt
   style:
     font: "Microsoft YaHei"
-    font_size: 24
+    font_size: 68
     color: "#FFFFFF"
     outline_color: "#1a1a1a"
-    outline_width: 2
-    position: bottom_third
-    max_chars_per_line: 16
+    outline_width: 3.5
+    bold: true
+    spacing: 1.5
+    shadow: 2.5
+    margin_v: 90
+    margin_h: 50
+    alignment: 2
+    border_style: 1
+    back_alpha: 120
+    fade_in: 220
+    fade_out: 120
 
 effects:
   color_grade: high_contrast
   vignette: 0.2
+  slowdown: 0.8
+  ken_burns:
+    enabled: true
+    zoom_range: 0.08
+    drift_speed: 0.15
 
 editing:
   techniques:
-    - name: loop
-      description: "循环播放素材直到填满文案时长"
-    - name: freeze_end
-      description: "播放完素材后冻结最后一帧直到填满"
+    - name: cinematic
+      description: "慢放 + 运镜漂移 + 淡入淡出转场（默认首选）"
     - name: speed_adjust
       description: "微调播放速度使素材恰好填满文案时长（0.75x~1.5x）"
     - name: trim_fade
@@ -108,30 +119,21 @@ copy:
       description: "发型卖点/特色"
 
   script_template: |
-    {{ hook }}
-    {{ story }}
+    {{ opening }}
     {{ shop_name }}{{ recommend }}{{ style_name }}，{{ feature }}。
     {% if shop_location %}我们就在{{ shop_location }}，随时欢迎来坐坐。{% endif %}
     {{ cta }}
 
   presets:
-    hook:
-      - "今天这位姐姐的变化，你们一定想看看。"
-      - "她说想换个心情，没想到效果这么好。"
-      - "做完之后她自己都愣住了，太好看了。"
-      - "好多姐妹点名要这款，拍给你们看看效果。"
-      - "本来只是想修一下，结果越做越惊喜。"
-      - "最近问得最多的发型，就是这个。"
-      - "这位姐姐进店的时候还犹豫，做完笑得停不下来。"
-    story:
-      - "加了点层次和弧度，整个人一下精致了好多。"
-      - "特别好打理，随便吹一吹就能出门。"
-      - "什么脸型都能驾驭，显脸小还上镜。"
-      - "蓬松度上来了，整个人看着轻盈了不少。"
-      - "做完她照了半天镜子，说早该来了。"
-      - "这个造型网上特别火，好多人拿着视频来找我。"
-      - "属于懒人款，不用怎么打理就很好看。"
-      - "换了个造型之后，气质一下就不一样了。"
+    opening:
+      - "她说最近心情不太好，想换个造型试试。做完出来那一刻，她对着镜子笑了好久，说这才是自己想要的样子。"
+      - "这位姐姐之前一直觉得自己发量少，显得没精神。我帮她做了个蓬松的层次，出来效果她自己都不敢信，说头发好像变多了。"
+      - "她跟我说平时太忙了，每天早上根本没时间弄头发。所以我给她设计了个懒人款，洗完吹干就很有型，再也不用早起折腾了。"
+      - "本来她只是来修个刘海的，聊着聊着就决定整体换个造型。做完之后她拍了好几张自拍，说朋友圈终于有素材了。"
+      - "有位姐妹刷到我之前的视频专门过来的，说就想做同款。做完效果确实也很好看，不同的脸型做出来各有各的韵味。"
+      - "她之前在别的地方做过一次不太满意，这次过来让我帮她调整一下。重新修了层次调了弧度，她说终于是自己想要的那个感觉了。"
+      - "这位姐姐进店的时候还有点犹豫，怕剪完不好看。结果做完之后笑得停不下来，还给闺蜜打了视频分享。"
+      - "她说换了新工作想给自己一个新开始，我就给她推荐了这款比较干练又不失温柔的造型。她说感觉整个人都自信了不少。"
     recommend:
       - "家的发型师特别推荐"
       - "最近主推的就是"
