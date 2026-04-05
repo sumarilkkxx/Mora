@@ -366,8 +366,8 @@ class FFmpegRenderer:
         filter_parts: list[str],
     ) -> str | None:
         """构建音频混合滤镜，返回 -map 可用的标签。
-        
-        Returns filter label "[a_out]" when filters are used, 
+
+        Returns filter label "[a_out]" when filters are used,
         or raw stream "N:a" when no filter needed.
         """
         bgm_cfg = audio_config.get("bgm", {})
@@ -379,22 +379,30 @@ class FFmpegRenderer:
         if tts_idx is not None and bgm_idx is not None:
             ducking = bgm_cfg.get("ducking", {})
             if ducking.get("enabled"):
+                # asplit 复制 TTS 流：一路给 sidechain 检测，一路混入输出
+                filter_parts.append(
+                    f"{tts_label}asplit=2[tts_sc][tts_mix]"
+                )
                 filter_parts.append(
                     f"{bgm_label}volume={bgm_volume}[bgm_vol]"
                 )
+                # sidechaincompress: 用 tts_sc 触发对 BGM 的压缩（配音响时 BGM 压低）
+                target_vol = ducking.get("target_volume", 0.1)
+                ratio = max(2, min(4, round(1 / target_vol))) if target_vol > 0 else 3
                 filter_parts.append(
-                    f"[bgm_vol]{tts_label}sidechaincompress="
-                    f"threshold=0.02:ratio=6:attack=200:release=1000[bgm_ducked]"
+                    f"[bgm_vol][tts_sc]sidechaincompress="
+                    f"threshold=0.03:ratio={ratio}:attack=200:release=800"
+                    f"[bgm_ducked]"
                 )
                 filter_parts.append(
-                    f"{tts_label}[bgm_ducked]amix=inputs=2:duration=first[a_out]"
+                    f"[tts_mix][bgm_ducked]amix=inputs=2:duration=first:weights=1 0.8[a_out]"
                 )
             else:
                 filter_parts.append(
                     f"{bgm_label}volume={bgm_volume}[bgm_vol]"
                 )
                 filter_parts.append(
-                    f"{tts_label}[bgm_vol]amix=inputs=2:duration=first[a_out]"
+                    f"{tts_label}[bgm_vol]amix=inputs=2:duration=first:weights=1 0.8[a_out]"
                 )
             return "[a_out]"
 

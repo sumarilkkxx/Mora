@@ -52,10 +52,10 @@ audio:
     volume: 1.0
   bgm:
     file: "assets/bgm/upbeat_01.mp3"
-    volume: 0.18
+    volume: 0.4
     ducking:
       enabled: true
-      target_volume: 0.05
+      target_volume: 0.15
       fade_duration: 0.3
 
 subtitles:
