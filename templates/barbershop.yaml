@@ -73,6 +73,19 @@ effects:
   color_grade: high_contrast
   vignette: 0.2
 
+# === 剪辑手法 ===
+# 系统会随机选取一种手法，将视频时长适配到文案（TTS）时长
+editing:
+  techniques:
+    - name: loop
+      description: "循环播放素材直到填满文案时长"
+    - name: freeze_end
+      description: "播放完素材后冻结最后一帧直到填满"
+    - name: speed_adjust
+      description: "微调播放速度使素材恰好填满文案时长（0.75x~1.5x）"
+    - name: trim_fade
+      description: "素材过长时裁剪尾部并淡出"
+
 copy:
   variables:
     - name: shop_name
@@ -87,10 +100,17 @@ copy:
       required: false
       default: "时尚又帅气"
       description: "发型卖点/特色"
+    - name: selling_point
+      required: false
+      default: "不挑脸型，谁剪谁帅"
+      description: "附加卖点"
 
   script_template: |
     {{ headline }}
+    {{ detail }}
     {{ shop_name }}推荐{{ style_name }}，{{ feature }}。
+    {{ selling_point }}。
+    {{ bridge }}
     {{ cta }}
 
   presets:
@@ -102,13 +122,26 @@ copy:
       - "理发师强烈推荐！"
       - "剪完直接帅一个档次"
       - "改变从头开始！"
+    detail:
+      - "很多顾客一进店就指名要这款，真的太火了。"
+      - "这款发型最大的特点就是打理起来特别方便，早上起来随便抓一抓就很有型。"
+      - "不管你是圆脸方脸还是长脸，这款发型都能完美驾驭。"
+      - "这个造型最近在各大平台都爆了，来店里剪的人特别多。"
+      - "剪完之后整个人的气质都不一样了，精神了好几个档次。"
+      - "这款发型的重点在于层次感，看起来特别自然不做作。"
+    bridge:
+      - "真的，好的发型就是最好的化妆品。"
+      - "换个发型比换件衣服效果还明显。"
+      - "发型选对了，颜值直接翻倍。"
+      - "一款好发型，能让你自信一整个月。"
+      - "不信你看，剪完前后对比差距太大了。"
     cta:
-      - "想剪同款的来找我"
-      - "你适合什么发型？评论区告诉我"
-      - "到店报暗号享8折优惠"
-      - "关注我，每天分享潮流发型"
-      - "点赞收藏，下次剪发不迷路"
-      - "私信预约，到店免排队"
+      - "想剪同款的来找我，私信预约不排队"
+      - "你适合什么发型？评论区告诉我，帮你参考一下"
+      - "到店报暗号享8折优惠，名额有限先到先得"
+      - "关注我，每天分享最新潮流发型，不让你踩雷"
+      - "点赞收藏，下次剪发不迷路，想剪的时候翻出来就行"
+      - "私信预约，到店免排队，还能免费做造型咨询"
 
 match_rules:
   filename_contains: ["理发", "发型", "造型", "美发", "barber", "hair", "剪发", "烫发", "染发"]

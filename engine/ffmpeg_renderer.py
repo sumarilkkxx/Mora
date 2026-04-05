@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import random
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -68,18 +69,28 @@ class FFmpegRenderer:
         # raw input indices — brackets added only for filter_complex expressions
         _raw_inputs: dict[str, int] = {}
 
+        editing_config = template.get("editing", {})
+        target_duration = self._calc_target_duration(tts, timeline_config)
+
+        # --- 选择剪辑手法 ---
+        technique = self._pick_editing_technique(
+            editing_config, asset, target_duration
+        )
+
         # --- 主素材输入 ---
         if asset.type == "video":
-            inputs.extend(["-i", str(asset.path)])
+            if technique == "loop":
+                inputs.extend(["-stream_loop", "-1", "-i", str(asset.path)])
+            else:
+                inputs.extend(["-i", str(asset.path)])
             video_input_label = f"[{input_idx}:v]"
             audio_from_video_idx = input_idx if asset.has_audio else None
             input_idx += 1
         elif asset.type == "image":
-            duration = self._calc_target_duration(tts, timeline_config)
             inputs.extend([
                 "-loop", "1",
                 "-i", str(asset.path),
-                "-t", str(duration),
+                "-t", str(target_duration),
             ])
             video_input_label = f"[{input_idx}:v]"
             audio_from_video_idx = None
@@ -121,11 +132,18 @@ class FFmpegRenderer:
 
         # Ken Burns 效果（图片素材）
         if asset.type == "image":
-            duration = self._calc_target_duration(tts, timeline_config)
-            frames = int(duration * target_fps)
+            frames = int(target_duration * target_fps)
             vf_chain.append(
                 f"zoompan=z='min(zoom+0.001,1.3)':d={frames}:s={target_w}x{target_h}:fps={target_fps}"
             )
+
+        # --- 视频时长适配（仅视频素材） ---
+        if asset.type == "video" and asset.duration and tts:
+            adapt_filter = self._build_duration_adapt_filter(
+                asset.duration, target_duration, target_fps, technique
+            )
+            if adapt_filter:
+                vf_chain.append(adapt_filter)
 
         # 色彩效果
         color_grade = effects_config.get("color_grade", "none")
@@ -204,7 +222,7 @@ class FFmpegRenderer:
         cmd.extend(["-c:a", self.audio_codec])
         cmd.extend(["-b:a", self.audio_bitrate])
         cmd.extend(["-movflags", self.movflags])
-        cmd.extend(["-shortest"])
+        cmd.extend(["-t", str(round(target_duration, 2))])
 
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -269,6 +287,75 @@ class FFmpegRenderer:
         intro_d = timeline.get("intro", {}).get("duration", 0)
         outro_d = timeline.get("outro", {}).get("duration", 0)
         return base + intro_d + outro_d
+
+    def _pick_editing_technique(
+        self, editing_config: dict, asset: MediaAsset, target_duration: float
+    ) -> str:
+        """从模板的 editing.techniques 中随机选取一种适用的剪辑手法。"""
+        techniques = editing_config.get("techniques", [])
+        available_names = [t.get("name") for t in techniques if t.get("name")]
+
+        if not available_names or asset.type != "video" or not asset.duration:
+            return "trim_fade"
+
+        video_dur = asset.duration
+        ratio = video_dur / target_duration if target_duration > 0 else 1.0
+
+        suitable: list[str] = []
+        for name in available_names:
+            if name == "loop" and ratio < 1.0:
+                suitable.append(name)
+            elif name == "freeze_end" and 0.5 <= ratio < 1.0:
+                suitable.append(name)
+            elif name == "speed_adjust" and 0.6 <= ratio <= 1.6:
+                suitable.append(name)
+            elif name == "trim_fade" and ratio > 0.9:
+                suitable.append(name)
+
+        if not suitable:
+            if ratio < 1.0:
+                return "loop"
+            return "trim_fade"
+
+        return random.choice(suitable)
+
+    def _build_duration_adapt_filter(
+        self,
+        video_duration: float,
+        target_duration: float,
+        fps: int,
+        technique: str,
+    ) -> str | None:
+        """根据剪辑手法生成时长适配的 FFmpeg 滤镜。"""
+        if target_duration <= 0 or video_duration <= 0:
+            return None
+
+        ratio = video_duration / target_duration
+
+        if technique == "speed_adjust":
+            speed = max(0.5, min(2.0, ratio))
+            pts_factor = 1.0 / speed
+            return f"setpts={pts_factor:.4f}*PTS"
+
+        elif technique == "freeze_end":
+            if ratio >= 1.0:
+                return f"trim=duration={target_duration},setpts=PTS-STARTPTS"
+            pad_seconds = target_duration - video_duration
+            return f"tpad=stop_mode=clone:stop_duration={pad_seconds:.2f}"
+
+        elif technique == "loop":
+            return f"trim=duration={target_duration},setpts=PTS-STARTPTS"
+
+        elif technique == "trim_fade":
+            if ratio > 1.0:
+                fade_start = max(0, target_duration - 1.0)
+                return (
+                    f"trim=duration={target_duration},setpts=PTS-STARTPTS,"
+                    f"fade=t=out:st={fade_start:.2f}:d=1.0"
+                )
+            return None
+
+        return None
 
     def _build_scale_filter(
         self, asset: MediaAsset, tw: int, th: int, fps: int, fit_mode: str
