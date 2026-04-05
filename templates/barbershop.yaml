@@ -47,7 +47,7 @@ timeline:
 audio:
   voice:
     engine: edge-tts
-    voice_id: zh-CN-YunxiNeural
+    voice_id: zh-CN-XiaoxiaoNeural
     rate: "+0%"
     volume: 1.0
   bgm:
