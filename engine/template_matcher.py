@@ -50,10 +50,14 @@ def match_template(
     best_score = -1.0
 
     default_template = None
+    fallback_template = None
     for t in templates:
-        name = t.get("meta", {}).get("name", "")
-        if name == "default" or t.get("meta", {}).get("is_default"):
+        if t.get("meta", {}).get("is_default"):
             default_template = t
+        if t.get("meta", {}).get("name") == "default":
+            fallback_template = t
+    if default_template is None:
+        default_template = fallback_template
 
     for t in templates:
         score = calculate_match_score(asset, t)

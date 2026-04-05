@@ -2,10 +2,10 @@
 
 meta:
   name: "default"
-  description: "通用默认模板，适用于任何短视频素材"
+  description: "通用兜底模板，适用于无法匹配到其他模板的素材"
   version: "1.0"
-  is_default: true
-  tags: ["通用", "默认"]
+  is_default: false
+  tags: ["通用", "兜底"]
 
 extends: _global
 

@@ -1,0 +1,118 @@
+# 理发店推荐模板 — 适用于理发店/发型推荐、造型展示类视频
+
+meta:
+  name: "barbershop"
+  description: "适用于理发店推荐、发型展示、造型变化类短视频"
+  version: "1.0"
+  author: "AI_clip"
+  is_default: true
+  tags: ["理发店", "发型", "造型", "美发"]
+
+extends: _global
+
+canvas:
+  width: 1080
+  height: 1920
+  fps: 30
+
+timeline:
+  intro:
+    type: title_card
+    duration: 2.0
+    background: "#1a1a1a"
+    text: "{{ headline }}"
+    text_style:
+      font_size: 60
+      color: "#F5DEB3"
+      animation: fade_up
+
+  body:
+    type: media_sequence
+    source: "$input_media"
+    duration: auto
+    fit_mode: cover_center
+    transition:
+      type: fade
+      duration: 0.5
+
+  outro:
+    type: title_card
+    duration: 2.5
+    text: "{{ cta }}"
+    text_style:
+      font_size: 46
+      color: "#FFFFFF"
+      animation: fade
+
+audio:
+  voice:
+    engine: edge-tts
+    voice_id: zh-CN-YunxiNeural
+    rate: "+0%"
+    volume: 1.0
+  bgm:
+    volume: 0.18
+    ducking:
+      enabled: true
+      target_volume: 0.05
+      fade_duration: 0.3
+
+subtitles:
+  source: tts_srt
+  style:
+    font: "Microsoft YaHei"
+    font_size: 44
+    color: "#FFFFFF"
+    outline_color: "#1a1a1a"
+    outline_width: 2
+    position: bottom_third
+    max_chars_per_line: 16
+
+effects:
+  color_grade: high_contrast
+  vignette: 0.2
+
+copy:
+  variables:
+    - name: shop_name
+      required: false
+      default: "我们店"
+      description: "店铺名称"
+    - name: style_name
+      required: false
+      default: "这款发型"
+      description: "发型/造型名称"
+    - name: feature
+      required: false
+      default: "时尚又帅气"
+      description: "发型卖点/特色"
+
+  script_template: |
+    {{ headline }}
+    {{ shop_name }}推荐{{ style_name }}，{{ feature }}。
+    {{ cta }}
+
+  presets:
+    headline:
+      - "换个发型换个心情！"
+      - "今天这位顾客的变化绝了"
+      - "帅哥都在剪这款发型"
+      - "最近超火的发型来了"
+      - "理发师强烈推荐！"
+      - "剪完直接帅一个档次"
+      - "改变从头开始！"
+    cta:
+      - "想剪同款的来找我"
+      - "你适合什么发型？评论区告诉我"
+      - "到店报暗号享8折优惠"
+      - "关注我，每天分享潮流发型"
+      - "点赞收藏，下次剪发不迷路"
+      - "私信预约，到店免排队"
+
+match_rules:
+  filename_contains: ["理发", "发型", "造型", "美发", "barber", "hair", "剪发", "烫发", "染发"]
+  folder_name: ["理发", "美发", "barber", "hair", "发型"]
+  aspect_ratio: portrait
+  min_duration: 3
+  max_duration: 120
+  priority: 15
