@@ -1,0 +1,37 @@
+# 全局默认配置 — 所有模板继承此文件
+
+canvas:
+  width: 1080
+  height: 1920
+  fps: 30
+  background: "#000000"
+
+audio:
+  voice:
+    engine: edge-tts
+    voice_id: zh-CN-XiaoxiaoNeural
+    rate: "+0%"
+    volume: 1.0
+  bgm:
+    volume: 0.15
+    ducking:
+      enabled: true
+      target_volume: 0.05
+      fade_duration: 0.3
+
+subtitles:
+  source: tts_srt
+  style:
+    font: "Microsoft YaHei"
+    font_size: 42
+    color: "#FFFFFF"
+    outline_color: "#000000"
+    outline_width: 2
+    position: bottom_third
+    max_chars_per_line: 16
+
+effects:
+  color_grade: none
+  vignette: 0
+
+watermark: {}

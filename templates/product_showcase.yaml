@@ -1,0 +1,109 @@
+# 产品展示模板 — 适用于电商产品短视频
+
+meta:
+  name: "product_showcase"
+  description: "适用于电商产品短视频"
+  version: "1.0"
+  author: "AI_clip"
+  tags: ["电商", "产品", "竖屏"]
+
+extends: _global
+
+canvas:
+  width: 1080
+  height: 1920
+  fps: 30
+
+timeline:
+  intro:
+    type: title_card
+    duration: 2.0
+    background: "#1a1a2e"
+    text: "{{ headline }}"
+    text_style:
+      font_size: 64
+      color: "#FFD700"
+      animation: fade_up
+
+  body:
+    type: media_sequence
+    source: "$input_media"
+    duration: auto
+    fit_mode: cover_center
+    transition:
+      type: fade
+      duration: 0.5
+
+  outro:
+    type: title_card
+    duration: 2.5
+    text: "{{ cta }}"
+    text_style:
+      font_size: 48
+      color: "#FFFFFF"
+      animation: fade
+
+audio:
+  voice:
+    engine: edge-tts
+    voice_id: zh-CN-XiaoxiaoNeural
+    rate: "+0%"
+    volume: 1.0
+  bgm:
+    volume: 0.15
+    ducking:
+      enabled: true
+      target_volume: 0.05
+      fade_duration: 0.3
+
+subtitles:
+  source: tts_srt
+  style:
+    font: "Microsoft YaHei"
+    font_size: 42
+    color: "#FFFFFF"
+    outline_color: "#000000"
+    outline_width: 2
+    position: bottom_third
+    max_chars_per_line: 16
+
+effects:
+  color_grade: warm_boost
+  vignette: 0.3
+
+copy:
+  variables:
+    - name: product_name
+      required: true
+      description: "产品名称"
+    - name: product_feature
+      required: true
+      description: "核心卖点"
+    - name: price
+      required: false
+      default: ""
+
+  script_template: |
+    {{ headline }}
+    {{ product_name }}，{{ product_feature }}。
+    {{ cta }}
+
+  presets:
+    headline:
+      - "发现一款好物！"
+      - "今天必须安利这个！"
+      - "用了就回不去了！"
+      - "这也太好用了吧！"
+    cta:
+      - "点击下方链接，get同款"
+      - "评论区告诉我你想要什么颜色"
+      - "限时优惠，手慢无"
+      - "喜欢就点赞收藏吧"
+
+match_rules:
+  filename_contains: ["产品", "product", "商品", "goods", "展示"]
+  folder_name: ["product", "电商", "products"]
+  aspect_ratio: portrait
+  min_duration: 3
+  max_duration: 120
+  priority: 10

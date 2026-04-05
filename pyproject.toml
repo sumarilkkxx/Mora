@@ -1,0 +1,28 @@
+[project]
+name = "ai-clip"
+version = "0.1.0"
+description = "自动化批量视频剪辑系统"
+requires-python = ">=3.10"
+dependencies = [
+    "edge-tts>=6.1",
+    "Pillow>=10.0",
+    "PyYAML>=6.0",
+    "Jinja2>=3.1",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+extract = [
+    "scenedetect[opencv]>=0.6",
+    "openai-whisper>=20231117",
+]
+jianying = [
+    "pyJianYingDraft>=0.2.6",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+]
+
+[project.scripts]
+ai-clip = "cli:main"
