@@ -11,7 +11,7 @@ from typing import Any, Callable, Literal
 
 from .scanner import MediaAsset
 from .tts import TTSResult, generate_tts
-from .copy_writer import render_copy
+from .copy_writer import render_copy, render_title
 from .ffmpeg_renderer import FFmpegRenderer, RenderResult
 
 
@@ -22,6 +22,7 @@ class EditTask:
     template: dict
     tts_result: TTSResult | None = None
     copy_text: str = ""
+    title_text: str = ""
     output_path: Path = Path(".")
     status: Literal["pending", "processing", "success", "failed", "skipped"] = "pending"
     error: str | None = None
@@ -88,11 +89,17 @@ def create_tasks(
         except Exception:
             copy_text = ""
 
+        try:
+            title_text = render_title(copy_config, {**copy_variables})
+        except Exception:
+            title_text = ""
+
         tasks.append(EditTask(
             id=task_id,
             asset=asset,
             template=tpl,
             copy_text=copy_text,
+            title_text=title_text,
             output_path=out_path,
         ))
 
@@ -167,6 +174,7 @@ class BatchProcessor:
                     bgm_path=bgm_path,
                     template=task.template,
                     output_path=task.output_path,
+                    title_text=task.title_text,
                 )
 
                 # 4. 执行渲染

@@ -22,8 +22,13 @@ timeline:
     background: "#1a1a1a"
     text: "{{ headline }}"
     text_style:
-      font_size: 60
+      font_size: 68              # 标题文字 64-72px，取中间值
       color: "#F5DEB3"
+      bold: true
+      alignment: center
+      margin_h: 120              # 水平安全边距，避开右侧互动按钮
+      max_chars_per_line: 14     # 标题每行最多 14 字
+      max_lines: 2
       animation: fade_up
 
   body:
@@ -37,18 +42,20 @@ timeline:
 
   outro:
     type: title_card
-    duration: 1.0
+    duration: 1.5
     text: "{{ cta }}"
     text_style:
-      font_size: 46
+      font_size: 48
       color: "#FFFFFF"
+      alignment: center
+      margin_h: 120              # 水平安全边距，避开右侧互动按钮
       animation: fade
 
 audio:
   voice:
     engine: edge-tts
     voice_id: zh-CN-XiaoxiaoNeural
-    rate: "+0%"
+    rate: "-8%"
     volume: 1.0
   bgm:
     file: "assets/bgm/upbeat_01.mp3"
@@ -60,22 +67,70 @@ audio:
 
 subtitles:
   source: tts_srt
+
+  # ── 安全区域（参考抖音 UI 布局图） ──
+  safe_area:
+    bottom: 480          # 底部 480px 保留给点赞/评论/分享 + 文字描述区
+    right: 120           # 右侧 120px 保留给互动按钮列
+    left: 120            # 左侧对称留白，保证文字水平居中
+
+  # ── 旁白字幕样式 ──
   style:
     font: "Microsoft YaHei"
-    font_size: 68
+    font_size: 48              # 旁白字幕 44-52px（取中间值）
     color: "#FFFFFF"
-    outline_color: "#1a1a1a"
-    outline_width: 3.5
-    bold: true
+    bold: false                # 旁白字幕用常规字重
     spacing: 1.5
-    shadow: 2.5
-    margin_v: 90
-    margin_h: 50
-    alignment: 2
-    border_style: 1
-    back_alpha: 120
+    alignment: 2               # 底部水平居中
+    margin_v: 480              # 底部安全距离：避开 UI 点赞/评论/分享/描述区
+    margin_h: 120              # 水平安全边距：避开右侧互动按钮列，左右对称居中
+    max_chars_per_line: 18     # 每行最多 18 个字符
+    max_lines: 3               # 最多显示 3 行
+    outline:
+      color: "#1a1a1a"
+      width: 2
+    shadow: 2
     fade_in: 220
     fade_out: 120
+
+    # 半透明黑色圆角背景底条
+    background:
+      enabled: true
+      color: "#000000"
+      opacity: 0.45            # 透明度 0.4-0.5，取中间值
+      border_radius: 12        # 圆角半径
+      padding_h: 24            # 水平内边距
+      padding_v: 10            # 垂直内边距
+      blur: 5                  # 底条边缘模糊半径（磨砂质感）
+
+  # ── 字幕停留时长规则 ──
+  # 最短停留时间 = ceil(字符数 / chars_per_second_unit) × unit_seconds
+  # 例：30 字符 → ceil(30/13) × 1.0 = 3.0 秒；13 字符 → 1.0 秒
+  timing:
+    chars_per_second_unit: 13  # 每 13 个字符对应 1 秒最短展示时间
+    unit_seconds: 1.0
+    min_seconds: 1.0           # 单条字幕绝对最短时长
+    padding_seconds: 0.3       # 额外留白，给观众反应时间
+
+# ── 标题覆盖层（全时段显示在视频上方） ──
+title:
+  enabled: true
+  style:
+    font: "Microsoft YaHei"
+    font_size: 68              # 标题 64-72px，取中间值
+    color: "#FFFFFF"
+    bold: true
+    alignment: 8               # ASS top-center
+    margin_v: 200              # 距顶部 200px（避开 140px 状态栏 + 头像区）
+    margin_h: 120              # 水平安全边距
+    max_chars_per_line: 14     # 每行最多 14 字
+    max_lines: 2               # 最多 2 行
+    spacing: 2.0
+    outline_color: "#000000"
+    outline_width: 3
+    shadow: 2
+    fade_in: 500
+    fade_out: 500
 
 effects:
   color_grade: high_contrast
@@ -83,8 +138,8 @@ effects:
   slowdown: 0.8
   ken_burns:
     enabled: true
-    zoom_range: 0.08
-    drift_speed: 0.15
+    zoom_range: 0.12
+    drift_speed: 0.20
 
 editing:
   techniques:
@@ -120,11 +175,38 @@ copy:
 
   script_template: |
     {{ opening }}
+    {{ detail }}
     {{ shop_name }}{{ recommend }}{{ style_name }}，{{ feature }}。
     {% if shop_location %}我们就在{{ shop_location }}，随时欢迎来坐坐。{% endif %}
     {{ cta }}
 
+  title_template: "{{ shop_name }} · {{ headline }}\n{{ hashtag }}"
+
   presets:
+    headline:
+      - "今日发型分享"
+      - "发型推荐 · 焕然一新"
+      - "造型改变好心情"
+      - "她的全新造型"
+      - "这款发型绝了"
+      - "变美从头开始"
+      - "今日造型推荐"
+      - "来看看她的新发型"
+    hashtag:
+      - "#发型推荐 #造型分享 #变美日记"
+      - "#今日造型 #发型设计 #焕然一新"
+      - "#发型推荐 #美发日记 #造型改变"
+      - "#造型推荐 #发型分享 #变美从头开始"
+      - "#今日发型 #造型灵感 #发型打卡"
+    detail:
+      - "从发根到发尾都重新做了调整，整个造型既有层次感又不失柔美。"
+      - "特意选了最衬肤色的色调，在自然光下效果特别惊艳，本人比照片还好看。"
+      - "根据她的脸型和五官比例做了微调，出来的效果既自然又有辨识度。"
+      - "整个过程大概两个小时，从洗剪到最后定型，每一步都很用心。"
+      - "做完之后连旁边等位的姐姐都过来问同款，说这个弧度刚刚好。"
+      - "她自己说最满意的就是头顶的蓬松度，显得整个人精神了不少。"
+      - "这款造型最大的优点就是好打理，平时吹一吹就能出门，省时又好看。"
+      - "发色和发型搭配得刚刚好，整个人气质都提升了一个档次。"
     opening:
       - "她说最近心情不太好，想换个造型试试。做完出来那一刻，她对着镜子笑了好久，说这才是自己想要的样子。"
       - "这位姐姐之前一直觉得自己发量少，显得没精神。我帮她做了个蓬松的层次，出来效果她自己都不敢信，说头发好像变多了。"

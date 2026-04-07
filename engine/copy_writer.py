@@ -16,6 +16,32 @@ def pick_random_preset(presets: dict[str, list[str]], key: str) -> str:
     return random.choice(options)
 
 
+def render_title(template_config: dict, variables: dict[str, Any] | None = None) -> str:
+    """从模板 copy 配置中生成标题文本。
+
+    使用 title_template（默认 '{{ headline }}'）和预设池随机组合。
+    """
+    variables = dict(variables) if variables else {}
+    presets = template_config.get("presets", {})
+
+    for key in presets:
+        if key not in variables:
+            variables[key] = pick_random_preset(presets, key)
+
+    var_defs = template_config.get("variables", [])
+    for var_def in var_defs:
+        name = var_def.get("name", "")
+        if name not in variables:
+            variables[name] = var_def.get("default", "")
+
+    title_tpl = template_config.get("title_template", "{{ headline }}")
+    try:
+        tpl = Template(title_tpl)
+        return tpl.render(**variables).strip()
+    except (UndefinedError, Exception):
+        return ""
+
+
 def render_copy(template_config: dict, variables: dict[str, Any] | None = None) -> str:
     """使用 Jinja2 渲染文案模板，返回完整文案文本。
 

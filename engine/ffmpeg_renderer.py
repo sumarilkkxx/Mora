@@ -51,6 +51,7 @@ class FFmpegRenderer:
         bgm_path: Path | None,
         template: dict,
         output_path: Path,
+        title_text: str = "",
     ) -> list[str]:
         """将模板参数编译为 FFmpeg 命令行参数列表。"""
         canvas = template.get("canvas", {})
@@ -143,7 +144,8 @@ class FFmpegRenderer:
             beat_expr = self._build_beat_brightness_expr(target_duration)
             vf_chain.append(
                 f"eq=brightness='{beat_expr}+0.015*sin(t*0.7)'"
-                f":saturation='1+0.03*sin(t*0.5)'"
+                f":saturation='1+0.05*sin(t*0.4)'"
+                f":contrast='1+0.02*sin(t*0.3)'"
             )
         else:
             fit_mode = timeline_config.get("body", {}).get("fit_mode", "cover_center")
@@ -193,6 +195,17 @@ class FFmpegRenderer:
             vf_str = ",".join(vf_chain)
             filter_parts.append(f"{current_v}{vf_str}[v_main]")
             current_v = "[v_main]"
+
+        # --- 标题覆盖层 ---
+        title_config = template.get("title", {})
+        if title_text and title_config.get("enabled"):
+            title_filter = self._build_title_filter(
+                title_text, title_config,
+                target_w, target_h, target_duration, output_path
+            )
+            if title_filter:
+                filter_parts.append(f"{current_v}{title_filter}[v_title]")
+                current_v = "[v_title]"
 
         # --- 字幕 ---
         srt_source = subtitle_config.get("source", "")
@@ -445,19 +458,21 @@ class FFmpegRenderer:
         )
 
     def _build_beat_brightness_expr(
-        self, target_duration: float, n_beats: int = 2
+        self, target_duration: float, n_beats: int = 3
     ) -> str:
         """生成节奏性明暗脉冲的 eq brightness 表达式。
 
-        用 sin 半波在每个 beat 点短暂压暗再恢复，避免 fade 滤镜
-        的永久黑屏副作用。
+        交替使用压暗脉冲和增亮闪光，模拟剪辑转场的呼吸节奏。
+        奇数 beat 压暗（模拟「呼」），偶数 beat 增亮（模拟「吸」/闪白过渡）。
         """
-        pulse_dur = 0.5
-        depth = -0.45
+        pulse_dur = 0.45
+        dark_depth = -0.40
+        bright_depth = 0.15
         parts: list[str] = []
         interval = target_duration / (n_beats + 1)
         for i in range(1, n_beats + 1):
             t = interval * i
+            depth = dark_depth if i % 2 == 1 else bright_depth
             parts.append(
                 f"if(between(t,{t:.2f},{t + pulse_dur:.2f}),"
                 f"{depth}*sin((t-{t:.2f})*{math.pi / pulse_dur:.4f}),0)"
@@ -539,7 +554,7 @@ class FFmpegRenderer:
         return f"&H{alpha:02X}{b}{g}{r}"
 
     @staticmethod
-    def _wrap_text(text: str, max_chars: int) -> str:
+    def _wrap_text(text: str, max_chars: int, max_lines: int = 0) -> str:
         """将中文长文本按最大字符数自动折行（\\N 分隔）。"""
         if len(text) <= max_chars:
             return text
@@ -556,29 +571,54 @@ class FFmpegRenderer:
                     break
             lines.append(text[:cut])
             text = text[cut:]
+        if max_lines > 0 and len(lines) > max_lines:
+            lines = lines[:max_lines]
         return "\\N".join(lines)
 
     def _srt_to_styled_ass(
         self, srt_path: Path, style: dict, canvas_w: int, canvas_h: int
     ) -> Path:
-        """将 SRT 转换为 ASS，注入丰富样式和逐行淡入淡出动画。"""
+        """将 SRT 转换为双层 ASS 字幕：模糊底条层 + 清晰文字层。
+
+        Layer 0 (SubBG):  BorderStyle=3 半透明底条 + \\blur 柔化边缘
+        Layer 1 (SubText): BorderStyle=1 清晰文字 + 细描边
+        两层叠加产生「磨砂玻璃背景 + 锐利文字」的精致效果。
+        """
         import re
 
         font = style.get("font", "Microsoft YaHei")
-        font_size = style.get("font_size", 68)
+        font_size = style.get("font_size", 48)
         color = style.get("color", "#FFFFFF")
-        outline_color = style.get("outline_color", "#000000")
-        outline_w = style.get("outline_width", 3.5)
-        shadow_depth = style.get("shadow", 2.5)
-        bold = 1 if style.get("bold", True) else 0
+        bold = 1 if style.get("bold", False) else 0
         spacing = style.get("spacing", 1.5)
-        margin_v = style.get("margin_v", 90)
-        margin_h = style.get("margin_h", 50)
-        border_style = style.get("border_style", 1)
-        back_alpha = style.get("back_alpha", 120)
+        margin_v = style.get("margin_v", 480)
+        margin_h = style.get("margin_h", 120)
         fade_in = style.get("fade_in", 220)
         fade_out = style.get("fade_out", 120)
         alignment = style.get("alignment", 2)
+        shadow_depth = style.get("shadow", 2.0)
+
+        outline_cfg = style.get("outline")
+        if isinstance(outline_cfg, dict):
+            outline_color = outline_cfg.get("color", "#000000")
+            outline_w = outline_cfg.get("width", 2.0)
+        else:
+            outline_color = style.get("outline_color", "#000000")
+            outline_w = style.get("outline_width", 2.0)
+
+        bg_cfg = style.get("background")
+        has_bg = isinstance(bg_cfg, dict) and bg_cfg.get("enabled")
+        if has_bg:
+            bg_color = bg_cfg.get("color", "#000000")
+            bg_opacity = bg_cfg.get("opacity", 0.45)
+            bg_alpha = round((1.0 - bg_opacity) * 255)
+            bg_padding = bg_cfg.get("padding_v", 10)
+            bg_blur = bg_cfg.get("blur", 5)
+        else:
+            bg_color = "#000000"
+            bg_alpha = 120
+            bg_padding = 10
+            bg_blur = 0
 
         ref_short = 1080
         actual_short = min(canvas_w, canvas_h)
@@ -588,14 +628,38 @@ class FFmpegRenderer:
         shadow_depth = round(shadow_depth * scale, 1)
         margin_v = max(15, round(margin_v * scale))
         margin_h = max(10, round(margin_h * scale))
+        bg_pad_scaled = max(8, round(bg_padding * scale))
 
-        usable_w = canvas_w - margin_h * 2
-        max_chars = max(6, int(usable_w / (font_size * 0.95)))
+        max_chars_cfg = style.get("max_chars_per_line")
+        max_lines_cfg = style.get("max_lines", 0)
+        if max_chars_cfg:
+            max_chars = int(max_chars_cfg)
+        else:
+            usable_w = canvas_w - margin_h * 2
+            max_chars = max(6, int(usable_w / (font_size * 0.95)))
 
         primary = self._hex_to_ass_color(color, 0)
-        outline_c = self._hex_to_ass_color(outline_color, 0)
-        back_c = self._hex_to_ass_color("#000000", back_alpha)
         secondary = self._hex_to_ass_color("#00FFFF", 0)
+        transparent = self._hex_to_ass_color("#000000", 255)
+
+        # SubBG: 半透明底条，用 \blur 柔化边缘营造磨砂质感
+        bg_box_c = self._hex_to_ass_color(bg_color, bg_alpha)
+        style_bg = (
+            f"Style: SubBG,{font},{font_size},{primary},{secondary},"
+            f"{bg_box_c},{transparent},{bold},0,0,0,100,100,{spacing},0,"
+            f"3,{bg_pad_scaled},0,"
+            f"{alignment},{margin_h},{margin_h},{margin_v},1"
+        )
+
+        # SubText: 清晰文字 + 细描边 + 轻投影
+        text_outline_c = self._hex_to_ass_color(outline_color, 0)
+        text_shadow_c = self._hex_to_ass_color("#000000", 100)
+        style_text = (
+            f"Style: SubText,{font},{font_size},{primary},{secondary},"
+            f"{text_outline_c},{text_shadow_c},{bold},0,0,0,100,100,{spacing},0,"
+            f"1,{outline_w},{shadow_depth},"
+            f"{alignment},{margin_h},{margin_h},{margin_v},1"
+        )
 
         header = (
             "[Script Info]\n"
@@ -609,10 +673,8 @@ class FFmpegRenderer:
             "OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, "
             "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
             "Alignment, MarginL, MarginR, MarginV, Encoding\n"
-            f"Style: Default,{font},{font_size},{primary},{secondary},"
-            f"{outline_c},{back_c},{bold},0,0,0,100,100,{spacing},0,"
-            f"{border_style},{outline_w},{shadow_depth},"
-            f"{alignment},{margin_h},{margin_h},{margin_v},1\n\n"
+            f"{style_bg}\n"
+            f"{style_text}\n\n"
             "[Events]\n"
             "Format: Layer, Start, End, Style, Name, "
             "MarginL, MarginR, MarginV, Effect, Text\n"
@@ -632,10 +694,17 @@ class FFmpegRenderer:
             start = f"{m.group(2)}.{m.group(3)[:2]}"
             end = f"{m.group(4)}.{m.group(5)[:2]}"
             raw = m.group(6).strip().replace("\n", "")
-            text = self._wrap_text(raw, max_chars)
-            anim = f"{{\\fad({fade_in},{fade_out})}}"
+            text = self._wrap_text(raw, max_chars, max_lines_cfg)
+            fade_tag = f"\\fad({fade_in},{fade_out})"
+
+            if has_bg and bg_blur > 0:
+                dialogues.append(
+                    f"Dialogue: 0,{start},{end},SubBG,,0,0,0,,"
+                    f"{{{fade_tag}\\blur{bg_blur}}}{text}"
+                )
             dialogues.append(
-                f"Dialogue: 0,{start},{end},Default,,0,0,0,,{anim}{text}"
+                f"Dialogue: 1,{start},{end},SubText,,0,0,0,,"
+                f"{{{fade_tag}}}{text}"
             )
 
         ass_content = header + "\n".join(dialogues) + "\n"
@@ -647,6 +716,117 @@ class FFmpegRenderer:
         self, srt_path: Path, style: dict, canvas_w: int, canvas_h: int
     ) -> str:
         ass_path = self._srt_to_styled_ass(srt_path, style, canvas_w, canvas_h)
+        ass_escaped = str(ass_path).replace("\\", "/").replace(":", "\\:")
+        return f"ass='{ass_escaped}'"
+
+    def _build_title_ass(
+        self,
+        title_text: str,
+        title_config: dict,
+        canvas_w: int,
+        canvas_h: int,
+        duration: float,
+        output_dir: Path,
+    ) -> Path:
+        """创建标题覆盖层的 ASS 文件（全时段显示）。
+
+        支持 title_text 中包含 '\\n' 分隔的 hashtag 行，
+        hashtag 行会以更小字号和暖色调渲染。
+        """
+        style = title_config.get("style", {})
+        font = style.get("font", "Microsoft YaHei")
+        font_size = style.get("font_size", 68)
+        color = style.get("color", "#FFFFFF")
+        bold = 1 if style.get("bold", True) else 0
+        alignment = style.get("alignment", 8)
+        margin_v = style.get("margin_v", 200)
+        margin_h = style.get("margin_h", 120)
+        outline_color = style.get("outline_color", "#000000")
+        outline_w = style.get("outline_width", 3.0)
+        shadow_depth = style.get("shadow", 2.0)
+        spacing = style.get("spacing", 2.0)
+        fade_in = style.get("fade_in", 500)
+        fade_out = style.get("fade_out", 500)
+        max_chars = style.get("max_chars_per_line", 14)
+        max_lines = style.get("max_lines", 2)
+        hashtag_color = style.get("hashtag_color", "#F5DEB3")
+
+        ref_short = 1080
+        actual_short = min(canvas_w, canvas_h)
+        scale = actual_short / ref_short
+        font_size = max(12, round(font_size * scale))
+        hashtag_size = max(10, round(font_size * 0.52))
+        outline_w = round(outline_w * scale, 1)
+        shadow_depth = round(shadow_depth * scale, 1)
+        margin_v = max(15, round(margin_v * scale))
+        margin_h = max(10, round(margin_h * scale))
+
+        primary = self._hex_to_ass_color(color, 0)
+        secondary = self._hex_to_ass_color("#00FFFF", 0)
+        outline_c = self._hex_to_ass_color(outline_color, 0)
+        back_c = self._hex_to_ass_color("#000000", 200)
+        hashtag_ass_c = self._hex_to_ass_color(hashtag_color, 0)
+
+        lines = title_text.split("\n")
+        title_line = lines[0].strip()
+        hashtag_line = lines[1].strip() if len(lines) > 1 else ""
+
+        wrapped = self._wrap_text(title_line, max_chars, max_lines)
+        if hashtag_line:
+            wrapped += f"\\N{{\\fs{hashtag_size}\\1c{hashtag_ass_c}\\b0}}{hashtag_line}"
+
+        h = int(duration) // 3600
+        m = (int(duration) % 3600) // 60
+        s = int(duration) % 60
+        cs = int((duration - int(duration)) * 100)
+        end_time = f"{h}:{m:02d}:{s:02d}.{cs:02d}"
+
+        header = (
+            "[Script Info]\n"
+            "ScriptType: v4.00+\n"
+            f"PlayResX: {canvas_w}\n"
+            f"PlayResY: {canvas_h}\n"
+            "WrapStyle: 0\n"
+            "ScaledBorderAndShadow: yes\n\n"
+            "[V4+ Styles]\n"
+            "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, "
+            "OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, "
+            "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
+            "Alignment, MarginL, MarginR, MarginV, Encoding\n"
+            f"Style: Title,{font},{font_size},{primary},{secondary},"
+            f"{outline_c},{back_c},{bold},0,0,0,100,100,{spacing},0,"
+            f"1,{outline_w},{shadow_depth},"
+            f"{alignment},{margin_h},{margin_h},{margin_v},1\n\n"
+            "[Events]\n"
+            "Format: Layer, Start, End, Style, Name, "
+            "MarginL, MarginR, MarginV, Effect, Text\n"
+        )
+
+        anim = f"{{\\fad({fade_in},{fade_out})}}"
+        dialogue = f"Dialogue: 0,0:00:00.00,{end_time},Title,,0,0,0,,{anim}{wrapped}\n"
+
+        ass_content = header + dialogue
+        output_dir.mkdir(parents=True, exist_ok=True)
+        ass_path = output_dir / "title.ass"
+        ass_path.write_text(ass_content, encoding="utf-8-sig")
+        return ass_path
+
+    def _build_title_filter(
+        self,
+        title_text: str,
+        title_config: dict,
+        canvas_w: int,
+        canvas_h: int,
+        duration: float,
+        output_path: Path,
+    ) -> str | None:
+        """构建标题覆盖层滤镜，返回 ass= 滤镜字符串。"""
+        if not title_text or not title_config.get("enabled"):
+            return None
+        temp_dir = output_path.parent / "_temp"
+        ass_path = self._build_title_ass(
+            title_text, title_config, canvas_w, canvas_h, duration, temp_dir
+        )
         ass_escaped = str(ass_path).replace("\\", "/").replace(":", "\\:")
         return f"ass='{ass_escaped}'"
 
