@@ -1,4 +1,4 @@
-"""AI_clip CLI 入口 — 素材扫描、模板管理、批量剪辑。"""
+"""ClipCraft CLI 入口 — 素材扫描、模板管理、批量剪辑、启动 Web 工作台。"""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
 
+from engine.ffmpeg_runtime import ensure_ffmpeg
 from engine.scanner import scan_folder, MediaAsset
 from engine.template_loader import load_all_templates, load_template, validate_template
 from engine.template_matcher import match_batch
@@ -33,6 +34,7 @@ def _load_config() -> dict:
 
 def cmd_scan(args: argparse.Namespace) -> None:
     """扫描素材文件夹，预览信息。"""
+    ensure_ffmpeg()
     input_path = Path(args.input)
     console.print(f"[bold blue]扫描素材:[/] {input_path}")
 
@@ -133,6 +135,7 @@ def cmd_templates(args: argparse.Namespace) -> None:
 
 def cmd_process(args: argparse.Namespace) -> None:
     """批量剪辑处理。"""
+    ensure_ffmpeg()
     config = _load_config()
     input_path = Path(args.input)
     output_path = Path(args.output) if args.output else Path("./output")
@@ -246,10 +249,35 @@ def cmd_process(args: argparse.Namespace) -> None:
 
 # ---- main ----
 
+def cmd_serve(args: argparse.Namespace) -> None:
+    """启动 ClipCraft Web 工作台。"""
+    try:
+        import uvicorn
+    except ImportError:
+        console.print("[red]缺少 Web 依赖，请先安装：pip install -e .[/]")
+        sys.exit(1)
+
+    dist = Path(__file__).parent / "web" / "dist"
+    if not dist.exists():
+        console.print(
+            "[yellow]提示：前端尚未构建，仅 API 可用。"
+            "构建命令：cd web && npm install && npm run build[/]"
+        )
+    console.print(
+        f"[bold green]ClipCraft Web 工作台[/] → http://{args.host}:{args.port}"
+    )
+    uvicorn.run(
+        "server.app:app",
+        host=args.host,
+        port=args.port,
+        reload=args.reload,
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
-        prog="ai-clip",
-        description="AI_clip — 自动化批量视频剪辑系统",
+        prog="clipcraft",
+        description="ClipCraft — 模板驱动的自动化批量视频剪辑工作台",
     )
     parser.add_argument("--json", action="store_true", help="输出结构化 JSON")
     subparsers = parser.add_subparsers(dest="command", help="可用命令")
@@ -275,6 +303,12 @@ def main() -> None:
     proc_parser.add_argument("--vars", nargs="*", help="文案变量 (key=value)")
     proc_parser.add_argument("--json", action="store_true", help="输出 JSON")
 
+    # serve
+    serve_parser = subparsers.add_parser("serve", help="启动 Web 工作台")
+    serve_parser.add_argument("--host", default="127.0.0.1", help="监听地址")
+    serve_parser.add_argument("--port", type=int, default=8000, help="监听端口")
+    serve_parser.add_argument("--reload", action="store_true", help="开发热重载")
+
     args = parser.parse_args()
 
     if args.command == "scan":
@@ -283,6 +317,8 @@ def main() -> None:
         cmd_templates(args)
     elif args.command == "process":
         cmd_process(args)
+    elif args.command == "serve":
+        cmd_serve(args)
     else:
         parser.print_help()
 

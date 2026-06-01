@@ -1,8 +1,32 @@
-# AI_clip — 自动化批量视频剪辑系统 设计文档
+# ClipCraft — 自动化批量视频剪辑工作台 设计文档
 
-**版本**: v1.0  
-**日期**: 2026-04-05  
-**状态**: 设计阶段
+**版本**: v2.0（原 AI_clip）  
+**日期**: 2026-06-01  
+**状态**: Web 工作台 + CLI 双形态
+
+---
+
+> **v2.0 重构说明**：项目更名为 **ClipCraft**，在保留原 CLI 与 `engine/` 核心引擎的基础上，
+> 新增**现代化 Web 工作台**。新增形态不改变「Python 做大脑、FFmpeg 做肌肉」的核心理念，
+> 仅在入口层之上增加一个 Web 通道：
+>
+> ```
+> 用户 ──┬─ Web 工作台 (React + Vite + 原生 CSS)
+>        │      │  REST + WebSocket（实时进度）
+>        │      ▼
+>        │   FastAPI (server/) ── 复用 ──┐
+>        └─ CLI (cli.py) ────────────────┤
+>                                         ▼
+>                                   engine/ 核心引擎
+>                                         ▼
+>                                      FFmpeg
+> ```
+>
+> - **后端** `server/`：FastAPI + Uvicorn，提供 `templates / voices / scan / jobs` REST 接口与
+>   `WebSocket` 实时进度推送；`JobManager` 异步运行 `BatchProcessor`，将进度事件经队列广播给订阅者。
+> - **前端** `web/`：React 19 + Vite + TypeScript，**原生 CSS（设计令牌 + 语义类名，不使用 Tailwind）**，
+>   四步工作流：素材扫描 → 模板配置 → 实时进度看板 → 成品预览。
+> - 以下原始设计内容（CLI / 模板 / 引擎）依然有效，Web 工作台是其上层封装。
 
 ---
 
