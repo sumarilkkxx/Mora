@@ -1,11 +1,10 @@
-import { Alert, Button, Divider, Steps, Tag } from "antd";
-import {
-  DownloadOutlined,
-  ThunderboltOutlined,
-} from "@ant-design/icons";
+import { Bolt, CheckCircle2, Download, FileVideo, Info, Radio, Timer, Wand2 } from "lucide-react";
 import type { Job, UploadResult } from "../api/client";
 import { api } from "../api/client";
 import { formatClock, formatDuration } from "../utils/format";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 
 interface Props {
   upload: UploadResult | null;
@@ -21,119 +20,121 @@ export default function RunPanel({ upload, job, connected, busy, onStart }: Prop
   const failedTask = job?.tasks.find((t) => t.status === "failed");
 
   let current = 0;
-  let stepStatus: "process" | "finish" | "error" = "process";
   if (job?.status === "scanning") current = 1;
   else if (job?.status === "running") current = 2;
-  else if (job?.status === "completed") {
-    current = 3;
-    stepStatus = "finish";
-  } else if (job?.status === "failed") {
-    current = 2;
-    stepStatus = "error";
-  }
+  else if (job?.status === "completed") current = 3;
 
   const running = job?.status === "scanning" || job?.status === "running";
+  const pipeline = [
+    { label: "素材校验", note: "文件结构与尺寸检查" },
+    { label: "内容解析", note: "镜头节奏与关键信息识别" },
+    { label: "配音合成", note: running ? formatClock(job?.elapsed_seconds ?? 0) : "口播 / 字幕 / 合成" },
+    { label: "成片交付", note: success ? "已生成可下载文件" : "完成后提供预览与下载" },
+  ];
 
   return (
-    <div>
-      <div className="cc-card-title" style={{ marginBottom: 14 }}>
-        预览与生成
-        {job && (
-          <Tag color={connected ? "green" : "default"} style={{ marginLeft: "auto" }}>
-            {connected ? "实时" : "已结束"}
-          </Tag>
+    <div className="space-y-6">
+      <div className="rounded-[1.8rem] border border-[hsl(var(--border)/0.8)] bg-[linear-gradient(180deg,hsl(var(--card)/0.92),hsl(var(--muted)/0.34))] p-5 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Radio size={15} className={connected ? "text-[hsl(var(--primary))]" : "text-[hsl(var(--muted-foreground))]"} />
+              {job ? (connected ? "实时生成中" : "渲染任务") : "准备就绪，等待启动"}
+            </div>
+            <div className="mt-3 text-2xl font-semibold tracking-tight">{job ? "成片工作流正在推进" : "开始生成你的成片"}</div>
+            <div className="mt-2 text-sm leading-6 text-[hsl(var(--muted-foreground))]">
+              {job ? "系统会持续完成解析、配音、字幕和渲染，并在完成后交付可下载成片。" : "确认当前配置后即可启动自动生成流程，系统会按模板策略完成全部处理。"}
+            </div>
+          </div>
+          {job && <Badge variant={connected ? "success" : "secondary"}>{connected ? "实时同步" : "任务结束"}</Badge>}
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-[1.35rem] bg-[hsl(var(--card)/0.84)] p-4">
+            <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">当前状态</div>
+            <div className="mt-2 text-sm font-semibold">{running ? "正在处理" : success ? "已完成" : job ? "等待结果" : "待启动"}</div>
+          </div>
+          <div className="rounded-[1.35rem] bg-[hsl(var(--card)/0.84)] p-4">
+            <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">已用时</div>
+            <div className="mt-2 text-sm font-semibold">{job ? formatClock(job.elapsed_seconds) : "00:00"}</div>
+          </div>
+          <div className="rounded-[1.35rem] bg-[hsl(var(--card)/0.84)] p-4">
+            <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">交付阶段</div>
+            <div className="mt-2 text-sm font-semibold">{success ? "可下载" : "处理中"}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-[1.8rem] border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.45)] shadow-sm">
+        {previewUrl ? <video className="cc-video" src={previewUrl} controls preload="metadata" /> : (
+          <div className="cc-preview-empty">
+            <FileVideo size={28} />
+            <span>上传视频后在此查看素材预览</span>
+          </div>
         )}
       </div>
 
-      {previewUrl ? (
-        <video className="cc-video" src={previewUrl} controls preload="metadata" />
-      ) : (
-        <div className="cc-preview-empty">上传视频后在此预览</div>
-      )}
-
       {upload && (
-        <div style={{ marginTop: 12 }}>
-          <div className="cc-meta-row">
-            <span>文件</span>
-            <b title={upload.name}>{upload.name}</b>
-          </div>
-          <div className="cc-meta-row">
-            <span>分辨率</span>
-            <b>
-              {upload.asset.width}×{upload.asset.height}
-            </b>
-          </div>
-          <div className="cc-meta-row">
-            <span>时长</span>
-            <b>{formatDuration(upload.asset.duration)}</b>
-          </div>
+        <div className="rounded-[1.8rem] border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.34)] p-5 text-sm shadow-sm">
+          <div className="mb-4 flex items-center gap-2 text-base font-semibold"><Wand2 size={16} className="text-[hsl(var(--primary))]" /> 素材摘要</div>
+          <div className="cc-meta-row"><span>文件</span><b title={upload.name}>{upload.name}</b></div>
+          <div className="cc-meta-row"><span>分辨率</span><b>{upload.asset.width} × {upload.asset.height}</b></div>
+          <div className="cc-meta-row"><span>时长</span><b>{formatDuration(upload.asset.duration)}</b></div>
         </div>
       )}
 
-      <Button
-        type="primary"
-        size="large"
-        block
-        icon={<ThunderboltOutlined />}
-        style={{ marginTop: 16 }}
-        disabled={!upload || running}
-        loading={busy || running}
-        onClick={onStart}
-      >
-        {running ? "正在生成…" : "生成视频"}
+      <Button size="lg" className="w-full rounded-full shadow-[0_18px_34px_rgba(201,111,74,0.22)]" disabled={!upload || running} onClick={onStart}>
+        <Bolt size={16} />
+        {busy || running ? "正在生成成片..." : "启动成片生成"}
       </Button>
 
-      {job && (
-        <>
-          <Divider style={{ margin: "20px 0 16px" }} />
-          <Steps
-            direction="vertical"
-            size="small"
-            current={current}
-            status={stepStatus}
-            items={[
-              { title: "上传素材", description: upload?.name },
-              { title: "解析素材", description: "提取视频元数据" },
-              {
-                title: "配音与渲染",
-                description: running
-                  ? `已用时 ${formatClock(job.elapsed_seconds)}`
-                  : "TTS 配音 · 字幕 · 运镜合成",
-              },
-              { title: "完成", description: success ? "成品已生成" : undefined },
-            ]}
-          />
+      <div className="rounded-[1.8rem] border border-[hsl(var(--border))] bg-[hsl(var(--card)/0.64)] p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="text-base font-semibold">生成流程</div>
+          <div className="text-xs text-[hsl(var(--muted-foreground))]">全链路自动执行</div>
+        </div>
+        <div className="space-y-3 text-sm">
+          {pipeline.map((item, idx) => {
+            const done = current > idx;
+            const active = current === idx || (!job && idx === 0);
+            return (
+              <div key={item.label} className={done || active ? "text-[hsl(var(--foreground))]" : "text-[hsl(var(--muted-foreground))]"}>
+                <div className="flex items-center gap-3 rounded-[1.25rem] bg-[hsl(var(--muted)/0.34)] px-4 py-3">
+                  <span className={`inline-grid h-8 w-8 place-items-center rounded-full ${done ? "bg-[hsl(var(--primary))] text-white" : active ? "bg-[hsl(var(--primary)/0.14)] text-[hsl(var(--primary))]" : "bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))]"}`}>
+                    {done ? <CheckCircle2 size={16} /> : idx + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium">{item.label}</div>
+                    <div className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">{item.note}</div>
+                  </div>
+                  {idx === 2 && running && <span className="flex items-center gap-1 text-xs"><Timer size={12} />进行中</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
-          {failedTask && (
-            <Alert
-              type="error"
-              showIcon
-              style={{ marginTop: 12 }}
-              message="生成失败"
-              description={failedTask.error || job.error || "未知错误"}
-            />
-          )}
+      {failedTask && (
+        <Alert variant="destructive">
+          <AlertTitle className="flex items-center gap-2"><Info size={14} /> 生成失败</AlertTitle>
+          <AlertDescription>{failedTask.error || job?.error || "未知错误"}</AlertDescription>
+        </Alert>
+      )}
 
-          {success && success.output && (
-            <div style={{ marginTop: 16 }}>
-              <video
-                className="cc-video"
-                src={api.jobFileUrl(job.id, success.output)}
-                controls
-                preload="metadata"
-              />
-              <Button
-                block
-                icon={<DownloadOutlined />}
-                style={{ marginTop: 12 }}
-                href={api.jobFileUrl(job.id, success.output)}
-                download
-              >
-                下载成品
-              </Button>
-            </div>
-          )}
-        </>
+      {success && success.output && (
+        <div className="space-y-4 rounded-[1.8rem] border border-[hsl(var(--border))] bg-[hsl(var(--card)/0.72)] p-5 shadow-sm">
+          <div>
+            <div className="text-base font-semibold">成片预览</div>
+            <div className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">已完成导出，可直接预览并下载最终视频。</div>
+          </div>
+          <video className="cc-video" src={api.jobFileUrl(job!.id, success.output)} controls preload="metadata" />
+          <a href={api.jobFileUrl(job!.id, success.output)} download>
+            <Button variant="outline" className="w-full rounded-full">
+              <Download size={16} /> 下载成品
+            </Button>
+          </a>
+        </div>
       )}
     </div>
   );

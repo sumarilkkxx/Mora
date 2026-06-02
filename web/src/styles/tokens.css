@@ -1,0 +1,147 @@
+:root {
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-800: #1e40af;
+
+  --color-gray-0: #ffffff;
+  --color-gray-50: #f8fafc;
+  --color-gray-100: #f1f5f9;
+  --color-gray-200: #e2e8f0;
+  --color-gray-300: #cbd5e1;
+  --color-gray-400: #94a3b8;
+  --color-gray-500: #64748b;
+  --color-gray-600: #475569;
+  --color-gray-700: #334155;
+  --color-gray-800: #1e293b;
+  --color-gray-900: #0f172a;
+
+  --color-success-50: #f0fdf4;
+  --color-success-500: #22c55e;
+  --color-success-600: #16a34a;
+
+  --color-warning-50: #fffbeb;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+
+  --color-error-50: #fef2f2;
+  --color-error-500: #ef4444;
+  --color-error-600: #dc2626;
+
+  --color-info-50: #ecfeff;
+  --color-info-500: #06b6d4;
+  --color-info-600: #0891b2;
+
+  --color-bg-page: var(--color-gray-50);
+  --color-bg-container: var(--color-gray-0);
+  --color-bg-subtle: var(--color-gray-100);
+
+  --color-text-primary: var(--color-gray-900);
+  --color-text-secondary: var(--color-gray-600);
+  --color-text-tertiary: var(--color-gray-500);
+  --color-text-disabled: var(--color-gray-400);
+  --color-text-inverse: var(--color-gray-0);
+
+  --color-border-default: var(--color-gray-200);
+  --color-border-strong: var(--color-gray-300);
+
+  --color-primary: var(--color-brand-500);
+  --color-primary-hover: var(--color-brand-600);
+  --color-primary-active: var(--color-brand-700);
+
+  --color-focus-ring: rgba(59, 130, 246, 0.35);
+
+  --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --font-size-12: 12px;
+  --font-size-13: 13px;
+  --font-size-14: 14px;
+  --font-size-16: 16px;
+  --font-size-20: 20px;
+  --font-size-24: 24px;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+
+  --line-height-12: 18px;
+  --line-height-13: 20px;
+  --line-height-14: 22px;
+  --line-height-16: 24px;
+  --line-height-20: 28px;
+  --line-height-24: 32px;
+
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-pill: 999px;
+
+  --border-width-1: 1px;
+  --border-width-2: 2px;
+
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.12);
+
+  --motion-duration-fast: 120ms;
+  --motion-duration-base: 180ms;
+  --motion-duration-slow: 240ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  --z-base: 1;
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1080;
+  --z-modal: 1090;
+  --z-toast: 1100;
+
+  --layout-topbar-height: 56px;
+  --layout-sider-width: 240px;
+  --layout-rightpanel-width: 320px;
+  --layout-content-max-width: 1220px;
+
+  --comp-btn-height-sm: 32px;
+  --comp-btn-height-md: 36px;
+  --comp-btn-height-lg: 40px;
+  --comp-btn-padding-x-sm: 12px;
+  --comp-btn-padding-x-md: 14px;
+  --comp-btn-padding-x-lg: 16px;
+  --comp-btn-radius: var(--radius-sm);
+
+  --comp-input-height: 36px;
+  --comp-input-padding-x: 12px;
+  --comp-input-radius: var(--radius-sm);
+  --comp-input-bg: var(--color-bg-container);
+  --comp-input-border: var(--color-border-default);
+
+  --comp-card-radius: var(--radius-lg);
+  --comp-card-padding: var(--space-4);
+  --comp-card-bg: var(--color-bg-container);
+  --comp-card-border: var(--color-border-default);
+
+  --comp-tag-height: 24px;
+  --comp-tag-padding-x: 8px;
+  --comp-tag-radius: var(--radius-pill);
+}

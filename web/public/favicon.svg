@@ -1,20 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#6d63ff"/>
-      <stop offset="1" stop-color="#4f46e5"/>
-    </linearGradient>
-    <linearGradient id="spark" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#ffd16b"/>
-      <stop offset="1" stop-color="#ff9d2e"/>
+    <linearGradient id="g" x1="32" y1="32" x2="224" y2="224" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
     </linearGradient>
   </defs>
-  <rect x="3" y="3" width="42" height="42" rx="12.5" fill="url(#tile)"/>
-  <rect x="3" y="3" width="42" height="42" rx="12.5" fill="#ffffff" opacity="0.05"/>
-  <!-- 开口圆环（字母 C） -->
-  <path
-    d="M33.96 32.36 A13 13 0 1 1 33.96 15.64 L29.67 19.24 A7.4 7.4 0 1 0 29.67 28.76 Z"
-    fill="#ffffff"/>
-  <!-- 开口处射出的播放三角 -->
-  <path d="M21 18 L21 30 L32 24 Z" fill="url(#spark)" stroke="url(#spark)" stroke-width="1.6" stroke-linejoin="round"/>
+  <rect x="24" y="24" width="208" height="208" rx="48" fill="#0F172A"/>
+  <rect x="40" y="40" width="176" height="176" rx="36" fill="#111827" stroke="#1F2937" stroke-width="2"/>
+
+  <path d="M86 86L86 170" stroke="url(#g)" stroke-width="18" stroke-linecap="round"/>
+  <path d="M128 102L128 154" stroke="url(#g)" stroke-width="18" stroke-linecap="round"/>
+  <path d="M170 74L170 182" stroke="url(#g)" stroke-width="18" stroke-linecap="round"/>
+
+  <path d="M74 182C95.5 160 117 157 138 170C151.5 178.5 164 177 182 160" stroke="#93C5FD" stroke-width="10" stroke-linecap="round"/>
+
+  <circle cx="170" cy="74" r="10" fill="#BFDBFE"/>
 </svg>
