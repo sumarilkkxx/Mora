@@ -1,0 +1,227 @@
+/* ClipCraft —— 极简布局样式（组件样式交由 Ant Design） */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: #f4f5f8;
+}
+
+/* ---- 顶栏 ---- */
+.cc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  padding: 0 28px;
+  background: #fff;
+  border-bottom: 1px solid #ececf1;
+}
+.cc-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cc-brand__mark {
+  width: 34px;
+  height: 34px;
+}
+.cc-brand__name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1c1d22;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+.cc-brand__tag {
+  font-size: 12px;
+  color: #8a8f9c;
+  margin-top: 1px;
+}
+
+/* ---- 主体 ---- */
+.cc-content {
+  padding: 24px;
+}
+.cc-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.cc-card-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.cc-step-no {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #eef0fe;
+  color: #4f46e5;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ---- 模板选择卡片（SaaS 风格） ---- */
+.cc-tpl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(202px, 1fr));
+  gap: 14px;
+}
+.cc-tpl {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  padding: 0;
+  overflow: hidden;
+  background: #fff;
+  border: 1.5px solid #ececf1;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+.cc-tpl:hover {
+  transform: translateY(-3px);
+  border-color: #dfe1ea;
+  box-shadow: 0 12px 26px rgba(17, 24, 39, 0.1);
+}
+.cc-tpl--active {
+  border-color: #4f46e5;
+  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.2);
+}
+
+.cc-tpl__cover {
+  position: relative;
+  height: 76px;
+  display: grid;
+  place-items: center;
+}
+.cc-tpl__cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+      circle at 26% 22%,
+      rgba(255, 255, 255, 0.35),
+      transparent 55%
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.06) 0 8px,
+      transparent 8px 16px
+    );
+}
+.cc-tpl__glyph {
+  position: relative;
+  z-index: 1;
+  color: #fff;
+  font-size: 27px;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.2));
+}
+.cc-tpl__badge {
+  position: absolute;
+  z-index: 2;
+  top: 9px;
+  right: 9px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  color: #4f46e5;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.22);
+}
+
+.cc-tpl__body {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 13px 14px 14px;
+}
+.cc-tpl__name {
+  font-weight: 700;
+  font-size: 14.5px;
+  color: #1c1d22;
+}
+.cc-tpl__desc {
+  font-size: 12.5px;
+  color: #6b7080;
+  line-height: 1.5;
+  min-height: 38px;
+}
+.cc-tpl__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.cc-pill {
+  font-size: 11px;
+  color: #5b6172;
+  background: #f3f4f7;
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+.cc-tpl__meta {
+  font-size: 11px;
+  color: #9aa0ad;
+  font-variant-numeric: tabular-nums;
+  border-top: 1px solid #f0f1f4;
+  padding-top: 9px;
+  margin-top: 1px;
+}
+
+/* ---- 上传 / 预览 ---- */
+.cc-video {
+  width: 100%;
+  border-radius: 8px;
+  background: #000;
+  display: block;
+  max-height: 340px;
+  object-fit: contain;
+}
+.cc-preview-empty {
+  border: 1px dashed #d9dbe3;
+  border-radius: 8px;
+  background: #fafbfc;
+  height: 220px;
+  display: grid;
+  place-items: center;
+  color: #9aa0ad;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* ---- 右侧运行面板 sticky ---- */
+.cc-run {
+  position: sticky;
+  top: 24px;
+}
+
+.cc-meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: #6b7080;
+  padding: 3px 0;
+}
+.cc-meta-row b {
+  color: #1c1d22;
+  font-weight: 600;
+}

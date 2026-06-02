@@ -1,0 +1,21 @@
+# 转场预设
+
+fade:
+  type: fade
+  duration: 0.5
+
+cut:
+  type: cut
+  duration: 0
+
+dissolve:
+  type: dissolve
+  duration: 0.8
+
+quick_fade:
+  type: fade
+  duration: 0.3
+
+slow_fade:
+  type: fade
+  duration: 1.0

@@ -1,0 +1,33 @@
+# 字幕样式预设
+
+default_white:
+  font: "Microsoft YaHei"
+  font_size: 42
+  color: "#FFFFFF"
+  outline_color: "#000000"
+  outline_width: 2
+  position: bottom_third
+
+bold_yellow:
+  font: "Microsoft YaHei"
+  font_size: 48
+  color: "#FFD700"
+  outline_color: "#000000"
+  outline_width: 3
+  position: bottom_third
+
+minimal:
+  font: "Microsoft YaHei"
+  font_size: 36
+  color: "#CCCCCC"
+  outline_color: "#333333"
+  outline_width: 1
+  position: bottom_third
+
+large_center:
+  font: "Microsoft YaHei"
+  font_size: 56
+  color: "#FFFFFF"
+  outline_color: "#000000"
+  outline_width: 3
+  position: center

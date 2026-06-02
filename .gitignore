@@ -1,0 +1,46 @@
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# 临时文件
+temp/
+*.tmp
+
+# 环境
+.env
+.venv/
+venv/
+
+# 前端
+node_modules/
+web/dist/
+.vite/
+
+# IDE
+.vscode/
+.idea/
+
+# 系统
+Thumbs.db
+.DS_Store
+
+# 大文件素材（用户添加的不纳入版本管理）
+assets/watermarks/*.png
+assets/intros/*
+reference_videos/*
+!reference_videos/.gitkeep
+
+# 输出
+output/
+uploads/
+
+# 变更文档
+daily_change.md
+
+# 本地定时推送脚本（勿提交）
+scripts/scheduled_push_master.sh
+

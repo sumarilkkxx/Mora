@@ -1,0 +1,99 @@
+# 默认兜底模板 — 适用于无法匹配到其他模板的素材
+
+meta:
+  name: "default"
+  description: "通用兜底模板，适用于无法匹配到其他模板的素材"
+  version: "1.0"
+  is_default: false
+  tags: ["通用", "兜底"]
+
+extends: _global
+
+canvas:
+  width: 1080
+  height: 1920
+  fps: 30
+
+timeline:
+  intro:
+    type: title_card
+    duration: 1.5
+    background: "#1a1a2e"
+    text: "{{ headline }}"
+    text_style:
+      font_size: 56
+      color: "#FFFFFF"
+      animation: fade_up
+
+  body:
+    type: media_sequence
+    source: "$input_media"
+    duration: auto
+    fit_mode: cover_center
+    transition:
+      type: fade
+      duration: 0.5
+
+  outro:
+    type: title_card
+    duration: 2.0
+    text: "{{ cta }}"
+    text_style:
+      font_size: 42
+      color: "#FFFFFF"
+      animation: fade
+
+audio:
+  voice:
+    engine: edge-tts
+    voice_id: zh-CN-XiaoxiaoNeural
+    rate: "+0%"
+  bgm:
+    volume: 0.15
+    ducking:
+      enabled: true
+      target_volume: 0.05
+
+subtitles:
+  source: tts_srt
+  style:
+    font: "Microsoft YaHei"
+    font_size: 42
+    color: "#FFFFFF"
+    outline_color: "#000000"
+    outline_width: 2
+    position: bottom_third
+
+effects:
+  color_grade: none
+  vignette: 0
+
+copy:
+  variables:
+    - name: product_name
+      required: false
+      default: "好物"
+      description: "产品名称"
+
+  script_template: |
+    {{ headline }}
+    {{ product_name }}，值得推荐。
+    {{ cta }}
+
+  presets:
+    headline:
+      - "发现一个好东西！"
+      - "今天给大家推荐一下"
+      - "这个必须安利一下"
+      - "来看看这个"
+    cta:
+      - "喜欢的话点个赞吧"
+      - "你们觉得怎么样？"
+      - "评论区告诉我你的想法"
+      - "关注我获取更多好物推荐"
+
+match_rules:
+  aspect_ratio: portrait
+  min_duration: 1
+  max_duration: 300
+  priority: 0

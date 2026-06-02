@@ -1,0 +1,43 @@
+[project]
+name = "clipcraft"
+version = "1.0.0"
+description = "ClipCraft — 模板驱动的自动化批量视频剪辑工作台（Web GUI + CLI）"
+requires-python = ">=3.10"
+dependencies = [
+    "edge-tts>=6.1",
+    "Pillow>=10.0",
+    "PyYAML>=6.0",
+    "Jinja2>=3.1",
+    "rich>=13.0",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "python-multipart>=0.0.9",
+    "static-ffmpeg>=2.5",
+]
+
+[project.optional-dependencies]
+extract = [
+    "scenedetect[opencv]>=0.6",
+    "openai-whisper>=20231117",
+]
+jianying = [
+    "pyJianYingDraft>=0.2.6",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+]
+
+[project.scripts]
+clipcraft = "cli:main"
+clipcraft-server = "server.__main__:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["cli"]
+
+[tool.setuptools.packages.find]
+include = ["engine*", "server*"]

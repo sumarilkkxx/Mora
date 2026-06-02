@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6d63ff"/>
+      <stop offset="1" stop-color="#4f46e5"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd16b"/>
+      <stop offset="1" stop-color="#ff9d2e"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="42" height="42" rx="12.5" fill="url(#tile)"/>
+  <rect x="3" y="3" width="42" height="42" rx="12.5" fill="#ffffff" opacity="0.05"/>
+  <!-- 开口圆环（字母 C） -->
+  <path
+    d="M33.96 32.36 A13 13 0 1 1 33.96 15.64 L29.67 19.24 A7.4 7.4 0 1 0 29.67 28.76 Z"
+    fill="#ffffff"/>
+  <!-- 开口处射出的播放三角 -->
+  <path d="M21 18 L21 30 L32 24 Z" fill="url(#spark)" stroke="url(#spark)" stroke-width="1.6" stroke-linejoin="round"/>
+</svg>

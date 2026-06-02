@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/api/client.ts","./src/components/processstep.tsx","./src/components/resultsstep.tsx","./src/components/sidebar.tsx","./src/components/sourcestep.tsx","./src/components/templatestep.tsx","./src/components/icons.tsx","./src/hooks/usejobstream.ts","./src/utils/format.ts"],"errors":true,"version":"5.9.3"}
