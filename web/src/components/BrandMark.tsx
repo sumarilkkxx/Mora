@@ -1,15 +1,46 @@
 export default function BrandMark({ className = "h-11 w-11" }: { className?: string }) {
   return (
-    <div
-      className={`${className} relative overflow-hidden rounded-[1.15rem] border border-[hsl(var(--border)/0.6)] bg-[linear-gradient(145deg,#2c211c_0%,#8d5a42_52%,#efc7a3_100%)] shadow-[0_18px_34px_rgba(72,46,33,0.18)]`}
-      aria-hidden="true"
-    >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_22%,rgba(255,255,255,0.42),transparent_28%),linear-gradient(to_bottom,transparent,rgba(20,12,8,0.18))]" />
-      <div className="absolute left-[24%] top-[22%] h-[56%] w-[18%] rounded-full bg-white/92 shadow-[0_0_12px_rgba(255,255,255,0.28)]" />
-      <div className="absolute left-[41%] top-[22%] h-[56%] w-[18%] rounded-full bg-white/76" />
-      <div className="absolute left-[58%] top-[22%] h-[56%] w-[18%] rounded-full bg-white/56" />
-      <div className="absolute bottom-[18%] left-[18%] right-[18%] h-[12%] rounded-full bg-[rgba(48,28,18,0.28)] blur-[1px]" />
-      <div className="absolute inset-x-[22%] top-[18%] h-[64%] rounded-[999px] border border-white/18" />
+    <div className={`${className} relative`} aria-hidden="true">
+      <svg viewBox="0 0 88 88" className="h-full w-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="cc-panel" x1="12" y1="10" x2="74" y2="78" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#1D232B" />
+            <stop offset="0.52" stopColor="#2B3541" />
+            <stop offset="1" stopColor="#161B22" />
+          </linearGradient>
+          <linearGradient id="cc-accent" x1="22" y1="24" x2="67" y2="62" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#FFCC8A" />
+            <stop offset="0.45" stopColor="#F19A53" />
+            <stop offset="1" stopColor="#D66A2F" />
+          </linearGradient>
+          <linearGradient id="cc-accent-soft" x1="27" y1="22" x2="58" y2="53" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#FFE6C3" />
+            <stop offset="1" stopColor="#F2B173" />
+          </linearGradient>
+          <linearGradient id="cc-rail" x1="22" y1="62" x2="66" y2="62" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#F7C68D" stopOpacity="0.95" />
+            <stop offset="1" stopColor="#E28647" stopOpacity="0.34" />
+          </linearGradient>
+        </defs>
+
+        <rect x="8" y="8" width="72" height="72" rx="18" fill="url(#cc-panel)" />
+        <rect x="8.75" y="8.75" width="70.5" height="70.5" rx="17.25" stroke="#F8D6AF" strokeOpacity="0.12" strokeWidth="1.5" />
+        <path d="M22 25C22 21.686 24.686 19 28 19H60C63.314 19 66 21.686 66 25V33H22V25Z" fill="#262F39" />
+        <circle cx="27.5" cy="26" r="1.9" fill="#F58E4A" />
+        <circle cx="33.5" cy="26" r="1.9" fill="#F3BC67" />
+        <circle cx="39.5" cy="26" r="1.9" fill="#D9D4C9" fillOpacity="0.88" />
+        <rect x="22" y="33" width="44" height="36" rx="8" fill="#11161C" />
+
+        <path d="M33.5 42.25L45.5 34.75C46.833 33.917 48.5 34.874 48.5 36.446V41.219C48.5 42.126 48.962 42.97 49.727 43.459L58.281 48.919C59.547 49.727 59.556 51.571 58.298 52.391L49.743 57.974C48.975 58.475 48.5 59.329 48.5 60.247V64.115C48.5 65.684 46.84 66.643 45.507 65.816L33.506 58.365C32.622 57.816 32.084 56.849 32.084 55.808V44.815C32.084 43.772 32.623 42.803 33.5 42.25Z" fill="url(#cc-accent)" />
+
+        <rect x="27" y="58" width="34" height="3.5" rx="1.75" fill="url(#cc-rail)" />
+        <path d="M29 49.5H32" stroke="#8A96A3" strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M29 54H32" stroke="#8A96A3" strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M49.5 40.5H59" stroke="#FFE1BC" strokeOpacity="0.55" strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M51 44.5H60" stroke="#FFE1BC" strokeOpacity="0.4" strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M50.5 48.5H58.5" stroke="#FFE1BC" strokeOpacity="0.28" strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M53.4 21.8L54.55 24.45L57.2 25.6L54.55 26.7L53.4 29.4L52.25 26.7L49.55 25.6L52.25 24.45L53.4 21.8Z" fill="url(#cc-accent-soft)" fillOpacity="0.92" />
+      </svg>
     </div>
   );
 }

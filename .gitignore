@@ -19,6 +19,8 @@ venv/
 node_modules/
 web/dist/
 .vite/
+web/playwright-report/
+web/test-results/
 
 # IDE
 .vscode/

@@ -8,6 +8,8 @@ import {
   CloudUpload,
   FileVideo,
   Info,
+  LayoutDashboard,
+  PanelsTopLeft,
   Sparkles,
   Wand2,
 } from "lucide-react";
@@ -37,10 +39,10 @@ interface Toast {
 }
 
 const STEPS = [
-  { key: "upload", title: "上传素材", desc: "导入视频", eyebrow: "素材入库" },
-  { key: "template", title: "选择模板", desc: "确定风格", eyebrow: "模板编排" },
-  { key: "voice", title: "配音文案", desc: "完善表达", eyebrow: "表达配置" },
-  { key: "render", title: "生成导出", desc: "输出成片", eyebrow: "结果交付" },
+  { key: "upload", title: "素材导入", desc: "视频入库与基础校验", eyebrow: "Source" },
+  { key: "template", title: "模板编排", desc: "选择叙事结构与场景策略", eyebrow: "Template" },
+  { key: "voice", title: "表达配置", desc: "控制音色、语速与变量内容", eyebrow: "Voice" },
+  { key: "render", title: "渲染交付", desc: "查看进度、预览并导出成片", eyebrow: "Render" },
 ] as const;
 
 const FALLBACK_TEMPLATES: TemplateSummary[] = [
@@ -209,83 +211,81 @@ export default function App() {
     label: `${v.name} · ${v.style}${v.recommended ? " · 推荐" : ""}`,
   }));
 
-  const progressTitle = useMemo(() => ["素材入库", "模板编排", "文案驱动", "成片交付"], []);
+  const progressTitle = useMemo(() => ["素材导入", "模板编排", "表达配置", "渲染交付"], []);
   const completionPercent = Math.round(((activeStep + 1) / STEPS.length) * 100);
   const filledVariableCount = Object.keys(variables).filter((key) => (variables[key] || "").trim()).length;
   const currentTemplateSummary = templates.find((item) => item.name === selectedTemplate) ?? null;
   const templateScenarios = TEMPLATE_SCENARIOS[selectedTemplate ?? "__auto__"] ?? TEMPLATE_SCENARIOS.__auto__;
   const templateDescription = currentTemplateSummary?.description ?? "系统将结合素材比例、时长与内容重心，为你匹配更顺滑的成片结构。";
 
-  function renderStepRail() {
+  function renderWorkspaceHeader() {
     return (
-      <div className="rounded-[1.6rem] border border-[hsl(var(--border)/0.76)] bg-[hsl(var(--card)/0.78)] px-5 py-5 shadow-[0_12px_36px_rgba(55,39,27,0.06)] backdrop-blur">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-          <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-start sm:gap-6">
-            <div className="flex shrink-0 items-center gap-3">
-              <BrandMark className="h-10 w-10" />
-              <div className="min-w-0">
-                <div className="text-lg font-semibold tracking-tight leading-tight">ClipCraft</div>
-                <Badge variant="secondary" className="mt-1.5">智能视频工作台</Badge>
+      <header className="cc-workspace-header">
+        <div className="cc-workspace-top">
+          <div className="cc-workspace-brand">
+            <BrandMark className="h-11 w-11" />
+            <div className="min-w-0">
+              <div className="cc-app-eyebrow">ClipCraft Studio</div>
+              <div className="cc-app-title-row">
+                <h1>AI 视频剪辑工作台</h1>
               </div>
-            </div>
-
-            <div
-              className="cc-progress-block sm:mt-1 sm:border-l sm:border-[hsl(var(--border)/0.65)] sm:pl-6"
-              role="progressbar"
-              aria-valuenow={completionPercent}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label={`整体进度 ${completionPercent}%`}
-            >
-              <div className="cc-progress-meta">
-                <span>当前阶段</span>
-                <strong>{progressTitle[activeStep]}</strong>
-                <em>{completionPercent}%</em>
-              </div>
-              <div className="cc-progress-track">
-                <div className="cc-progress-fill" style={{ width: `${completionPercent}%` }} />
-              </div>
+              <p>参考专业创作工具的布局方式，把素材、模板、表达配置与渲染交付放在同一个清晰工作区中。</p>
             </div>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1 xl:max-w-[58%] xl:justify-end">
-            {STEPS.map((step, index) => {
-              const active = index === activeStep;
-              const done = index < activeStep;
-              return (
-                <button
-                  key={step.key}
-                  type="button"
-                  onClick={() => setActiveStep(index)}
-                  className={`flex min-w-[128px] shrink-0 items-center gap-2.5 rounded-[1rem] border px-3 py-2 text-left transition ${
-                    active
-                      ? "border-[hsl(var(--primary)/0.38)] bg-[hsl(var(--primary)/0.1)] shadow-sm"
-                      : done
-                        ? "border-[hsl(var(--border)/0.72)] bg-[hsl(var(--card)/0.92)]"
-                        : "border-[hsl(var(--border)/0.68)] bg-[hsl(var(--background)/0.52)] hover:bg-[hsl(var(--card)/0.82)]"
-                  }`}
-                >
-                  <span
-                    className={`inline-grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-semibold ${
-                      active
-                        ? "bg-[hsl(var(--foreground))] text-[hsl(var(--background))]"
-                        : done
-                          ? "bg-[hsl(var(--primary)/0.16)] text-[hsl(var(--primary))]"
-                          : "bg-[hsl(var(--muted)/0.78)] text-[hsl(var(--muted-foreground))]"
-                    }`}
-                  >
-                    {done ? <CheckCircle2 size={14} /> : index + 1}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-medium leading-tight">{step.title}</span>
-                    <span className="mt-0.5 block text-[11px] text-[hsl(var(--muted-foreground))]">{active ? "当前操作" : done ? "已完成" : step.desc}</span>
-                  </span>
-                </button>
-              );
-            })}
+          <div className="cc-workspace-actions">
+            <div className="cc-header-chip">
+              <PanelsTopLeft size={15} />
+              <span>多面板创作</span>
+            </div>
+            <div className="cc-header-chip">
+              <LayoutDashboard size={15} />
+              <span>{progressTitle[activeStep]}</span>
+            </div>
           </div>
         </div>
-      </div>
+
+        {/* Integrate the step rail into the header so the top area stays clean and ordered. */}
+        <div className="cc-header-progress">{renderTopProgress()}</div>
+      </header>
+    );
+  }
+
+  function renderTopProgress() {
+    return (
+      <section className="cc-top-progress" aria-label="创作阶段">
+        <div className="cc-topline">
+          <div className="cc-topline-left">
+            <span>创作阶段</span>
+            <Badge variant="secondary" className="rounded-full">Workspace</Badge>
+          </div>
+          <strong>{completionPercent}%</strong>
+        </div>
+        <div className="cc-progress-track cc-progress-track-thin">
+          <div className="cc-progress-fill" style={{ width: `${completionPercent}%` }} />
+        </div>
+        <div className="cc-top-rail">
+          {STEPS.map((step, index) => {
+            const active = index === activeStep;
+            const done = index < activeStep;
+            return (
+              <button
+                key={step.key}
+                type="button"
+                onClick={() => setActiveStep(index)}
+                className={`cc-top-rail-item ${active ? "is-active" : ""} ${done ? "is-done" : ""}`}
+                aria-current={active ? "step" : undefined}
+              >
+                <span className="cc-top-rail-index">{done ? <CheckCircle2 size={14} /> : index + 1}</span>
+                <span className="cc-top-rail-text">
+                  <em>{step.eyebrow}</em>
+                  <strong>{step.title}</strong>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
     );
   }
 
@@ -293,7 +293,7 @@ export default function App() {
     return (
       <div className="cc-page-footer">
         <p className="cc-page-footer-hint">
-          当前阶段：<strong>{progressTitle[activeStep]}</strong>，系统会保留已填写内容，便于继续衔接下一步。
+          当前阶段：<strong>{progressTitle[activeStep]}</strong>，所有配置都会实时保留，便于你像在专业工具里一样逐步调整与回看。
         </p>
         <div className="cc-page-footer-actions">
           <Button variant="outline" className="min-w-[108px] rounded-full" disabled={prevDisabled} onClick={() => setActiveStep((s) => Math.max(0, s - 1))}>
@@ -309,167 +309,146 @@ export default function App() {
 
   function renderUploadPage() {
     return (
-      <div key="page-upload" className="w-full">
-        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)]">
-          <section className="flex flex-col rounded-[1.75rem] border border-[hsl(var(--border)/0.7)] bg-[hsl(var(--card)/0.82)] p-6 shadow-[0_24px_80px_rgba(60,42,30,0.10)] backdrop-blur md:p-8">
-            <Badge variant="secondary">第一步 · 上传素材</Badge>
-            <h2 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">让每一段素材快速进入可交付流程</h2>
-            <p className="mt-3 max-w-2xl text-[15px] leading-7 text-[hsl(var(--muted-foreground))]">
-              上传原始视频后，系统会自动识别画幅、时长与基础信息，为模板匹配、配音编排和成片生成做好准备。
-            </p>
+      <div key="page-upload" className="cc-workspace-grid">
+        <section className="cc-main-panel">
+          <div className="cc-panel-header">
+            <Badge variant="secondary">Source Intake</Badge>
+            <h2>导入素材并建立本次创作任务</h2>
+            <p>上传后，系统会完成文件校验、基础元数据识别与后续流程预置。这个区域更像创作工具中的主工作区，专注当前动作本身。</p>
+          </div>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-xl bg-[hsl(var(--muted)/0.36)] px-4 py-3">
-                <div className="text-[11px] uppercase tracking-[0.14em] text-[hsl(var(--muted-foreground))]">支持格式</div>
-                <div className="mt-1.5 text-sm font-medium">mp4 / mov / avi / mkv / webm</div>
-              </div>
-              <div className="rounded-xl bg-[hsl(var(--muted)/0.36)] px-4 py-3">
-                <div className="text-[11px] uppercase tracking-[0.14em] text-[hsl(var(--muted-foreground))]">自动处理</div>
-                <div className="mt-1.5 text-sm font-medium">识别尺寸、时长与基础信息</div>
-              </div>
-              <div className="rounded-xl bg-[hsl(var(--muted)/0.36)] px-4 py-3">
-                <div className="text-[11px] uppercase tracking-[0.14em] text-[hsl(var(--muted-foreground))]">适用场景</div>
-                <div className="mt-1.5 text-sm font-medium">推广、商品展示、知识内容</div>
-              </div>
-            </div>
-
-            <label className="cc-upload-zone mt-6 min-h-[280px] flex-1 rounded-[1.5rem]">
+          <div className="cc-upload-layout">
+            <label className="cc-upload-zone cc-upload-zone-strong text-center">
               <input id="clip-upload" className="hidden" type="file" accept="video/*" onChange={(e) => void handleDrop(e.target.files)} />
-              <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[hsl(var(--primary)/0.12)] text-[hsl(var(--primary))]">
+              <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[hsl(var(--primary)/0.14)] text-[hsl(var(--primary))]">
                 <CloudUpload size={28} />
               </span>
               <span className="space-y-2 text-center">
                 <span className="block text-2xl font-semibold tracking-tight">点击上传视频素材</span>
                 <span className="block max-w-md text-sm leading-6 text-[hsl(var(--muted-foreground))]">
-                  上传后将自动进入下一阶段，并保留素材信息供后续流程复用。
+                  上传成功后会自动进入模板编排区，并把素材信息同步到右侧状态面板。
                 </span>
               </span>
             </label>
-            {renderFooterActions(true, !upload, upload ? "进入模板选择" : "请先上传素材")}
-          </section>
 
-          <aside className="cc-sidebar-stack lg:sticky lg:top-6">
-            <Card className="cc-glass-card rounded-[1.75rem]">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base"><FileVideo size={17} /> 当前素材</CardTitle>
-                <p className="text-sm leading-6 text-[hsl(var(--muted-foreground))]">上传后在此查看文件名、分辨率与时长。</p>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-0">
-                <div className="rounded-xl bg-[hsl(var(--muted)/0.5)] px-4 py-3.5 text-sm text-[hsl(var(--muted-foreground))]">
+            <div className="cc-inspector-stack">
+              <div className="cc-mini-panel">
+                <div className="cc-mini-title">输入规格</div>
+                <div className="cc-mini-grid">
+                  <div><span>格式</span><strong>mp4 / mov / avi / mkv / webm</strong></div>
+                  <div><span>自动处理</span><strong>尺寸 / 时长 / 文件信息</strong></div>
+                  <div><span>适用内容</span><strong>推广、讲解、商品展示</strong></div>
+                </div>
+              </div>
+
+              <div className="cc-mini-panel">
+                <div className="cc-mini-title">当前素材</div>
+                <div className="rounded-xl bg-[hsl(var(--muted)/0.4)] px-4 py-3.5 text-sm text-[hsl(var(--muted-foreground))]">
                   {upload ? upload.name : "尚未上传视频"}
                 </div>
                 {upload && (
-                  <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card)/0.62)] px-4 py-1 text-sm">
+                  <div className="mt-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card)/0.72)] px-4 py-1 text-sm">
                     <div className="cc-meta-row"><span>文件名称</span><b>{upload.name}</b></div>
                     <div className="cc-meta-row"><span>画面尺寸</span><b>{upload.asset.width} x {upload.asset.height}</b></div>
                     <div className="cc-meta-row"><span>素材时长</span><b>{Math.round(upload.asset.duration ?? 0)} 秒</b></div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
+          </div>
 
-            <Card className="cc-glass-card rounded-[1.75rem]">
-              <CardContent className="space-y-3 p-5">
-                <div className="flex items-center gap-2 text-base font-semibold"><Sparkles size={17} className="text-[hsl(var(--primary))]" /> 创作收益</div>
-                <ul className="space-y-2 text-sm leading-6 text-[hsl(var(--muted-foreground))]">
-                  <li className="rounded-xl bg-[hsl(var(--muted)/0.45)] px-4 py-3">自动衔接模板、配音与成片流程</li>
-                  <li className="rounded-xl bg-[hsl(var(--muted)/0.45)] px-4 py-3">保留素材信息，减少重复配置</li>
-                  <li className="rounded-xl bg-[hsl(var(--muted)/0.45)] px-4 py-3">适合门店推广、商品介绍与教程讲解</li>
-                </ul>
-              </CardContent>
-            </Card>
-          </aside>
-        </div>
+          {renderFooterActions(true, !upload, upload ? "进入模板编排" : "请先上传素材")}
+        </section>
+
+        <aside className="cc-side-panel">
+          <Card className="cc-glass-card rounded-[1.6rem]">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base"><FileVideo size={17} /> 工作区说明</CardTitle>
+              <p className="text-sm leading-6 text-[hsl(var(--muted-foreground))]">左侧完成主要操作，右侧持续作为状态与说明面板，减少上下跳转。</p>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-0">
+              <div className="rounded-xl bg-[hsl(var(--muted)/0.45)] px-4 py-3 text-sm leading-6 text-[hsl(var(--muted-foreground))]">上传素材后，模板、配音和渲染模块会自动复用这些信息。</div>
+              <div className="rounded-xl bg-[hsl(var(--muted)/0.45)] px-4 py-3 text-sm leading-6 text-[hsl(var(--muted-foreground))]">你可以随时回到任一步骤重新调整，不需要重复录入。</div>
+            </CardContent>
+          </Card>
+
+          <Card className="cc-glass-card rounded-[1.6rem]">
+            <CardContent className="space-y-3 p-5">
+              <div className="flex items-center gap-2 text-base font-semibold"><Sparkles size={17} className="text-[hsl(var(--primary))]" /> 任务收益</div>
+              <ul className="space-y-2 text-sm leading-6 text-[hsl(var(--muted-foreground))]">
+                <li className="rounded-xl bg-[hsl(var(--muted)/0.45)] px-4 py-3">统一管理素材与配置</li>
+                <li className="rounded-xl bg-[hsl(var(--muted)/0.45)] px-4 py-3">减少生成前的重复确认成本</li>
+                <li className="rounded-xl bg-[hsl(var(--muted)/0.45)] px-4 py-3">更符合专业工具的工作流操作习惯</li>
+              </ul>
+            </CardContent>
+          </Card>
+        </aside>
       </div>
     );
   }
 
   function renderTemplatePage() {
     return (
-      <div key="page-template" className="w-full">
-        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.12fr)_minmax(260px,300px)]">
-          <section className="rounded-[1.75rem] border border-[hsl(var(--border)/0.7)] bg-[hsl(var(--card)/0.82)] p-6 shadow-[0_24px_80px_rgba(60,42,30,0.10)] backdrop-blur md:p-8">
-            <Badge variant="secondary">第二步 · 选择模板</Badge>
-            <h2 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">为你的内容选择更合适的表达结构</h2>
-            <p className="mt-3 max-w-3xl text-[15px] leading-7 text-[hsl(var(--muted-foreground))]">
-              模板会影响镜头节奏、字幕布局和信息排序。你可以直接指定业务场景，也可以交给系统进行智能匹配。
-            </p>
-            <div className="mt-8 grid gap-5">
-              <div className="grid gap-4 rounded-[1.7rem] border border-[hsl(var(--border)/0.75)] bg-[hsl(var(--muted)/0.28)] p-5 md:grid-cols-3">
-                <div className="rounded-[1.35rem] bg-[hsl(var(--card)/0.82)] p-4">
-                  <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">选择建议</div>
-                  <div className="mt-2 text-sm font-medium">有明确场景时优先手动选择，可获得更稳定的成片表达。</div>
+      <div key="page-template" className="cc-workspace-grid">
+        <section className="cc-main-panel">
+          <div className="cc-panel-header">
+            <Badge variant="secondary">Template Board</Badge>
+            <h2>像选择编辑预设一样确定成片结构</h2>
+            <p>模板区域从营销卡片改成更接近工作台中的 preset browser，用统一信息层级展示场景、节奏和输出规格。</p>
+          </div>
+
+          <div className="cc-panel-section">
+            <div className="cc-kpi-row">
+              <div className="cc-kpi-card"><span>当前模式</span><strong>{selectedTemplate ? "已指定模板" : "智能匹配"}</strong></div>
+              <div className="cc-kpi-card"><span>推荐策略</span><strong>有明确场景时优先手动选择</strong></div>
+              <div className="cc-kpi-card"><span>输出目标</span><strong>提升信息表达与发布效率</strong></div>
+            </div>
+            <TemplatePicker templates={templates} selected={selectedTemplate} onSelect={setSelectedTemplate} />
+          </div>
+
+          {renderFooterActions(false, false, "进入表达配置")}
+        </section>
+
+        <aside className="cc-side-panel">
+          <Card className="cc-glass-card overflow-hidden rounded-[1.6rem] border border-[hsl(var(--border)/0.7)] bg-[linear-gradient(180deg,hsl(var(--card)/0.92),hsl(var(--card)/0.78))] shadow-sm">
+            <div className="h-20 bg-[radial-gradient(circle_at_20%_20%,hsl(var(--primary)/0.22),transparent_55%),radial-gradient(circle_at_80%_0%,hsl(42_78%_79%/0.38),transparent_52%),linear-gradient(135deg,hsl(24_22%_18%/0.92),hsl(34_20%_22%/0.62))]" />
+            <CardContent className="space-y-4 p-5 -mt-8 relative z-10">
+              <div className="rounded-[1.35rem] border border-[hsl(var(--border)/0.72)] bg-[hsl(var(--card)/0.88)] p-4">
+                <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">当前策略</div>
+                <div className="cc-text-safe mt-2 text-xl font-semibold tracking-tight">{selectedTemplateLabel}</div>
+                <div className="cc-text-safe mt-2 text-sm leading-6 text-[hsl(var(--muted-foreground))]">{templateDescription}</div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-[1.2rem] bg-[hsl(var(--muted)/0.42)] p-4">
+                  <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">成片节奏</div>
+                  <div className="cc-text-safe mt-2 text-sm font-medium leading-6">{selectedTemplate === "tutorial" ? "结构清晰，适合分段讲解" : selectedTemplate === "emotional_story" ? "情绪递进，适合叙事表达" : "紧凑有重点，兼顾转化效率"}</div>
                 </div>
-                <div className="rounded-[1.35rem] bg-[hsl(var(--card)/0.82)] p-4">
-                  <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">当前模式</div>
-                  <div className="mt-2 text-sm font-medium">{selectedTemplate ? "已指定模板" : "智能匹配"}</div>
-                </div>
-                <div className="rounded-[1.35rem] bg-[hsl(var(--card)/0.82)] p-4">
-                  <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">产出目标</div>
-                  <div className="mt-2 text-sm font-medium">强化信息呈现与发布转化效率。</div>
+                <div className="rounded-[1.2rem] bg-[hsl(var(--muted)/0.42)] p-4">
+                  <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">变量要求</div>
+                  <div className="mt-2 text-sm font-medium">{detail ? `${detail.variables.length} 项可配置字段` : "按素材自动生成内容策略"}</div>
                 </div>
               </div>
-              <TemplatePicker templates={templates} selected={selectedTemplate} onSelect={setSelectedTemplate} />
-            </div>
-            {renderFooterActions(false, false, "进入配音设置")}
-          </section>
 
-          <aside className="cc-sidebar-stack lg:sticky lg:top-6">
-            <Card className="cc-glass-card overflow-hidden rounded-[1.75rem]">
-              <div className="h-40 bg-[linear-gradient(135deg,#2f241f_0%,#b9744e_50%,#e8c4a6_100%)]" />
-              <CardContent className="space-y-5 p-6 -mt-14 relative z-10">
-                <div className="rounded-[1.6rem] border border-white/40 bg-[hsl(var(--card)/0.82)] p-5 backdrop-blur">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">当前策略</div>
-                      <div className="cc-text-safe mt-2 text-2xl font-semibold tracking-tight">{selectedTemplateLabel}</div>
-                      <div className="cc-text-safe mt-3 text-sm leading-6 text-[hsl(var(--muted-foreground))]">{templateDescription}</div>
-                    </div>
-                    <Badge variant="secondary">{selectedTemplate ? "手动指定" : "自动匹配"}</Badge>
-                  </div>
+              <div className="rounded-[1.35rem] border border-[hsl(var(--border)/0.75)] bg-[hsl(var(--card)/0.72)] p-4">
+                <div className="text-sm font-semibold">适用场景</div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {templateScenarios.map((item) => (
+                    <Badge key={item} variant="outline">{item}</Badge>
+                  ))}
                 </div>
+              </div>
+            </CardContent>
+          </Card>
 
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-[1.35rem] bg-[hsl(var(--muted)/0.42)] p-4">
-                    <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">成片节奏</div>
-                    <div className="cc-text-safe mt-2 text-sm font-medium leading-6">{selectedTemplate === "tutorial" ? "结构清晰，适合分段讲解" : selectedTemplate === "emotional_story" ? "情绪递进，适合叙事表达" : "紧凑有重点，兼顾转化效率"}</div>
-                  </div>
-                  <div className="rounded-[1.35rem] bg-[hsl(var(--muted)/0.42)] p-4">
-                    <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">变量要求</div>
-                    <div className="mt-2 text-sm font-medium">{detail ? `${detail.variables.length} 项可配置字段` : "按素材自动生成内容策略"}</div>
-                  </div>
-                </div>
-
-                <div className="rounded-[1.5rem] border border-[hsl(var(--border)/0.75)] bg-[hsl(var(--card)/0.68)] p-5">
-                  <div className="text-sm font-semibold">适用场景</div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {templateScenarios.map((item) => (
-                      <Badge key={item} variant="outline">{item}</Badge>
-                    ))}
-                  </div>
-                </div>
-
-                {detail ? (
-                  <div className="space-y-3 rounded-[1.6rem] border border-[hsl(var(--border))] bg-[hsl(var(--card)/0.62)] p-5 text-sm text-[hsl(var(--muted-foreground))]">
-                    <div className="cc-meta-row"><span>输出尺寸</span><b>{String(detail.canvas.width ?? "-")} x {String(detail.canvas.height ?? "-")}</b></div>
-                    <div className="cc-meta-row"><span>帧率</span><b>{String(detail.canvas.fps ?? "-")} fps</b></div>
-                    <div className="cc-meta-row"><span>变量数量</span><b>{detail.variables.length}</b></div>
-                  </div>
-                ) : (
-                  <div className="rounded-[1.6rem] border border-dashed border-[hsl(var(--border))] p-5 text-sm text-[hsl(var(--muted-foreground))]">
-                    智能匹配模式会在创建任务时根据素材自动挑选更适合的视频结构与信息节奏。
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Alert>
+          <Alert>
+            <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center">
               <Info size={16} />
-              <AlertTitle>使用建议</AlertTitle>
-              <AlertDescription>如果素材目标明确，建议优先选择贴近业务场景的模板，成片结果通常会更稳定、更聚焦。</AlertDescription>
-            </Alert>
-          </aside>
-        </div>
+            </span>
+            <AlertTitle>使用建议</AlertTitle>
+            <AlertDescription>如果素材目标明确，建议优先选择贴近业务场景的模板，整体结果会更稳定、更像可复用的内容 preset。</AlertDescription>
+          </Alert>
+        </aside>
       </div>
     );
   }
@@ -477,137 +456,105 @@ export default function App() {
   function renderVoicePage() {
     const vars = detail?.variables || [];
     return (
-      <div key="page-voice" className="w-full">
-        <section className="rounded-[1.75rem] border border-[hsl(var(--border)/0.7)] bg-[hsl(var(--card)/0.82)] p-6 shadow-[0_24px_80px_rgba(60,42,30,0.10)] backdrop-blur md:p-8">
-            <Badge variant="secondary">第三步 · 配音文案</Badge>
-            <h2 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">专业配音控制台，让表达更精准、更有节奏</h2>
-            <p className="mt-3 max-w-3xl text-[15px] leading-7 text-[hsl(var(--muted-foreground))]">
-              在这里统一完成音色选择、语速微调和文案变量配置。所有设置都会直接影响成片节奏、口播风格和字幕信息密度。
-            </p>
+      <div key="page-voice" className="cc-workspace-grid">
+        <section className="cc-main-panel">
+          <div className="cc-panel-header">
+            <Badge variant="secondary">Expression Inspector</Badge>
+            <h2>在同一工作区里控制音色、节奏和脚本变量</h2>
+            <p>这个页面调整成更接近 inspector + property panel 的结构，让配音参数与模板变量更清晰地分层展示。</p>
+          </div>
 
-            <div className="mt-6 grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-              <div className="space-y-4">
-                <Card className="rounded-[1.8rem] border-[hsl(var(--border)/0.8)] bg-[hsl(var(--card)/0.76)] shadow-sm">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-2"><Sparkles size={18} className="text-[hsl(var(--primary))]" /> 音色引擎</CardTitle>
-                    <div className="text-sm leading-6 text-[hsl(var(--muted-foreground))]">选择与业务场景更匹配的中文音色，让成片更自然、更具说服力。</div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <Select value={voice} onValueChange={setVoice} options={voiceOptions} />
-                    <div className="grid gap-3 md:grid-cols-3">
-                      <div className="rounded-[1.3rem] bg-[hsl(var(--muted)/0.5)] p-4">
-                        <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">已选音色</div>
-                        <div className="mt-2 text-lg font-semibold">{selectedVoice?.name || "待选择"}</div>
-                      </div>
-                      <div className="rounded-[1.3rem] bg-[hsl(var(--muted)/0.5)] p-4">
-                        <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">声音风格</div>
-                        <div className="mt-2 text-sm font-medium text-[hsl(var(--foreground))]">{selectedVoice?.style || "默认"}</div>
-                      </div>
-                      <div className="rounded-[1.3rem] bg-[hsl(var(--muted)/0.5)] p-4">
-                        <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">适用场景</div>
-                        <div className="mt-2 text-sm font-medium text-[hsl(var(--foreground))]">{selectedVoice?.scene || "通用场景"}</div>
-                      </div>
+          <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="space-y-4">
+              <Card className="rounded-[1.5rem] border-[hsl(var(--border)/0.8)] bg-[hsl(var(--card)/0.82)] shadow-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2"><Sparkles size={18} className="text-[hsl(var(--primary))]" /> 音色引擎</CardTitle>
+                  <div className="text-sm leading-6 text-[hsl(var(--muted-foreground))]">选择与业务场景更匹配的中文音色，控制系统生成时的表达风格。</div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Select value={voice} onValueChange={setVoice} options={voiceOptions} />
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="rounded-[1.2rem] bg-[hsl(var(--muted)/0.5)] p-4"><div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">已选音色</div><div className="mt-2 text-lg font-semibold">{selectedVoice?.name || "待选择"}</div></div>
+                    <div className="rounded-[1.2rem] bg-[hsl(var(--muted)/0.5)] p-4"><div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">声音风格</div><div className="mt-2 text-sm font-medium text-[hsl(var(--foreground))]">{selectedVoice?.style || "默认"}</div></div>
+                    <div className="rounded-[1.2rem] bg-[hsl(var(--muted)/0.5)] p-4"><div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">适用场景</div><div className="mt-2 text-sm font-medium text-[hsl(var(--foreground))]">{selectedVoice?.scene || "通用场景"}</div></div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-[1.5rem] border-[hsl(var(--border)/0.8)] bg-[hsl(var(--card)/0.82)] shadow-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2"><Wand2 size={18} className="text-[hsl(var(--primary))]" /> 文案变量面板</CardTitle>
+                  <div className="text-sm leading-6 text-[hsl(var(--muted-foreground))]">按模板要求补全标题、卖点和口播信息，保持所有字段像属性面板一样统一排布。</div>
+                </CardHeader>
+                <CardContent>
+                  {vars.length === 0 ? (
+                    <div className="rounded-[1.4rem] border border-dashed border-[hsl(var(--border))] p-6 text-sm text-[hsl(var(--muted-foreground))]">
+                      当前模板无需额外变量，系统会根据素材自动组织文案与节奏。
                     </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="rounded-[1.8rem] border-[hsl(var(--border)/0.8)] bg-[hsl(var(--card)/0.76)] shadow-sm">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-2"><Wand2 size={18} className="text-[hsl(var(--primary))]" /> 文案变量面板</CardTitle>
-                    <div className="text-sm leading-6 text-[hsl(var(--muted-foreground))]">按模板要求补全标题、卖点和口播信息，系统会自动组织字幕与表达节奏。</div>
-                  </CardHeader>
-                  <CardContent>
-                    {vars.length === 0 ? (
-                      <div className="rounded-[1.6rem] border border-dashed border-[hsl(var(--border))] p-6 text-sm text-[hsl(var(--muted-foreground))]">
-                        当前模板无需额外变量，系统会根据素材自动组织文案与节奏。
-                      </div>
-                    ) : (
-                      <div className="grid gap-4 md:grid-cols-2">
-                        {vars.map((variable) => (
-                          <Card key={variable.name} className="rounded-[1.5rem] border-[hsl(var(--border)/0.8)] bg-[hsl(var(--muted)/0.26)] shadow-none">
-                            <CardContent className="space-y-3 p-5">
-                              <div className="flex items-center justify-between gap-3">
-                                <div>
-                                  <div className="text-sm font-semibold">{variable.name}</div>
-                                  {variable.description && <div className="mt-1 text-xs leading-5 text-[hsl(var(--muted-foreground))]">{variable.description}</div>}
-                                </div>
-                                {variable.required ? <Badge>必填</Badge> : <Badge variant="secondary">选填</Badge>}
+                  ) : (
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {vars.map((variable) => (
+                        <Card key={variable.name} className="rounded-[1.3rem] border-[hsl(var(--border)/0.8)] bg-[hsl(var(--muted)/0.26)] shadow-none">
+                          <CardContent className="space-y-3 p-5">
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <div className="text-sm font-semibold">{variable.name}</div>
+                                {variable.description && <div className="mt-1 text-xs leading-5 text-[hsl(var(--muted-foreground))]">{variable.description}</div>}
                               </div>
-                              <Input
-                                className="h-11 rounded-xl bg-[hsl(var(--card))]"
-                                placeholder={variable.default || `请输入${variable.name}`}
-                                value={variables[variable.name] ?? variable.default ?? ""}
-                                onChange={(e) => setVariables((prev) => ({ ...prev, [variable.name]: e.target.value }))}
-                              />
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              <aside className="cc-sidebar-stack lg:sticky lg:top-6">
-                <Card className="rounded-[1.5rem] border-[hsl(var(--border)/0.8)] bg-[linear-gradient(180deg,hsl(var(--card)/0.88),hsl(var(--muted)/0.42))] shadow-sm">
-                  <CardHeader className="pb-4">
-                    <CardTitle>配音控制台</CardTitle>
-                    <div className="text-sm leading-6 text-[hsl(var(--muted-foreground))]">集中查看关键控制项和本次生成策略，让口播表达更稳定。</div>
-                  </CardHeader>
-                  <CardContent className="space-y-5">
-                    <div className="rounded-[1.5rem] border border-[hsl(var(--border)/0.7)] bg-[hsl(var(--card)/0.8)] p-4">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-[hsl(var(--muted-foreground))]">语速校准</span>
-                        <b>{rate >= 0 ? "+" : ""}{rate}%</b>
-                      </div>
-                      <input
-                        className="mt-4 w-full accent-[hsl(var(--primary))]"
-                        type="range"
-                        min="-30"
-                        max="30"
-                        step="5"
-                        value={rate}
-                        onChange={(e) => setRate(Number(e.target.value || 0))}
-                      />
-                      <div className="mt-3 flex justify-between text-xs text-[hsl(var(--muted-foreground))]">
-                        <span>更沉稳</span>
-                        <span>标准</span>
-                        <span>更紧凑</span>
-                      </div>
+                              {variable.required ? <Badge>必填</Badge> : <Badge variant="secondary">选填</Badge>}
+                            </div>
+                            <Input
+                              className="h-11 rounded-xl bg-[hsl(var(--card))]"
+                              placeholder={variable.default || `请输入${variable.name}`}
+                              value={variables[variable.name] ?? variable.default ?? ""}
+                              onChange={(e) => setVariables((prev) => ({ ...prev, [variable.name]: e.target.value }))}
+                            />
+                          </CardContent>
+                        </Card>
+                      ))}
                     </div>
-
-                    <div className="grid gap-3">
-                      <div className="rounded-[1.35rem] bg-[hsl(var(--muted)/0.45)] p-4">
-                        <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">内容节奏</div>
-                        <div className="mt-2 text-sm font-medium">{rate <= -10 ? "舒缓叙述" : rate >= 10 ? "高信息密度" : "均衡表达"}</div>
-                      </div>
-                      <div className="rounded-[1.35rem] bg-[hsl(var(--muted)/0.45)] p-4">
-                        <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">变量完成度</div>
-                        <div className="mt-2 text-sm font-medium">{vars.length === 0 ? "无需补充" : `${filledVariableCount}/${vars.length} 项已填写`}</div>
-                      </div>
-                      <div className="rounded-[1.35rem] bg-[hsl(var(--muted)/0.45)] p-4">
-                        <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">成片预期</div>
-                        <div className="mt-2 text-sm font-medium">更适合用于推广发布、商品讲解和业务展示。</div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-[1.5rem] border border-[hsl(var(--border)/0.7)] bg-[hsl(var(--card)/0.8)] p-4 text-sm">
-                      <div className="cc-meta-row"><span>素材</span><b>{upload?.name || "未上传"}</b></div>
-                      <div className="cc-meta-row"><span>模板</span><b>{selectedTemplateLabel}</b></div>
-                      <div className="cc-meta-row"><span>音色</span><b>{selectedVoice?.name || "默认音色"}</b></div>
-                      <div className="cc-meta-row"><span>语速</span><b>{rate >= 0 ? "+" : ""}{rate}%</b></div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Alert>
-                  <Sparkles size={16} />
-                  <AlertTitle>生成效果</AlertTitle>
-                  <AlertDescription>系统会自动完成配音、字幕、节奏编排与导出，帮助你更快产出可发布的短视频内容。</AlertDescription>
-                </Alert>
-              </aside>
+                  )}
+                </CardContent>
+              </Card>
             </div>
-            {renderFooterActions(false, false, "开始生成", () => void startJob())}
+
+            <aside className="cc-side-panel">
+              <Card className="rounded-[1.5rem] border-[hsl(var(--border)/0.8)] bg-[linear-gradient(180deg,hsl(var(--card)/0.88),hsl(var(--muted)/0.42))] shadow-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle>表达控制台</CardTitle>
+                  <div className="text-sm leading-6 text-[hsl(var(--muted-foreground))]">集中查看关键控制项和本次生成策略，让口播表达更稳定。</div>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <div className="rounded-[1.35rem] border border-[hsl(var(--border)/0.7)] bg-[hsl(var(--card)/0.8)] p-4">
+                    <div className="flex items-center justify-between text-sm"><span className="text-[hsl(var(--muted-foreground))]">语速校准</span><b>{rate >= 0 ? "+" : ""}{rate}%</b></div>
+                    <input className="mt-4 w-full accent-[hsl(var(--primary))]" type="range" min="-30" max="30" step="5" value={rate} onChange={(e) => setRate(Number(e.target.value || 0))} />
+                    <div className="mt-3 flex justify-between text-xs text-[hsl(var(--muted-foreground))]"><span>更沉稳</span><span>标准</span><span>更紧凑</span></div>
+                  </div>
+
+                  <div className="grid gap-3">
+                    <div className="rounded-[1.2rem] bg-[hsl(var(--muted)/0.45)] p-4"><div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">内容节奏</div><div className="mt-2 text-sm font-medium">{rate <= -10 ? "舒缓叙述" : rate >= 10 ? "高信息密度" : "均衡表达"}</div></div>
+                    <div className="rounded-[1.2rem] bg-[hsl(var(--muted)/0.45)] p-4"><div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">变量完成度</div><div className="mt-2 text-sm font-medium">{vars.length === 0 ? "无需补充" : `${filledVariableCount}/${vars.length} 项已填写`}</div></div>
+                    <div className="rounded-[1.2rem] bg-[hsl(var(--muted)/0.45)] p-4"><div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">成片预期</div><div className="mt-2 text-sm font-medium">更适合用于推广发布、商品讲解和业务展示。</div></div>
+                  </div>
+
+                  <div className="rounded-[1.35rem] border border-[hsl(var(--border)/0.7)] bg-[hsl(var(--card)/0.8)] p-4 text-sm">
+                    <div className="cc-meta-row"><span>素材</span><b>{upload?.name || "未上传"}</b></div>
+                    <div className="cc-meta-row"><span>模板</span><b>{selectedTemplateLabel}</b></div>
+                    <div className="cc-meta-row"><span>音色</span><b>{selectedVoice?.name || "默认音色"}</b></div>
+                    <div className="cc-meta-row"><span>语速</span><b>{rate >= 0 ? "+" : ""}{rate}%</b></div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Alert>
+                <Sparkles size={16} />
+                <AlertTitle>生成效果</AlertTitle>
+                <AlertDescription>系统会自动完成配音、字幕、节奏编排与导出，帮助你更快产出可发布的短视频内容。</AlertDescription>
+              </Alert>
+            </aside>
+          </div>
+
+          {renderFooterActions(false, false, "开始生成", () => void startJob())}
         </section>
       </div>
     );
@@ -615,16 +562,16 @@ export default function App() {
 
   function renderRenderPage() {
     return (
-      <div key="page-render" className="w-full">
-        <div className="grid items-start gap-5 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
-          <section className="rounded-[1.75rem] border border-[hsl(var(--border)/0.7)] bg-[hsl(var(--card)/0.82)] p-6 shadow-[0_24px_80px_rgba(60,42,30,0.10)] backdrop-blur md:p-8">
-            <Badge variant="secondary">第四步 · 生成导出</Badge>
-            <h2 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">将创意配置快速转化为成片结果</h2>
-            <p className="mt-3 text-[15px] leading-7 text-[hsl(var(--muted-foreground))]">
-              这里会集中展示预览、任务进度和下载结果。完成生成后，可直接查看视频并导出最终成品。
-            </p>
+      <div key="page-render" className="cc-workspace-grid cc-workspace-grid-render">
+        <section className="cc-main-panel">
+          <div className="cc-panel-header">
+            <Badge variant="secondary">Render Console</Badge>
+            <h2>集中查看任务进度、预览与导出结果</h2>
+            <p>把原来的“左侧说明 + 右侧结果”改成更像专业软件的渲染台：左侧是流程导航，右侧是主渲染面板。</p>
+          </div>
 
-            <div className="mt-8 space-y-4 rounded-[1.8rem] border border-[hsl(var(--border)/0.8)] bg-[hsl(var(--muted)/0.36)] p-5">
+          <div className="grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)]">
+            <div className="rounded-[1.5rem] border border-[hsl(var(--border)/0.8)] bg-[hsl(var(--muted)/0.34)] p-4">
               {STEPS.map((step, index) => {
                 const active = index === activeStep;
                 const done = index < activeStep;
@@ -633,7 +580,7 @@ export default function App() {
                     key={step.key}
                     type="button"
                     onClick={() => setActiveStep(index)}
-                    className={`flex w-full items-start gap-3 rounded-[1.4rem] px-4 py-4 text-left transition ${active ? "bg-[hsl(var(--card))] shadow-sm" : "hover:bg-[hsl(var(--card)/0.66)]"}`}
+                    className={`flex w-full items-start gap-3 rounded-[1.15rem] px-4 py-4 text-left transition ${active ? "bg-[hsl(var(--card))] shadow-sm" : "hover:bg-[hsl(var(--card)/0.66)]"}`}
                   >
                     <span className={`mt-0.5 inline-grid h-9 w-9 place-items-center rounded-full ${done || active ? "bg-[hsl(var(--primary)/0.12)] text-[hsl(var(--primary))]" : "bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))]"}`}>
                       {done ? <CheckCircle2 size={18} /> : <CircleDot size={18} />}
@@ -646,23 +593,16 @@ export default function App() {
                   </button>
                 );
               })}
+              <div className="mt-4 rounded-[1.15rem] bg-[hsl(var(--card)/0.76)] p-4 text-sm text-[hsl(var(--muted-foreground))]">
+                当前配置会同步传递到渲染流程，无需重复录入。生成完成后，可直接在右侧预览并下载。
+              </div>
             </div>
 
-            <div className="mt-6 grid gap-3">
-              <div className="rounded-[1.35rem] bg-[hsl(var(--muted)/0.48)] p-4 text-sm text-[hsl(var(--muted-foreground))]">成片生成完成后，可直接在右侧预览并下载，用于发布、交付或团队审核。</div>
-              <div className="rounded-[1.35rem] bg-[hsl(var(--muted)/0.48)] p-4 text-sm text-[hsl(var(--muted-foreground))]">当前配置会同步传递到渲染流程，无需重复录入。</div>
-            </div>
-            <div className="mt-6">
-              <Button variant="outline" className="rounded-full" onClick={() => setActiveStep(2)}>
-                <ArrowLeft size={16} /> 返回调整配置
-              </Button>
-            </div>
-          </section>
-
-          <section className="min-h-[480px] rounded-[1.75rem] border border-[hsl(var(--border)/0.7)] bg-[hsl(var(--card)/0.82)] p-6 shadow-[0_24px_80px_rgba(60,42,30,0.10)] backdrop-blur md:p-8">
-            <RunPanel upload={upload} job={job} connected={connected} busy={creating} onStart={() => void startJob()} />
-          </section>
-        </div>
+            <section className="rounded-[1.5rem] border border-[hsl(var(--border)/0.8)] bg-[hsl(var(--card)/0.82)] p-5 shadow-sm">
+              <RunPanel upload={upload} job={job} connected={connected} busy={creating} onStart={() => void startJob()} />
+            </section>
+          </div>
+        </section>
       </div>
     );
   }
@@ -683,10 +623,10 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(232,203,174,0.24),transparent_30%),linear-gradient(180deg,#f7f1e8_0%,#f4ede3_100%)] text-[hsl(var(--foreground))]">
-      <div className="cc-app-shell mx-auto w-full max-w-7xl px-4 md:px-6">
-        <div className="pt-6">{renderStepRail()}</div>
-        <div className="pb-12 pt-6">{renderCurrentPage()}</div>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(232,203,174,0.18),transparent_26%),linear-gradient(180deg,#f4eee6_0%,#efe6dc_100%)] text-[hsl(var(--foreground))]">
+      <div className="cc-app-shell mx-auto w-full max-w-[1500px] px-4 pb-12 pt-6 md:px-6">
+        {renderWorkspaceHeader()}
+        <div className="mt-6">{renderCurrentPage()}</div>
       </div>
 
       <div className="pointer-events-none fixed right-4 top-4 z-50 flex max-w-sm flex-col gap-3">
