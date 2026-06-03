@@ -30,14 +30,14 @@ const LABEL_MAP: Record<string, string> = {
 
 const THEME: Record<string, Theme> = {
   __auto__: {
-    grad: "linear-gradient(145deg,#2f241f 0%,#a85d3e 55%,#f0c197 100%)",
+    grad: "linear-gradient(145deg,#222a34 0%,#3a4a62 52%,#d59a63 100%)",
     icon: <Bot size={18} />,
     tone: "智能策略",
     highlight: "自动识别素材节奏与内容重点",
     pitch: "适合快速起稿与批量生成",
   },
   barbershop: {
-    grad: "linear-gradient(145deg,#342019 0%,#875135 48%,#dfb188 100%)",
+    grad: "linear-gradient(145deg,#2d221a 0%,#7a3f2a 48%,#f0c197 100%)",
     icon: <Scissors size={18} />,
     tone: "本地服务",
     highlight: "强化前后对比与服务亮点",
@@ -86,19 +86,19 @@ function Item({ active, theme, title, desc, tags, meta, isDefault, onClick }: { 
   return (
     <Card
       className={cn(
-        "cc-template-card group flex h-full min-w-0 flex-col rounded-[1.9rem] border-2 bg-[hsl(var(--card)/0.74)] p-0 shadow-[0_16px_40px_rgba(55,39,27,0.08)] backdrop-blur transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:shadow-[0_28px_56px_rgba(49,37,28,0.14)]",
+        "cc-template-card group flex h-full min-w-0 flex-col rounded-[1.4rem] border bg-[hsl(var(--card))] p-0 shadow-sm transition-transform duration-300 hover:-translate-y-0.5",
         active
-          ? "border-[hsl(var(--primary))] shadow-[0_26px_56px_rgba(201,111,74,0.16)]"
-          : "border-[hsl(var(--border)/0.8)]",
+          ? "border-[hsl(var(--primary))]"
+          : "border-[hsl(var(--border))]",
       )}
     >
       <Button
         type="button"
         variant="ghost"
-        className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col items-stretch justify-start whitespace-normal rounded-[1.75rem] p-0 text-left hover:bg-transparent"
+        className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col items-stretch justify-start whitespace-normal rounded-[1.35rem] p-0 text-left hover:bg-transparent"
         onClick={onClick}
       >
-        <div className="relative min-h-[11.5rem] shrink-0 overflow-hidden rounded-t-[1.75rem]" style={{ background: theme.grad }}>
+        <div className="relative min-h-[11.5rem] shrink-0 overflow-hidden rounded-t-[1.35rem]" style={{ background: theme.grad }}>
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_18%,rgba(255,255,255,0.36),transparent_28%),radial-gradient(circle_at_78%_0%,rgba(255,255,255,0.18),transparent_28%),linear-gradient(to_bottom,transparent,rgba(19,13,10,0.24))]" />
           <div className="relative z-10 flex flex-col gap-4 p-5">
             <div className="grid grid-cols-[minmax(0,1fr)_2rem] items-start gap-3">
@@ -108,9 +108,7 @@ function Item({ active, theme, title, desc, tags, meta, isDefault, onClick }: { 
                   <div className="text-xs uppercase tracking-[0.18em] text-white/72">{theme.tone}</div>
                   <div className="cc-text-safe mt-1 text-lg font-semibold leading-snug tracking-tight">{title}</div>
                   {isDefault && (
-                    <span className="mt-2 inline-flex rounded-full bg-white/18 px-2.5 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
-                      推荐
-                    </span>
+                    <span className="mt-2 inline-flex rounded-full bg-white/18 px-2.5 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">推荐</span>
                   )}
                 </div>
               </div>
@@ -145,7 +143,7 @@ function Item({ active, theme, title, desc, tags, meta, isDefault, onClick }: { 
             </span>
           </div>
 
-          <div className="rounded-[1.25rem] bg-[hsl(var(--muted)/0.5)] p-3 text-sm text-[hsl(var(--muted-foreground))]">
+          <div className="rounded-[1rem] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3 text-sm text-[hsl(var(--muted-foreground))]">
             <div className="text-xs uppercase tracking-[0.16em]">适用价值</div>
             <div className="cc-text-safe mt-2 font-medium leading-6 text-[hsl(var(--foreground))]">{theme.pitch}</div>
           </div>
