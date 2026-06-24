@@ -3,20 +3,25 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../../lib-utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[0.95rem] text-sm font-medium transition-[transform,background-color,border-color,color,box-shadow] duration-200 ease-out disabled:pointer-events-none disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring)/0.22)] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--background))]",
   {
     variants: {
       variant: {
-        default: "bg-[hsl(var(--foreground))] text-[hsl(var(--background))] shadow-sm hover:-translate-y-0.5 hover:bg-[hsl(var(--primary))]",
-        secondary: "bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))] hover:bg-[hsl(var(--secondary)/0.85)]",
-        outline: "border border-[hsl(var(--border))] bg-[hsl(var(--card)/0.72)] hover:-translate-y-0.5 hover:bg-[hsl(var(--accent))]",
-        ghost: "hover:bg-[hsl(var(--muted)/0.56)]",
-        destructive: "bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))] hover:opacity-90",
+        default:
+          "bg-[hsl(var(--foreground))] text-[hsl(var(--background))] shadow-[0_16px_30px_hsl(22_16%_12%/0.12)] hover:-translate-y-px hover:bg-[hsl(var(--primary))] hover:shadow-[0_18px_36px_hsl(18_42%_28%/0.2)] active:translate-y-0 active:scale-[0.99]",
+        secondary:
+          "bg-[hsl(var(--muted)/0.72)] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted)/0.95)] active:scale-[0.99]",
+        outline:
+          "border border-[hsl(var(--border)/0.92)] bg-[hsl(var(--card)/0.92)] text-[hsl(var(--foreground))] shadow-[0_8px_20px_hsl(22_18%_20%/0.04)] hover:-translate-y-px hover:border-[hsl(var(--primary)/0.26)] hover:bg-[hsl(var(--background))] active:translate-y-0 active:scale-[0.99]",
+        ghost:
+          "text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted)/0.52)] active:scale-[0.99]",
+        destructive:
+          "bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))] shadow-[0_14px_28px_hsl(4_64%_40%/0.16)] hover:-translate-y-px hover:opacity-95 active:translate-y-0 active:scale-[0.99]",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 px-3",
-        lg: "h-12 px-6",
+        default: "h-11 px-4 py-2.5",
+        sm: "h-9 px-3.5",
+        lg: "h-12 px-6 text-[15px]",
       },
     },
     defaultVariants: {

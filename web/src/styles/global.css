@@ -1,26 +1,33 @@
 @import "tailwindcss";
 
 :root {
-  --background: 42 38% 94%;
-  --foreground: 24 14% 13%;
-  --card: 38 35% 97%;
-  --card-foreground: 24 14% 13%;
-  --popover: 38 35% 97%;
-  --popover-foreground: 24 14% 13%;
+  --background: 32 24% 96%;
+  --foreground: 22 16% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 22 16% 15%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 22 16% 15%;
   --primary: 18 56% 47%;
   --primary-foreground: 35 40% 97%;
-  --secondary: 36 24% 88%;
-  --secondary-foreground: 24 14% 18%;
-  --muted: 38 24% 89%;
-  --muted-foreground: 25 10% 42%;
-  --accent: 30 44% 89%;
+  --secondary: 28 22% 91%;
+  --secondary-foreground: 23 15% 20%;
+  --muted: 32 18% 92%;
+  --muted-foreground: 24 10% 36%;
+  --accent: 28 42% 91%;
   --accent-foreground: 24 16% 16%;
   --destructive: 4 64% 49%;
   --destructive-foreground: 35 40% 97%;
-  --border: 30 18% 80%;
-  --input: 30 18% 78%;
+  --border: 28 18% 82%;
+  --input: 28 18% 80%;
   --ring: 18 56% 47%;
-  --radius: 1.35rem;
+  --radius: 1rem;
+  --shadow-xs: 0 10px 24px hsl(22 18% 20% / 0.05);
+  --shadow-sm: 0 16px 34px hsl(22 18% 20% / 0.07);
+  --shadow-md: 0 22px 46px hsl(22 18% 20% / 0.1);
+  --panel-bg: 0 0% 100%;
+  --panel-muted: 30 18% 94%;
+  --transition-base: 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-soft: 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 * {
@@ -37,9 +44,8 @@ body,
 
 body {
   background:
-    radial-gradient(circle at 12% 8%, hsl(20 72% 86% / 0.48), transparent 30%),
-    radial-gradient(circle at 86% 14%, hsl(42 70% 88% / 0.72), transparent 26%),
-    linear-gradient(135deg, hsl(42 38% 94%), hsl(34 34% 91%));
+    radial-gradient(circle at top, hsl(28 46% 86% / 0.22), transparent 28%),
+    linear-gradient(180deg, hsl(32 24% 96%), hsl(30 20% 92%));
   color: hsl(var(--foreground));
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   line-height: 1.55;
@@ -51,6 +57,17 @@ button,
 input,
 select {
   font: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 .cc-topbar {
@@ -113,21 +130,23 @@ select {
   justify-content: center;
   align-items: center; /* center icon + text horizontally */
   gap: 22px;
-  border: 1px dashed hsl(var(--primary) / 0.42);
-  border-radius: 30px;
+  border: 1px dashed hsl(var(--primary) / 0.32);
+  border-radius: 24px;
   background:
-    radial-gradient(circle at 100% 0%, hsl(var(--primary) / 0.12), transparent 35%),
-    hsl(var(--card) / 0.56);
+    radial-gradient(circle at 100% 0%, hsl(var(--primary) / 0.1), transparent 35%),
+    hsl(var(--card) / 0.74);
   padding: 32px;
-  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.3);
+  transition: transform var(--transition-soft), border-color var(--transition-base), background-color var(--transition-base), box-shadow var(--transition-soft);
 }
 
 .cc-upload-zone:hover {
   transform: translateY(-2px);
-  border-color: hsl(var(--primary) / 0.72);
+  border-color: hsl(var(--primary) / 0.58);
   background:
-    radial-gradient(circle at 100% 0%, hsl(var(--primary) / 0.18), transparent 35%),
-    hsl(var(--card) / 0.78);
+    radial-gradient(circle at 100% 0%, hsl(var(--primary) / 0.16), transparent 35%),
+    hsl(var(--card) / 0.92);
+  box-shadow: var(--shadow-sm);
 }
 
 .cc-field-card {
@@ -280,6 +299,49 @@ select {
   box-sizing: border-box;
 }
 
+.cc-workspace-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.cc-workspace-overview > div {
+  border: 1px solid hsl(var(--border) / 0.72);
+  border-radius: 16px;
+  background: hsl(var(--card) / 0.82);
+  padding: 13px 15px;
+  box-shadow: var(--shadow-xs);
+}
+
+.cc-overview-label {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+
+.cc-workspace-overview strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 16px;
+}
+
+.cc-workspace-overview p {
+  margin: 8px 0 0;
+  color: hsl(var(--muted-foreground));
+  line-height: 1.6;
+}
+
+.cc-toast-stack {
+  width: min(calc(100vw - 32px), 360px);
+}
+
+.cc-toast {
+  line-height: 1.6;
+}
+
 .cc-template-grid {
   width: 100%;
 }
@@ -311,12 +373,12 @@ select {
 .cc-workspace-header {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  border: 1px solid hsl(var(--border) / 0.78);
-  border-radius: 28px;
-  background: linear-gradient(180deg, hsl(var(--card) / 0.92), hsl(var(--card) / 0.74));
-  padding: 22px;
-  box-shadow: 0 18px 46px rgba(42, 31, 24, 0.08);
+  gap: 14px;
+  border: 1px solid hsl(var(--border) / 0.74);
+  border-radius: 24px;
+  background: linear-gradient(180deg, hsl(var(--card) / 0.96), hsl(var(--card) / 0.9));
+  padding: 18px;
+  box-shadow: var(--shadow-sm);
 }
 
 .cc-workspace-top {
@@ -328,14 +390,14 @@ select {
 }
 
 .cc-header-progress {
-  border-top: 1px solid hsl(var(--border) / 0.6);
-  padding-top: 16px;
+  border-top: 1px solid hsl(var(--border) / 0.56);
+  padding-top: 14px;
 }
 
 .cc-workspace-brand {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  align-items: flex-start;
+  gap: 14px;
   min-width: 0;
   flex: 1;
 }
@@ -357,13 +419,15 @@ select {
 
 .cc-app-title-row h1 {
   margin: 0;
-  font-size: clamp(26px, 3vw, 36px);
-  line-height: 1.05;
+  font-size: clamp(24px, 2.5vw, 32px);
+  line-height: 1.08;
+  text-wrap: balance;
 }
 
 .cc-workspace-brand p {
-  margin: 10px 0 0;
-  max-width: 900px;
+  margin: 6px 0 0;
+  max-width: 640px;
+  font-size: 14px;
   color: hsl(var(--muted-foreground));
 }
 
@@ -371,6 +435,7 @@ select {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  justify-content: flex-end;
 }
 
 @media (max-width: 640px) {
@@ -403,10 +468,11 @@ select {
   gap: 8px;
   border: 1px solid hsl(var(--border) / 0.72);
   border-radius: 999px;
-  background: hsl(var(--background) / 0.7);
-  padding: 10px 14px;
-  font-size: 13px;
+  background: hsl(var(--background) / 0.88);
+  padding: 8px 12px;
+  font-size: 12px;
   color: hsl(var(--muted-foreground));
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.22);
 }
 
 .cc-workspace-grid {
@@ -415,10 +481,10 @@ select {
 }
 
 .cc-top-progress {
-  border: 1px solid hsl(var(--border) / 0.72);
-  border-radius: 20px;
-  background: hsl(var(--card));
-  padding: 12px 16px;
+  border: 1px solid hsl(var(--border) / 0.68);
+  border-radius: 18px;
+  background: hsl(var(--card) / 0.98);
+  padding: 12px 14px;
 }
 
 .cc-topline {
@@ -459,17 +525,25 @@ select {
   display: flex;
   align-items: center;
   gap: 10px;
-  border: 1px solid hsl(var(--border) / 0.65);
+  border: 1px solid hsl(var(--border) / 0.62);
   border-radius: 14px;
-  background: hsl(var(--background) / 0.54);
-  padding: 8px 10px;
+  background: hsl(var(--background) / 0.68);
+  padding: 10px 12px;
   text-align: left;
-  transition: 160ms ease;
+  transition: transform var(--transition-soft), border-color var(--transition-base), background-color var(--transition-base), box-shadow var(--transition-soft);
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.18);
+}
+
+.cc-top-rail-item:hover {
+  transform: translateY(-1px);
+  border-color: hsl(var(--primary) / 0.24);
+  background: hsl(var(--card) / 0.92);
 }
 
 .cc-top-rail-item.is-active {
-  border-color: hsl(var(--primary) / 0.34);
+  border-color: hsl(var(--primary) / 0.38);
   background: hsl(var(--primary) / 0.08);
+  box-shadow: var(--shadow-xs);
 }
 
 .cc-top-rail-item.is-done .cc-top-rail-index {
@@ -486,6 +560,13 @@ select {
   background: hsl(var(--muted) / 0.7);
   color: hsl(var(--muted-foreground));
   flex-shrink: 0;
+  transition: background-color var(--transition-base), color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.cc-top-rail-item.is-active .cc-top-rail-index {
+  background: hsl(var(--foreground));
+  color: hsl(var(--background));
+  box-shadow: 0 10px 22px hsl(22 18% 16% / 0.14);
 }
 
 .cc-top-rail-text em {
@@ -498,6 +579,8 @@ select {
 
 .cc-top-rail-text strong {
   display: block;
+  font-size: 15px;
+  line-height: 1.25;
 }
 
 .cc-workspace-grid {
@@ -518,10 +601,63 @@ select {
 
 .cc-stage-panel,
 .cc-main-panel {
-  border: 1px solid hsl(var(--border) / 0.7);
-  border-radius: 22px;
-  background: linear-gradient(180deg, hsl(var(--card) / 0.96), hsl(var(--card) / 0.86));
+  border: 1px solid hsl(var(--border) / 0.68);
+  border-radius: 20px;
+  background: linear-gradient(180deg, hsl(var(--card) / 0.96), hsl(var(--card) / 0.9));
   box-shadow: var(--shadow-sm);
+}
+
+@media (max-width: 640px) {
+  .cc-app-shell {
+    padding-top: 88px;
+  }
+
+  .cc-toast-stack {
+    right: 16px;
+    left: 16px;
+    top: 12px;
+    width: auto;
+    max-width: none;
+  }
+
+  .cc-toast {
+    border-radius: 20px;
+    padding: 12px 14px;
+    box-shadow: 0 14px 28px hsl(22 18% 20% / 0.12);
+  }
+
+  .cc-workspace-header {
+    border-radius: 24px;
+    padding: 18px;
+  }
+
+  .cc-header-progress {
+    padding-top: 14px;
+  }
+
+  .cc-top-progress {
+    padding: 12px;
+  }
+
+  .cc-top-rail {
+    gap: 8px;
+  }
+
+  .cc-top-rail-item {
+    padding: 10px;
+  }
+
+  .cc-top-rail-text strong {
+    font-size: 14px;
+  }
+
+  .cc-workspace-overview {
+    gap: 10px;
+  }
+
+  .cc-workspace-overview > div {
+    padding: 12px 14px;
+  }
 }
 
 .cc-stage-panel {
@@ -648,21 +784,22 @@ select {
 }
 
 .cc-main-panel {
-  padding: 24px;
+  padding: 22px;
 }
 
 .cc-panel-header h2 {
-  margin: 10px 0 0;
-  font-size: clamp(24px, 2.6vw, 34px);
-  line-height: 1.15;
+  margin: 8px 0 0;
+  font-size: clamp(24px, 2.4vw, 32px);
+  line-height: 1.12;
   letter-spacing: -0.02em;
 }
 
 .cc-panel-header p {
-  max-width: 860px;
-  margin: 12px 0 0;
+  max-width: 760px;
+  margin: 10px 0 0;
+  font-size: 14px;
   color: hsl(var(--muted-foreground));
-  line-height: 1.7;
+  line-height: 1.65;
 }
 
 .cc-panel-section {
@@ -680,8 +817,9 @@ select {
 .cc-mini-panel {
   border: 1px solid hsl(var(--border) / 0.74);
   border-radius: 16px;
-  background: hsl(var(--card));
+  background: hsl(var(--card) / 0.9);
   padding: 14px;
+  box-shadow: var(--shadow-xs);
 }
 
 .cc-kpi-card span,
@@ -707,7 +845,7 @@ select {
 }
 
 .cc-upload-zone-strong {
-  min-height: 340px;
+  min-height: 320px;
   border-style: dashed;
   border-width: 2px;
 }
@@ -746,7 +884,84 @@ select {
   gap: 16px;
 }
 
+.cc-stage-enter {
+  animation: cc-stage-in var(--transition-soft) both;
+  will-change: opacity, transform;
+}
+
+@keyframes cc-stage-in {
+  from {
+    opacity: 0.01;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cc-selection-feedback {
+  transition:
+    border-color var(--transition-base),
+    background-color var(--transition-base),
+    box-shadow var(--transition-soft),
+    transform var(--transition-soft),
+    color var(--transition-base);
+  will-change: transform, box-shadow;
+}
+
+.cc-checklist {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cc-checklist li {
+  position: relative;
+  border-radius: 14px;
+  background: hsl(var(--muted) / 0.45);
+  padding: 12px 14px 12px 40px;
+  color: hsl(var(--muted-foreground));
+  line-height: 1.6;
+}
+
+.cc-checklist li::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 15px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+}
+
+.cc-checklist li.is-current {
+  background: hsl(var(--primary) / 0.08);
+  color: hsl(var(--foreground));
+}
+
+.cc-checklist li.is-current::before {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.14);
+}
+
+.cc-checklist li.is-done {
+  color: hsl(var(--foreground));
+}
+
+.cc-checklist li.is-done::before {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary));
+  box-shadow: inset 0 0 0 3px hsl(var(--card));
+}
+
 @media (max-width: 1180px) {
+  .cc-workspace-overview,
   .cc-overview-grid,
   .cc-workspace-grid,
   .cc-upload-layout {
@@ -755,6 +970,10 @@ select {
 }
 
 @media (max-width: 860px) {
+  .cc-workspace-actions {
+    display: none;
+  }
+
   .cc-kpi-row {
     grid-template-columns: 1fr;
   }

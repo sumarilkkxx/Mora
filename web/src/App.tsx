@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -9,7 +9,6 @@ import {
   FileVideo,
   Info,
   LayoutDashboard,
-  PanelsTopLeft,
   Sparkles,
   Wand2,
 } from "lucide-react";
@@ -39,10 +38,10 @@ interface Toast {
 }
 
 const STEPS = [
-  { key: "upload", title: "素材导入", desc: "视频入库与基础校验", eyebrow: "Source" },
-  { key: "template", title: "模板编排", desc: "选择叙事结构与场景策略", eyebrow: "Template" },
-  { key: "voice", title: "表达配置", desc: "控制音色、语速与变量内容", eyebrow: "Voice" },
-  { key: "render", title: "渲染交付", desc: "查看进度、预览并导出成片", eyebrow: "Render" },
+  { key: "upload", title: "素材导入", desc: "视频入库与基础校验", eyebrow: "上传" },
+  { key: "template", title: "模板编排", desc: "选择叙事结构与场景策略", eyebrow: "模板" },
+  { key: "voice", title: "表达配置", desc: "控制音色、语速与变量内容", eyebrow: "表达" },
+  { key: "render", title: "渲染交付", desc: "查看进度、预览并导出成片", eyebrow: "交付" },
 ] as const;
 
 const FALLBACK_TEMPLATES: TemplateSummary[] = [
@@ -111,13 +110,31 @@ export default function App() {
   const [creating, setCreating] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const toastTimers = useRef<Map<string, number>>(new Map());
   const { job, connected } = useJobStream(jobId);
 
   function pushToast(variant: Toast["variant"], message: string) {
+    const key = `${variant}:${message}`;
+    const existingTimer = toastTimers.current.get(key);
+    if (existingTimer) {
+      window.clearTimeout(existingTimer);
+    }
+
     const id = Date.now() + Math.floor(Math.random() * 1000);
-    setToasts((prev) => [...prev, { id, variant, message }]);
-    window.setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3200);
+    setToasts((prev) => [...prev.filter((toast) => !(toast.variant === variant && toast.message === message)), { id, variant, message }]);
+
+    const timer = window.setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+      toastTimers.current.delete(key);
+    }, 3200);
+
+    toastTimers.current.set(key, timer);
   }
+
+  useEffect(() => () => {
+    toastTimers.current.forEach((timer) => window.clearTimeout(timer));
+    toastTimers.current.clear();
+  }, []);
 
   useEffect(() => {
     void (async () => {
@@ -217,6 +234,7 @@ export default function App() {
   const currentTemplateSummary = templates.find((item) => item.name === selectedTemplate) ?? null;
   const templateScenarios = TEMPLATE_SCENARIOS[selectedTemplate ?? "__auto__"] ?? TEMPLATE_SCENARIOS.__auto__;
   const templateDescription = currentTemplateSummary?.description ?? "系统将结合素材比例、时长与内容重心，为你匹配更顺滑的成片结构。";
+  const stepMeta = STEPS[activeStep];
 
   function renderWorkspaceHeader() {
     return (
@@ -225,22 +243,22 @@ export default function App() {
           <div className="cc-workspace-brand">
             <BrandMark className="h-11 w-11" />
             <div className="min-w-0">
-              <div className="cc-app-eyebrow">ClipCraft Studio</div>
+              <div className="cc-app-eyebrow">ClipCraft</div>
               <div className="cc-app-title-row">
                 <h1>AI 视频剪辑工作台</h1>
               </div>
-              <p>参考专业创作工具的布局方式，把素材、模板、表达配置与渲染交付放在同一个清晰工作区中。</p>
+              <p>从素材上传到成片交付，所有关键操作都保留在一个更克制、更高效的创作工作区里。</p>
             </div>
           </div>
 
-          <div className="cc-workspace-actions">
-            <div className="cc-header-chip">
-              <PanelsTopLeft size={15} />
-              <span>多面板创作</span>
-            </div>
+          <div className="cc-workspace-actions" aria-label="工作区状态">
             <div className="cc-header-chip">
               <LayoutDashboard size={15} />
               <span>{progressTitle[activeStep]}</span>
+            </div>
+            <div className="cc-header-chip">
+              <Sparkles size={15} />
+              <span>{upload ? "素材已就绪" : "等待上传"}</span>
             </div>
           </div>
         </div>
@@ -256,8 +274,8 @@ export default function App() {
       <section className="cc-top-progress" aria-label="创作阶段">
         <div className="cc-topline">
           <div className="cc-topline-left">
-            <span>创作阶段</span>
-            <Badge variant="secondary" className="rounded-full">Workspace</Badge>
+            <span>创作流程</span>
+            <Badge variant="secondary" className="rounded-full">四步工作流</Badge>
           </div>
           <strong>{completionPercent}%</strong>
         </div>
@@ -296,10 +314,10 @@ export default function App() {
           当前阶段：<strong>{progressTitle[activeStep]}</strong>，所有配置都会实时保留，便于你像在专业工具里一样逐步调整与回看。
         </p>
         <div className="cc-page-footer-actions">
-          <Button variant="outline" className="min-w-[108px] rounded-full" disabled={prevDisabled} onClick={() => setActiveStep((s) => Math.max(0, s - 1))}>
+          <Button variant="outline" className="min-w-[108px]" disabled={prevDisabled} onClick={() => setActiveStep((s) => Math.max(0, s - 1))}>
             <ArrowLeft size={16} /> 上一步
           </Button>
-          <Button className="min-w-[148px] rounded-full shadow-[0_18px_34px_rgba(201,111,74,0.18)]" disabled={nextDisabled} onClick={nextAction ?? (() => setActiveStep((s) => Math.min(3, s + 1)))}>
+          <Button className="min-w-[148px] shadow-[0_18px_34px_rgba(201,111,74,0.18)]" disabled={nextDisabled} onClick={nextAction ?? (() => setActiveStep((s) => Math.min(3, s + 1)))}>
             {nextLabel} <ArrowRight size={16} />
           </Button>
         </div>
@@ -312,9 +330,9 @@ export default function App() {
       <div key="page-upload" className="cc-workspace-grid">
         <section className="cc-main-panel">
           <div className="cc-panel-header">
-            <Badge variant="secondary">Source Intake</Badge>
+            <Badge variant="secondary">素材上传</Badge>
             <h2>导入素材并建立本次创作任务</h2>
-            <p>上传后，系统会完成文件校验、基础元数据识别与后续流程预置。这个区域更像创作工具中的主工作区，专注当前动作本身。</p>
+            <p>先完成上传，系统会自动识别尺寸、时长和基础元数据，然后把这些信息带入模板、表达和渲染阶段。</p>
           </div>
 
           <div className="cc-upload-layout">
@@ -324,9 +342,9 @@ export default function App() {
                 <CloudUpload size={28} />
               </span>
               <span className="space-y-2 text-center">
-                <span className="block text-2xl font-semibold tracking-tight">点击上传视频素材</span>
+                  <span className="block text-2xl font-semibold tracking-tight">点击上传视频素材</span>
                 <span className="block max-w-md text-sm leading-6 text-[hsl(var(--muted-foreground))]">
-                  上传成功后会自动进入模板编排区，并把素材信息同步到右侧状态面板。
+                    上传成功后会自动进入模板编排，并把素材信息同步到右侧状态面板。
                 </span>
               </span>
             </label>
@@ -363,22 +381,22 @@ export default function App() {
         <aside className="cc-side-panel">
           <Card className="cc-glass-card rounded-[1.6rem]">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base"><FileVideo size={17} /> 工作区说明</CardTitle>
-              <p className="text-sm leading-6 text-[hsl(var(--muted-foreground))]">左侧完成主要操作，右侧持续作为状态与说明面板，减少上下跳转。</p>
+              <CardTitle className="flex items-center gap-2 text-base"><FileVideo size={17} /> 当前任务</CardTitle>
+              <p className="text-sm leading-6 text-[hsl(var(--muted-foreground))]">左侧完成主要操作，右侧持续展示状态与关键信息，减少来回跳转。</p>
             </CardHeader>
             <CardContent className="space-y-3 pt-0">
-              <div className="rounded-xl bg-[hsl(var(--muted)/0.45)] px-4 py-3 text-sm leading-6 text-[hsl(var(--muted-foreground))]">上传素材后，模板、配音和渲染模块会自动复用这些信息。</div>
-              <div className="rounded-xl bg-[hsl(var(--muted)/0.45)] px-4 py-3 text-sm leading-6 text-[hsl(var(--muted-foreground))]">你可以随时回到任一步骤重新调整，不需要重复录入。</div>
+              <div className="rounded-xl bg-[hsl(var(--muted)/0.45)] px-4 py-3 text-sm leading-6 text-[hsl(var(--muted-foreground))]">上传成功后，模板、配音和渲染模块会自动复用这些信息。</div>
+              <div className="rounded-xl bg-[hsl(var(--muted)/0.45)] px-4 py-3 text-sm leading-6 text-[hsl(var(--muted-foreground))]">你可以随时回到任一步骤调整，不需要重新录入。</div>
             </CardContent>
           </Card>
 
           <Card className="cc-glass-card rounded-[1.6rem]">
             <CardContent className="space-y-3 p-5">
-              <div className="flex items-center gap-2 text-base font-semibold"><Sparkles size={17} className="text-[hsl(var(--primary))]" /> 任务收益</div>
-              <ul className="space-y-2 text-sm leading-6 text-[hsl(var(--muted-foreground))]">
-                <li className="rounded-xl bg-[hsl(var(--muted)/0.45)] px-4 py-3">统一管理素材与配置</li>
-                <li className="rounded-xl bg-[hsl(var(--muted)/0.45)] px-4 py-3">减少生成前的重复确认成本</li>
-                <li className="rounded-xl bg-[hsl(var(--muted)/0.45)] px-4 py-3">更符合专业工具的工作流操作习惯</li>
+              <div className="flex items-center gap-2 text-base font-semibold"><Sparkles size={17} className="text-[hsl(var(--primary))]" /> 当前阶段检查</div>
+              <ul className="cc-checklist">
+                <li className={upload ? "is-done" : "is-current"}>上传一个可用视频文件</li>
+                <li className={upload ? "is-current" : ""}>进入模板编排并确认输出策略</li>
+                <li>后续阶段会自动复用当前素材</li>
               </ul>
             </CardContent>
           </Card>
@@ -392,9 +410,9 @@ export default function App() {
       <div key="page-template" className="cc-workspace-grid">
         <section className="cc-main-panel">
           <div className="cc-panel-header">
-            <Badge variant="secondary">Template Board</Badge>
+            <Badge variant="secondary">模板选择</Badge>
             <h2>像选择编辑预设一样确定成片结构</h2>
-            <p>模板区域从营销卡片改成更接近工作台中的 preset browser，用统一信息层级展示场景、节奏和输出规格。</p>
+            <p>在这里选择更适合当前素材的模板策略，用统一信息层级查看场景、节奏和输出规格。</p>
           </div>
 
           <div className="cc-panel-section">
@@ -459,9 +477,9 @@ export default function App() {
       <div key="page-voice" className="cc-workspace-grid">
         <section className="cc-main-panel">
           <div className="cc-panel-header">
-            <Badge variant="secondary">Expression Inspector</Badge>
+            <Badge variant="secondary">表达配置</Badge>
             <h2>在同一工作区里控制音色、节奏和脚本变量</h2>
-            <p>这个页面调整成更接近 inspector + property panel 的结构，让配音参数与模板变量更清晰地分层展示。</p>
+            <p>先把必要控制项放在主区，其他解释信息放到侧边栏，避免主区被说明文字淹没。</p>
           </div>
 
           <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -519,7 +537,7 @@ export default function App() {
             </div>
 
             <aside className="cc-side-panel">
-              <Card className="rounded-[1.5rem] border-[hsl(var(--border)/0.8)] bg-[linear-gradient(180deg,hsl(var(--card)/0.88),hsl(var(--muted)/0.42))] shadow-sm">
+              <Card className="rounded-[1.5rem] border-[hsl(var(--border)/0.8)] bg-[hsl(var(--card)/0.82)] shadow-sm">
                 <CardHeader className="pb-4">
                   <CardTitle>表达控制台</CardTitle>
                   <div className="text-sm leading-6 text-[hsl(var(--muted-foreground))]">集中查看关键控制项和本次生成策略，让口播表达更稳定。</div>
@@ -534,7 +552,7 @@ export default function App() {
                   <div className="grid gap-3">
                     <div className="rounded-[1.2rem] bg-[hsl(var(--muted)/0.45)] p-4"><div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">内容节奏</div><div className="mt-2 text-sm font-medium">{rate <= -10 ? "舒缓叙述" : rate >= 10 ? "高信息密度" : "均衡表达"}</div></div>
                     <div className="rounded-[1.2rem] bg-[hsl(var(--muted)/0.45)] p-4"><div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">变量完成度</div><div className="mt-2 text-sm font-medium">{vars.length === 0 ? "无需补充" : `${filledVariableCount}/${vars.length} 项已填写`}</div></div>
-                    <div className="rounded-[1.2rem] bg-[hsl(var(--muted)/0.45)] p-4"><div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">成片预期</div><div className="mt-2 text-sm font-medium">更适合用于推广发布、商品讲解和业务展示。</div></div>
+                    <div className="rounded-[1.2rem] bg-[hsl(var(--muted)/0.45)] p-4"><div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">下一步</div><div className="mt-2 text-sm font-medium">确认变量后启动生成</div></div>
                   </div>
 
                   <div className="rounded-[1.35rem] border border-[hsl(var(--border)/0.7)] bg-[hsl(var(--card)/0.8)] p-4 text-sm">
@@ -565,9 +583,9 @@ export default function App() {
       <div key="page-render" className="cc-workspace-grid cc-workspace-grid-render">
         <section className="cc-main-panel">
           <div className="cc-panel-header">
-            <Badge variant="secondary">Render Console</Badge>
+            <Badge variant="secondary">渲染交付</Badge>
             <h2>集中查看任务进度、预览与导出结果</h2>
-            <p>把原来的“左侧说明 + 右侧结果”改成更像专业软件的渲染台：左侧是流程导航，右侧是主渲染面板。</p>
+            <p>把主视图集中在当前进度、素材预览和结果交付上，让你更快确认是否达到可交付状态。</p>
           </div>
 
           <div className="grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)]">
@@ -626,14 +644,33 @@ export default function App() {
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(232,203,174,0.18),transparent_26%),linear-gradient(180deg,#f4eee6_0%,#efe6dc_100%)] text-[hsl(var(--foreground))]">
       <div className="cc-app-shell mx-auto w-full max-w-[1500px] px-4 pb-12 pt-6 md:px-6">
         {renderWorkspaceHeader()}
-        <div className="mt-6">{renderCurrentPage()}</div>
+        <section className="cc-workspace-overview" aria-label="当前工作区状态">
+          <div>
+            <span className="cc-overview-label">当前步骤</span>
+            <strong>{stepMeta.title}</strong>
+            <p>{stepMeta.desc}</p>
+          </div>
+          <div>
+            <span className="cc-overview-label">素材状态</span>
+            <strong>{upload ? upload.name : "未上传素材"}</strong>
+            <p>{upload ? `${upload.asset.width} x ${upload.asset.height} · ${Math.round(upload.asset.duration ?? 0)} 秒` : "上传后会自动带入模板、表达与渲染阶段。"}</p>
+          </div>
+          <div>
+            <span className="cc-overview-label">当前策略</span>
+            <strong>{selectedTemplateLabel}</strong>
+            <p>{selectedVoice?.name || "默认音色"} · 语速 {rate >= 0 ? "+" : ""}{rate}%</p>
+          </div>
+        </section>
+        <div key={STEPS[activeStep].key} data-ui="stage-shell" className="cc-stage-enter mt-5 md:mt-6">
+          {renderCurrentPage()}
+        </div>
       </div>
 
-      <div className="pointer-events-none fixed right-4 top-4 z-50 flex max-w-sm flex-col gap-3">
+      <div className="cc-toast-stack pointer-events-none fixed right-4 top-4 z-50 flex max-w-sm flex-col gap-3">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`pointer-events-auto rounded-2xl border px-4 py-3 text-sm shadow-lg backdrop-blur ${toast.variant === "destructive"
+            className={`cc-toast pointer-events-auto rounded-2xl border px-4 py-3 text-sm shadow-lg backdrop-blur ${toast.variant === "destructive"
               ? "border-[hsl(var(--destructive)/0.3)] bg-[hsl(var(--destructive)/0.12)] text-[hsl(var(--destructive))]"
               : toast.variant === "success"
                 ? "border-[hsl(var(--success)/0.25)] bg-[hsl(var(--success)/0.14)] text-[hsl(var(--success))]"
