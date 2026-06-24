@@ -1,11 +1,12 @@
-# 默认兜底模板 — 适用于无法匹配到其他模板的素材
+# 默认兜底模板 — 适用于无法匹配到其他模板的通用素材
 
 meta:
   name: "default"
-  description: "通用兜底模板，适用于无法匹配到其他模板的素材"
-  version: "1.0"
+  description: "通用兜底模板，适用于泛内容展示、日常记录和无法匹配到其他模板的素材"
+  version: "1.1"
+  author: "AI_clip"
   is_default: false
-  tags: ["通用", "兜底"]
+  tags: ["通用", "兜底", "日常", "记录", "泛内容"]
 
 extends: _global
 
@@ -17,12 +18,17 @@ canvas:
 timeline:
   intro:
     type: title_card
-    duration: 1.5
-    background: "#1a1a2e"
+    duration: 1.0
+    background: "#16181d"
     text: "{{ headline }}"
     text_style:
-      font_size: 56
+      font_size: 62
       color: "#FFFFFF"
+      bold: true
+      alignment: center
+      margin_h: 120
+      max_chars_per_line: 14
+      max_lines: 2
       animation: fade_up
 
   body:
@@ -32,68 +38,159 @@ timeline:
     fit_mode: cover_center
     transition:
       type: fade
-      duration: 0.5
+      duration: 0.4
 
   outro:
     type: title_card
-    duration: 2.0
+    duration: 1.6
     text: "{{ cta }}"
     text_style:
-      font_size: 42
+      font_size: 44
       color: "#FFFFFF"
+      alignment: center
+      margin_h: 120
       animation: fade
 
 audio:
   voice:
     engine: edge-tts
     voice_id: zh-CN-XiaoxiaoNeural
-    rate: "+0%"
+    rate: "-2%"
+    volume: 1.0
   bgm:
-    volume: 0.15
+    file: "assets/bgm/upbeat_01.mp3"
+    volume: 0.22
     ducking:
       enabled: true
-      target_volume: 0.05
+      target_volume: 0.08
+      fade_duration: 0.3
 
 subtitles:
   source: tts_srt
+
+  safe_area:
+    bottom: 460
+    right: 120
+    left: 120
+
   style:
     font: "Microsoft YaHei"
-    font_size: 42
+    font_size: 44
     color: "#FFFFFF"
+    bold: false
+    spacing: 1.2
+    alignment: 2
+    margin_v: 460
+    margin_h: 120
+    max_chars_per_line: 18
+    max_lines: 3
+    outline:
+      color: "#141414"
+      width: 2
+    shadow: 2
+    fade_in: 180
+    fade_out: 120
+
+    background:
+      enabled: true
+      color: "#000000"
+      opacity: 0.42
+      border_radius: 12
+      padding_h: 24
+      padding_v: 10
+      blur: 4
+
+  timing:
+    chars_per_second_unit: 13
+    unit_seconds: 1.0
+    min_seconds: 1.0
+    padding_seconds: 0.25
+
+title:
+  enabled: true
+  style:
+    font: "Microsoft YaHei"
+    font_size: 62
+    color: "#FFFFFF"
+    bold: true
+    alignment: 8
+    margin_v: 190
+    margin_h: 120
+    max_chars_per_line: 14
+    max_lines: 2
+    spacing: 1.6
     outline_color: "#000000"
-    outline_width: 2
-    position: bottom_third
+    outline_width: 3
+    shadow: 2
+    fade_in: 400
+    fade_out: 400
 
 effects:
   color_grade: none
-  vignette: 0
+  vignette: 0.08
+  slowdown: 1.0
+  ken_burns:
+    enabled: false
+
+editing:
+  techniques:
+    - name: cinematic
+      description: "默认优先使用轻微慢放与淡入淡出，保持泛内容兼容性"
+    - name: speed_adjust
+      description: "微调速度适配文案时长"
+    - name: trim_fade
+      description: "素材过长时裁剪并淡出"
 
 copy:
   variables:
-    - name: product_name
+    - name: subject_name
       required: false
-      default: "好物"
-      description: "产品名称"
+      default: "这条内容"
+      description: "内容主体名称，可为人物、场景、产品或事件"
+    - name: highlight
+      required: false
+      default: "有意思也值得看看"
+      description: "这条内容的亮点概括"
+    - name: use_case
+      required: false
+      default: ""
+      description: "适用场景或补充说明"
 
   script_template: |
-    {{ headline }}
-    {{ product_name }}，值得推荐。
+    {{ opening }}
+    今天想和你分享的是{{ subject_name }}。
+    整体看下来，最大的感受就是{{ highlight }}。
+    {% if use_case %}如果你也在关注{{ use_case }}，这条内容应该会对你有点启发。{% endif %}
     {{ cta }}
+
+  title_template: "{{ headline }}\n{{ hashtag }}"
 
   presets:
     headline:
-      - "发现一个好东西！"
-      - "今天给大家推荐一下"
-      - "这个必须安利一下"
-      - "来看看这个"
+      - "今天这条值得一看"
+      - "刚好看到，顺手分享给你"
+      - "这段内容挺有意思"
+      - "记录一下今天的发现"
+      - "简单分享一个片段"
+    hashtag:
+      - "#日常分享 #内容记录 #生活片段"
+      - "#今日记录 #内容分享 #随手一拍"
+      - "#短视频 #生活观察 #片段感"
+      - "#内容推荐 #记录一下 #今天看到"
+    opening:
+      - "有时候不是特别宏大的内容，反而是这种真实的小片段，更容易让人停下来多看两眼。"
+      - "刷到这一段的时候，我第一反应就是想保存下来，也想顺手分享给你看看。"
+      - "这一类内容可能不算特别复杂，但就是会让人觉得舒服、自然，而且很有记忆点。"
+      - "很多时候，一个镜头、一句表达、一个瞬间，就足够让整条视频有它自己的味道。"
+      - "如果你也喜欢这种轻松自然的内容，这条应该会让你愿意多停留几秒。"
     cta:
-      - "喜欢的话点个赞吧"
-      - "你们觉得怎么样？"
-      - "评论区告诉我你的想法"
-      - "关注我获取更多好物推荐"
+      - "如果你也觉得不错，记得点个赞支持一下。"
+      - "喜欢这种内容的话，可以先收藏起来。"
+      - "你觉得这条内容的亮点是什么？评论区聊聊。"
+      - "关注我，继续分享更多值得看的内容。"
 
 match_rules:
   aspect_ratio: portrait
-  min_duration: 1
+  min_duration: 2
   max_duration: 300
   priority: 0

@@ -2,15 +2,15 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../../lib-utils";
 
-const alertVariants = cva("relative w-full rounded-[1.35rem] border p-4", {
+const alertVariants = cva("relative w-full rounded-[1.15rem] border p-4 shadow-[var(--shadow-xs)]", {
   variants: {
     variant: {
       default:
-        "border-[hsl(var(--border)/0.78)] bg-[linear-gradient(180deg,hsl(var(--card)/0.92),hsl(var(--muted)/0.28))] text-[hsl(var(--foreground))] shadow-sm",
-      info: "border-blue-200 bg-blue-50 text-blue-900",
-      warning: "border-amber-200 bg-amber-50 text-amber-900",
-      destructive: "border-red-200 bg-red-50 text-red-900",
-      success: "border-emerald-200 bg-emerald-50 text-emerald-900",
+        "border-[hsl(var(--border)/0.82)] bg-[hsl(var(--card)/0.94)] text-[hsl(var(--foreground))]",
+      info: "border-[hsl(210_60%_84%)] bg-[hsl(210_90%_97%)] text-[hsl(210_58%_28%)]",
+      warning: "border-[hsl(38_70%_82%)] bg-[hsl(40_88%_96%)] text-[hsl(32_70%_28%)]",
+      destructive: "border-[hsl(var(--destructive)/0.2)] bg-[hsl(var(--destructive)/0.08)] text-[hsl(var(--destructive))]",
+      success: "border-[hsl(144_42%_80%)] bg-[hsl(142_60%_96%)] text-[hsl(152_54%_28%)]",
     },
   },
   defaultVariants: {

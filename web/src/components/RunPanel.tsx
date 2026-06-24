@@ -34,14 +34,14 @@ export default function RunPanel({ upload, job, connected, busy, onStart }: Prop
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[1.8rem] border border-[hsl(var(--border)/0.8)] bg-[linear-gradient(180deg,hsl(var(--card)/0.92),hsl(var(--muted)/0.34))] p-5 shadow-sm">
+      <div className="rounded-[1.35rem] border border-[hsl(var(--border)/0.82)] bg-[hsl(var(--card)/0.95)] p-5 shadow-[var(--shadow-sm)]">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-sm font-medium">
+            <div className="flex items-center gap-2 text-sm font-medium text-[hsl(var(--muted-foreground))]">
               <Radio size={15} className={connected ? "text-[hsl(var(--primary))]" : "text-[hsl(var(--muted-foreground))]"} />
               {job ? (connected ? "实时生成中" : "渲染任务") : "准备就绪，等待启动"}
             </div>
-            <div className="mt-3 text-2xl font-semibold tracking-tight">{job ? "成片工作流正在推进" : "开始生成你的成片"}</div>
+            <div className="mt-3 text-[clamp(1.6rem,2vw,2.1rem)] font-semibold tracking-tight">{job ? "成片工作流正在推进" : "开始生成你的成片"}</div>
             <div className="mt-2 text-sm leading-6 text-[hsl(var(--muted-foreground))]">
               {job ? "系统会持续完成解析、配音、字幕和渲染，并在完成后交付可下载成片。" : "确认当前配置后即可启动自动生成流程，系统会按模板策略完成全部处理。"}
             </div>
@@ -50,45 +50,46 @@ export default function RunPanel({ upload, job, connected, busy, onStart }: Prop
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-[1.35rem] bg-[hsl(var(--card)/0.84)] p-4">
+          <div className="rounded-[1rem] border border-[hsl(var(--border)/0.72)] bg-[hsl(var(--card)/0.88)] p-4 shadow-[var(--shadow-xs)]">
             <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">当前状态</div>
             <div className="mt-2 text-sm font-semibold">{running ? "正在处理" : success ? "已完成" : job ? "等待结果" : "待启动"}</div>
           </div>
-          <div className="rounded-[1.35rem] bg-[hsl(var(--card)/0.84)] p-4">
+          <div className="rounded-[1rem] border border-[hsl(var(--border)/0.72)] bg-[hsl(var(--card)/0.88)] p-4 shadow-[var(--shadow-xs)]">
             <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">已用时</div>
             <div className="mt-2 text-sm font-semibold">{job ? formatClock(job.elapsed_seconds) : "00:00"}</div>
           </div>
-          <div className="rounded-[1.35rem] bg-[hsl(var(--card)/0.84)] p-4">
+          <div className="rounded-[1rem] border border-[hsl(var(--border)/0.72)] bg-[hsl(var(--card)/0.88)] p-4 shadow-[var(--shadow-xs)]">
             <div className="text-xs uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">交付阶段</div>
             <div className="mt-2 text-sm font-semibold">{success ? "可下载" : "处理中"}</div>
           </div>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-[1.8rem] border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.45)] shadow-sm">
-        {previewUrl ? <video className="cc-video" src={previewUrl} controls preload="metadata" /> : (
-          <div className="cc-preview-empty">
-            <FileVideo size={28} />
-            <span>上传视频后在此查看素材预览</span>
-          </div>
-        )}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
+        <div className="overflow-hidden rounded-[1.25rem] border border-[hsl(var(--border)/0.8)] bg-[hsl(var(--muted)/0.4)] shadow-[var(--shadow-sm)]">
+          {previewUrl ? <video className="cc-video" src={previewUrl} controls preload="metadata" /> : (
+            <div className="cc-preview-empty">
+              <FileVideo size={28} />
+              <span>上传视频后在此查看素材预览</span>
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-[1.25rem] border border-[hsl(var(--border)/0.8)] bg-[hsl(var(--muted)/0.24)] p-5 text-sm shadow-[var(--shadow-xs)]">
+          <div className="mb-4 flex items-center gap-2 text-base font-semibold"><Wand2 size={16} className="text-[hsl(var(--primary))]" /> 渲染上下文</div>
+          <div className="cc-meta-row"><span>文件</span><b title={upload?.name || "未上传"}>{upload?.name || "未上传"}</b></div>
+          <div className="cc-meta-row"><span>分辨率</span><b>{upload ? `${upload.asset.width} × ${upload.asset.height}` : "待识别"}</b></div>
+          <div className="cc-meta-row"><span>时长</span><b>{upload ? formatDuration(upload.asset.duration) : "待识别"}</b></div>
+          <div className="cc-meta-row"><span>连接状态</span><b>{connected ? "实时同步" : job ? "任务已结束" : "待启动"}</b></div>
+        </div>
       </div>
 
-      {upload && (
-        <div className="rounded-[1.8rem] border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.34)] p-5 text-sm shadow-sm">
-          <div className="mb-4 flex items-center gap-2 text-base font-semibold"><Wand2 size={16} className="text-[hsl(var(--primary))]" /> 素材摘要</div>
-          <div className="cc-meta-row"><span>文件</span><b title={upload.name}>{upload.name}</b></div>
-          <div className="cc-meta-row"><span>分辨率</span><b>{upload.asset.width} × {upload.asset.height}</b></div>
-          <div className="cc-meta-row"><span>时长</span><b>{formatDuration(upload.asset.duration)}</b></div>
-        </div>
-      )}
-
-      <Button size="lg" className="w-full rounded-full shadow-[0_18px_34px_rgba(201,111,74,0.22)]" disabled={!upload || running} onClick={onStart}>
+      <Button size="lg" className="w-full rounded-[1rem] shadow-[0_20px_40px_rgba(201,111,74,0.18)]" disabled={!upload || running} onClick={onStart}>
         <Bolt size={16} />
         {busy || running ? "正在生成成片..." : "启动成片生成"}
       </Button>
 
-      <div className="rounded-[1.8rem] border border-[hsl(var(--border))] bg-[hsl(var(--card)/0.64)] p-5 shadow-sm">
+      <div className="rounded-[1.25rem] border border-[hsl(var(--border)/0.82)] bg-[hsl(var(--card)/0.78)] p-5 shadow-[var(--shadow-sm)]">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div className="text-base font-semibold">生成流程</div>
           <div className="text-xs text-[hsl(var(--muted-foreground))]">全链路自动执行</div>
@@ -99,8 +100,8 @@ export default function RunPanel({ upload, job, connected, busy, onStart }: Prop
             const active = current === idx || (!job && idx === 0);
             return (
               <div key={item.label} className={done || active ? "text-[hsl(var(--foreground))]" : "text-[hsl(var(--muted-foreground))]"}>
-                <div className="flex items-center gap-3 rounded-[1.25rem] bg-[hsl(var(--muted)/0.34)] px-4 py-3">
-                  <span className={`inline-grid h-8 w-8 place-items-center rounded-full ${done ? "bg-[hsl(var(--primary))] text-white" : active ? "bg-[hsl(var(--primary)/0.14)] text-[hsl(var(--primary))]" : "bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))]"}`}>
+                <div className="cc-selection-feedback flex items-center gap-3 rounded-[1rem] border border-[hsl(var(--border)/0.62)] bg-[hsl(var(--muted)/0.28)] px-4 py-3">
+                  <span className={`inline-grid h-8 w-8 place-items-center rounded-full ${done ? "bg-[hsl(var(--foreground))] text-white" : active ? "bg-[hsl(var(--primary)/0.14)] text-[hsl(var(--primary))]" : "bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))]"}`}>
                     {done ? <CheckCircle2 size={16} /> : idx + 1}
                   </span>
                   <div className="min-w-0 flex-1">
@@ -123,14 +124,14 @@ export default function RunPanel({ upload, job, connected, busy, onStart }: Prop
       )}
 
       {success && success.output && (
-        <div className="space-y-4 rounded-[1.8rem] border border-[hsl(var(--border))] bg-[hsl(var(--card)/0.72)] p-5 shadow-sm">
+        <div className="space-y-4 rounded-[1.25rem] border border-[hsl(var(--border)/0.82)] bg-[hsl(var(--card)/0.78)] p-5 shadow-[var(--shadow-sm)]">
           <div>
             <div className="text-base font-semibold">成片预览</div>
             <div className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">已完成导出，可直接预览并下载最终视频。</div>
           </div>
           <video className="cc-video" src={api.jobFileUrl(job!.id, success.output)} controls preload="metadata" />
           <a href={api.jobFileUrl(job!.id, success.output)} download>
-            <Button variant="outline" className="w-full rounded-full">
+            <Button variant="outline" className="w-full rounded-[1rem]">
               <Download size={16} /> 下载成品
             </Button>
           </a>

@@ -1,11 +1,12 @@
-# 产品展示模板 — 适用于电商产品短视频
+# 商品展示模板 — 适用于电商产品、单品卖点、种草推荐类视频
 
 meta:
   name: "product_showcase"
-  description: "适用于电商产品短视频"
-  version: "1.0"
+  description: "适用于电商产品、单品卖点、使用体验和转化导向类短视频"
+  version: "1.1"
   author: "AI_clip"
-  tags: ["电商", "产品", "竖屏"]
+  is_default: false
+  tags: ["电商", "商品", "种草", "带货", "产品展示"]
 
 extends: _global
 
@@ -17,12 +18,17 @@ canvas:
 timeline:
   intro:
     type: title_card
-    duration: 2.0
-    background: "#1a1a2e"
+    duration: 0.9
+    background: "#12151c"
     text: "{{ headline }}"
     text_style:
-      font_size: 64
-      color: "#FFD700"
+      font_size: 66
+      color: "#FFE1B5"
+      bold: true
+      alignment: center
+      margin_h: 110
+      max_chars_per_line: 14
+      max_lines: 2
       animation: fade_up
 
   body:
@@ -32,78 +38,176 @@ timeline:
     fit_mode: cover_center
     transition:
       type: fade
-      duration: 0.5
+      duration: 0.35
 
   outro:
     type: title_card
-    duration: 2.5
+    duration: 1.6
     text: "{{ cta }}"
     text_style:
-      font_size: 48
+      font_size: 46
       color: "#FFFFFF"
+      alignment: center
+      margin_h: 110
       animation: fade
 
 audio:
   voice:
     engine: edge-tts
     voice_id: zh-CN-XiaoxiaoNeural
-    rate: "+0%"
+    rate: "+2%"
     volume: 1.0
   bgm:
-    volume: 0.15
+    file: "assets/bgm/upbeat_01.mp3"
+    volume: 0.28
     ducking:
       enabled: true
-      target_volume: 0.05
-      fade_duration: 0.3
+      target_volume: 0.1
+      fade_duration: 0.25
 
 subtitles:
   source: tts_srt
+
+  safe_area:
+    bottom: 500
+    right: 120
+    left: 110
+
   style:
     font: "Microsoft YaHei"
-    font_size: 42
+    font_size: 46
     color: "#FFFFFF"
+    bold: false
+    spacing: 1.3
+    alignment: 2
+    margin_v: 500
+    margin_h: 110
+    max_chars_per_line: 17
+    max_lines: 3
+    outline:
+      color: "#161616"
+      width: 2
+    shadow: 2
+    fade_in: 180
+    fade_out: 110
+
+    background:
+      enabled: true
+      color: "#000000"
+      opacity: 0.4
+      border_radius: 12
+      padding_h: 24
+      padding_v: 10
+      blur: 4
+
+  timing:
+    chars_per_second_unit: 13
+    unit_seconds: 1.0
+    min_seconds: 1.0
+    padding_seconds: 0.25
+
+title:
+  enabled: true
+  style:
+    font: "Microsoft YaHei"
+    font_size: 66
+    color: "#FFFFFF"
+    bold: true
+    alignment: 8
+    margin_v: 180
+    margin_h: 110
+    max_chars_per_line: 14
+    max_lines: 2
+    spacing: 1.8
     outline_color: "#000000"
-    outline_width: 2
-    position: bottom_third
-    max_chars_per_line: 16
+    outline_width: 3
+    shadow: 2
+    fade_in: 420
+    fade_out: 420
 
 effects:
   color_grade: warm_boost
-  vignette: 0.3
+  vignette: 0.12
+  slowdown: 0.92
+  ken_burns:
+    enabled: true
+    zoom_range: 0.08
+    drift_speed: 0.16
+
+editing:
+  techniques:
+    - name: cinematic
+      description: "轻微慢放与细节镜头强调，突出商品质感"
+    - name: speed_adjust
+      description: "根据口播节奏微调画面速度"
+    - name: trim_fade
+      description: "素材过长时保留核心卖点片段"
 
 copy:
   variables:
     - name: product_name
       required: true
-      description: "产品名称"
-    - name: product_feature
+      default: ""
+      description: "商品名称，如“保温杯”“面膜”“蓝牙耳机”"
+    - name: product_category
+      required: false
+      default: "这款产品"
+      description: "商品品类概括"
+    - name: core_feature
       required: true
-      description: "核心卖点"
-    - name: price
+      default: ""
+      description: "核心卖点，如“轻便耐摔”“持久保温”"
+    - name: selling_point
+      required: false
+      default: "整体质感和实用性都在线"
+      description: "补充卖点说明"
+    - name: target_user
       required: false
       default: ""
+      description: "适用人群，如“学生党”“上班族”"
+    - name: promo_hint
+      required: false
+      default: ""
+      description: "可直接填写完整优惠提示短语，如“平台最近有活动”“现在入手很划算”"
 
   script_template: |
-    {{ headline }}
-    {{ product_name }}，{{ product_feature }}。
+    {{ opening }}
+    今天想分享的是{{ product_name }}。
+    它最打动我的一点就是{{ core_feature }}，而且{{ selling_point }}。
+    {% if target_user %}如果你是{{ target_user }}，这类{{ product_category }}会特别实用。{% endif %}
+    {% if promo_hint %}{{ promo_hint }}，想入手的话可以重点看看。{% endif %}
     {{ cta }}
+
+  title_template: "{{ product_name }} · {{ headline }}\n{{ hashtag }}"
 
   presets:
     headline:
-      - "发现一款好物！"
-      - "今天必须安利这个！"
-      - "用了就回不去了！"
-      - "这也太好用了吧！"
+      - "这款真的值得入手"
+      - "最近很想推荐的一个好物"
+      - "用了几次，确实有点惊喜"
+      - "这类产品里它很能打"
+      - "今天认真种草一下"
+    hashtag:
+      - "#好物推荐 #商品展示 #种草分享"
+      - "#今日种草 #产品推荐 #生活好物"
+      - "#电商短视频 #商品展示 #实用好物"
+      - "#好物分享 #使用体验 #值得入手"
+    opening:
+      - "最近在整理想推荐的好物，这个真的很快就进入了我的必推清单。"
+      - "一开始我对它期待其实没那么高，但真正用下来，体验比预想中更稳定。"
+      - "如果你最近也在看同类型产品，这条内容可以先帮你省一点筛选时间。"
+      - "很多产品第一眼看起来都差不多，但真正拉开差距的，往往是细节和使用感。"
+      - "我更愿意推荐那种用几次之后还愿意继续拿出来说的东西，这个就是其中之一。"
     cta:
-      - "点击下方链接，get同款"
-      - "评论区告诉我你想要什么颜色"
-      - "限时优惠，手慢无"
-      - "喜欢就点赞收藏吧"
+      - "如果你也在看同类产品，可以先把这条收藏起来。"
+      - "想看更多同类好物，记得关注我。"
+      - "你最看重哪一个卖点？评论区告诉我。"
+      - "如果想看实拍细节，我下一条继续展开讲。"
 
 match_rules:
-  filename_contains: ["产品", "product", "商品", "goods", "展示"]
-  folder_name: ["product", "电商", "products"]
+  filename_contains: ["产品", "商品", "好物", "测评", "开箱", "种草", "product", "goods", "review", "unbox"]
+  folder_name: ["product", "products", "电商", "商品", "好物"]
   aspect_ratio: portrait
   min_duration: 3
   max_duration: 120
-  priority: 10
+  priority: 12
