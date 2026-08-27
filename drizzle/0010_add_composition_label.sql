@@ -1,0 +1,1 @@
+ALTER TABLE `compositions` ADD `label` text;

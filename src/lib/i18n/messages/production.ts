@@ -1,0 +1,36 @@
+import type { NamespaceMessages } from "../config";
+
+export const production: NamespaceMessages = {
+  zh: {
+    title: "生产控制台", subtitle: "统一规划工作流、费用、模型、项目记忆、版本与质量修复。", back: "返回素材", loading: "正在汇总生产数据…", loadFailed: "生产数据加载失败",
+    cost: "预计生成成本", time: "预计耗时", unknownCalls: "{n} 次调用价格未知", shots: "{n} 个分镜", workflow: "工作流编排", workflowHint: "关闭不需要的阶段；依赖与实际执行位置保持可见。", saveWorkflow: "保存工作流", saved: "已保存", saving: "保存中…",
+    execution_server: "服务端", execution_client: "创作端", execution_local: "本地", billing_free: "免费", billing_paid: "付费", billing_conditional: "按配置",
+    stage_analyze: "媒体理解", stage_script: "脚本", stage_judge: "审稿", stage_keyframes: "关键帧", stage_motion: "动态镜头", stage_voice: "配音", stage_compose: "合成", stage_qc: "质检", stage_release: "发布门禁",
+    router: "智能模型路由", routerHint: "推荐会先满足输入能力，再按目标排序；应用后会成为真实默认视频模型。", goal_balanced: "均衡", goal_cost: "低成本", goal_speed: "速度", goal_quality: "质量", goal_consistency: "一致性", recommended: "推荐", applyModel: "应用推荐", noModel: "暂无可用视频模型",
+    memory: "项目视觉记忆", memoryHint: "结构化创作意图会参与真实提示词编译；视觉锚点用于生成前一致性检查。", subject: "核心主体", action: "主体动作", environment: "场景环境", lighting: "光线方向", camera: "镜头语言", characterAnchors: "人物锚点", productAnchors: "商品锚点", wardrobeAnchors: "服装锚点", forbiddenChanges: "禁止变化", commaHint: "多个锚点用逗号分隔", saveMemory: "保存项目记忆",
+    versions: "版本与产物树", snapshot: "创建当前快照", snapshots: "手动快照", generations: "生成记录", noVersions: "暂无版本记录",
+    assets: "语义素材", assetCount: "{n} 项素材", noTags: "尚无可提取标签",
+    diagnosis: "失败诊断", noFailure: "没有待处理的失败", recover: "建议动作", preview: "低成本即时预览", previewDesc: "使用快速 720p 合成档，不重新生成 AI 素材。", previewCta: "前往快速预览", runQc: "运行成片质检", qcRunning: "质检中…", repairs: "修复计划", noComposition: "尚无成片可质检",
+    statusError: "操作失败，请重试", usdRange: "${min}–${max}", minuteRange: "{min}–{max} 分钟", confidenceUnknown: "包含区间估算", priceKnown: "已使用当前模型目录价格", projectState: "当前生产状态", ready: "准备就绪", run_running: "执行中", run_done: "已完成", run_failed: "需处理", outputCounts: "{assets} 项素材 · {videos} 个成片", assetsUnit: "项素材",
+    priceUnknown: "价格由供应商运行时决定", perCall: "约 ${price} / 次", modelApplied: "推荐模型已应用", applied: "已应用", mediaInsights: "项目媒体洞察",
+    "recovery_resume-task": "继续查询原任务", "recovery_adapt-params": "自动适配参数", "recovery_switch-model": "切换备用模型", "recovery_neutralize-prompt": "中和提示词", "recovery_reduce-inputs": "减少参考素材", "recovery_repair-media": "修复媒体", "recovery_retry-stage": "单阶段重试", "recovery_configure-provider": "检查供应商配置",
+    qcPassed: "质检通过，无需修复", qcPlanned: "已生成修复计划，不会自动触发付费生成", freeAutoFix: "免费自动项", manualReview: "需确认", applyFreeRepairs: "应用全部免费修复", repairStarting: "正在启动修复…", repairStarted: "修复版已开始本地合成，完成后可再次运行质检。", repairVersionLabel: "QC 自动修复版",
+    openConsole: "生产控制台", textEditor: "文字剪辑",
+  },
+  en: {
+    title: "Production console", subtitle: "Plan workflow, cost, models, project memory, versions, and quality repairs in one place.", back: "Back to assets", loading: "Collecting production data…", loadFailed: "Failed to load production data",
+    cost: "Estimated generation cost", time: "Estimated time", unknownCalls: "{n} call(s) have unknown pricing", shots: "{n} shots", workflow: "Workflow orchestration", workflowHint: "Disable stages you do not need while keeping dependencies and execution locations visible.", saveWorkflow: "Save workflow", saved: "Saved", saving: "Saving…",
+    execution_server: "Server", execution_client: "Creator", execution_local: "Local", billing_free: "Free", billing_paid: "Paid", billing_conditional: "Conditional",
+    stage_analyze: "Media analysis", stage_script: "Script", stage_judge: "Review", stage_keyframes: "Keyframes", stage_motion: "Motion", stage_voice: "Voice", stage_compose: "Compose", stage_qc: "QC", stage_release: "Release gate",
+    router: "Smart model routing", routerHint: "Recommendations satisfy input capabilities first, then rank by goal. Applying one changes the real default video model.", goal_balanced: "Balanced", goal_cost: "Cost", goal_speed: "Speed", goal_quality: "Quality", goal_consistency: "Consistency", recommended: "Recommended", applyModel: "Apply recommendation", noModel: "No video model available",
+    memory: "Project visual memory", memoryHint: "Structured intent compiles into real prompts; visual anchors power consistency checks before generation.", subject: "Core subject", action: "Subject action", environment: "Environment", lighting: "Lighting direction", camera: "Camera language", characterAnchors: "Character anchors", productAnchors: "Product anchors", wardrobeAnchors: "Wardrobe anchors", forbiddenChanges: "Forbidden changes", commaHint: "Separate multiple anchors with commas", saveMemory: "Save project memory",
+    versions: "Version and output tree", snapshot: "Snapshot current state", snapshots: "Manual snapshots", generations: "Generation records", noVersions: "No version history yet",
+    assets: "Semantic assets", assetCount: "{n} assets", noTags: "No tags could be derived yet",
+    diagnosis: "Failure diagnosis", noFailure: "No failure needs attention", recover: "Suggested recovery", preview: "Low-cost instant preview", previewDesc: "Uses the fast 720p compose tier without regenerating AI assets.", previewCta: "Open fast preview", runQc: "Run video QC", qcRunning: "Running QC…", repairs: "Repair plan", noComposition: "No composed video to inspect yet",
+    statusError: "Action failed. Try again.", usdRange: "${min}–${max}", minuteRange: "{min}–{max} min", confidenceUnknown: "Includes range estimates", priceKnown: "Uses current model catalog pricing", projectState: "Production state", ready: "Ready", run_running: "Running", run_done: "Done", run_failed: "Needs attention", outputCounts: "{assets} assets · {videos} videos", assetsUnit: "assets",
+    priceUnknown: "Price is decided by the provider at runtime", perCall: "About ${price} / call", modelApplied: "Recommended model applied", applied: "Applied", mediaInsights: "Project media insights",
+    "recovery_resume-task": "Resume original task", "recovery_adapt-params": "Adapt parameters", "recovery_switch-model": "Switch fallback model", "recovery_neutralize-prompt": "Neutralize prompt", "recovery_reduce-inputs": "Reduce references", "recovery_repair-media": "Repair media", "recovery_retry-stage": "Retry one stage", "recovery_configure-provider": "Check provider setup",
+    qcPassed: "QC passed; no repair needed", qcPlanned: "Repair plan created; no paid generation was started", freeAutoFix: "Free automatic fix", manualReview: "Confirmation needed", applyFreeRepairs: "Apply all free repairs", repairStarting: "Starting repair…", repairStarted: "A repaired local composition has started. Run QC again when it finishes.", repairVersionLabel: "QC auto-repair",
+    openConsole: "Production console", textEditor: "Text edit",
+  },
+};

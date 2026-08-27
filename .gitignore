@@ -1,0 +1,105 @@
+# Dependencies and package-manager caches
+/node_modules/
+/.pnpm-store/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Next.js, bundler and compiler output
+/.next/
+/out/
+/build/
+/dist/
+/release/
+**/dist/
+/.turbo/
+/.cache/
+*.tsbuildinfo
+next-env.d.ts
+
+# Documentation and documentation assets
+/docs/
+/docs/**
+/TUTORIAL.md
+/TUTORIAL.en.md
+
+# Unit, integration and end-to-end tests
+/e2e/
+**/__tests__/
+**/__mocks__/
+**/*.test.*
+**/*.spec.*
+/vitest.config.*
+/playwright.config.*
+/coverage/
+/.nyc_output/
+/test-results/
+/playwright-report/
+/junit.xml
+
+# Local runtime data and generated media
+/data/
+/uploads/
+/output/
+/cache/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Local environment and secrets
+.env*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+
+# Logs and diagnostic artifacts
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+*.pid
+*.pid.lock
+
+# Electron and platform packaging artifacts
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+*.msi
+*.exe
+*.blockmap
+
+# Editor, operating-system and temporary files
+.DS_Store
+Thumbs.db
+Desktop.ini
+/.idea/
+/.vscode/
+*.swp
+*.swo
+*.tmp
+*.temp
+*~
+
+# Local agent and assistant context
+/AGENTS.md
+/CLAUDE.md
+/.claude/
+/.agents/
+/.codex/
+
+# Local deployment state
+/.vercel/

@@ -1,0 +1,122 @@
+{
+  "name": "mora",
+  "version": "0.8.95",
+  "description": "MORA — Multimodal Orchestration for Retail Automation",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "author": "xixihhhh",
+  "main": "electron/main.js",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=10"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest run",
+    "cli": "node bin/mora.mjs",
+    "render:element": "node scripts/render-element.mjs",
+    "bundle:standalone": "node scripts/bundle-standalone.mjs",
+    "electron": "electron .",
+    "electron:rebuild": "electron-rebuild -f -w better-sqlite3",
+    "pack:dir": "next build && pnpm bundle:standalone && electron-builder --dir",
+    "dist": "next build && pnpm bundle:standalone && electron-builder --publish never"
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.3.0",
+    "@ffprobe-installer/ffprobe": "^2.1.2",
+    "@huggingface/transformers": "4.2.0",
+    "@types/fluent-ffmpeg": "^2.1.28",
+    "better-sqlite3": "^12.11.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.1",
+    "ffmpeg-static": "^5.3.0",
+    "fluent-ffmpeg": "^2.1.3",
+    "geist": "^1.7.2",
+    "lucide-react": "^0.577.0",
+    "motion": "^12.38.0",
+    "next": "16.2.1",
+    "openai": "^6.32.0",
+    "qrcode": "^1.5.4",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-icons": "^5.5.0",
+    "tailwind-merge": "^3.5.0",
+    "tw-animate-css": "^1.4.0",
+    "zustand": "^5.0.12"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@ffprobe-installer/ffprobe",
+      "better-sqlite3",
+      "electron",
+      "electron-winstaller",
+      "esbuild",
+      "ffmpeg-static",
+      "msw",
+      "onnxruntime-node",
+      "protobufjs"
+    ]
+  },
+  "build": {
+    "appId": "com.mora.app",
+    "productName": "Mora",
+    "npmRebuild": false,
+    "compression": "maximum",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json",
+      "!node_modules/**",
+      "node_modules/ffmpeg-static/**",
+      "node_modules/@ffprobe-installer/**"
+    ],
+    "afterPack": "./electron/after-pack.cjs",
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**",
+      "node_modules/@ffprobe-installer/**"
+    ],
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.video",
+      "identity": null,
+      "icon": "electron/icon.png"
+    },
+    "dmg": {
+      "format": "UDBZ"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "electron/icon.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "electron/icon.png"
+    }
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
+    "@tailwindcss/postcss": "^4",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.10",
+    "electron": "^42.4.1",
+    "electron-builder": "^26.15.3",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.1",
+    "jsdom": "^29.0.1",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^4.1.0"
+  }
+}

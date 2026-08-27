@@ -1,0 +1,1 @@
+ALTER TABLE `publish_metrics` ADD `hook_id` text;
