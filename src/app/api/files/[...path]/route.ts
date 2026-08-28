@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDataDir } from "@/lib/paths";
 import { apiError } from "@/lib/api-error";
 import { parseRangeHeader } from "@/lib/http-range";
-import { stat } from "fs/promises";
+import { open, stat } from "fs/promises";
 import { join, normalize, sep } from "path";
 import { createReadStream, existsSync } from "fs";
 import { Readable } from "stream";
+import { detectImageMime } from "@/lib/image-format";
 
 // Static file server - serves uploaded images/videos.
 // Streams from disk (no whole-file buffering) and supports single-range HTTP Range requests (206),
@@ -52,8 +53,20 @@ export async function GET(
     m4v: "video/x-m4v",
   };
 
+  let contentType = mimeTypes[ext || ""] || "application/octet-stream";
+  if (contentType.startsWith("image/") && contentType !== "image/svg+xml") {
+    const handle = await open(filePath, "r");
+    try {
+      const signature = Buffer.alloc(16);
+      const { bytesRead } = await handle.read(signature, 0, signature.length, 0);
+      contentType = detectImageMime(signature.subarray(0, bytesRead)) ?? contentType;
+    } finally {
+      await handle.close();
+    }
+  }
+
   const baseHeaders: Record<string, string> = {
-    "Content-Type": mimeTypes[ext || ""] || "application/octet-stream",
+    "Content-Type": contentType,
     "Cache-Control": "public, max-age=31536000",
     "Accept-Ranges": "bytes",
   };

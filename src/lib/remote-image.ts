@@ -1,6 +1,7 @@
 import { readFile } from "fs/promises";
 import { join, sep } from "path";
 import { getDataDir } from "@/lib/paths";
+import { imageDataUri, normalizeImageDataUri } from "@/lib/image-format";
 
 /**
  * Resolve a local `/api/files/{relative-path}` reference to a safe absolute path inside the uploads directory.
@@ -27,14 +28,15 @@ export function resolveUploadFilePath(ref: string): string | null {
  */
 export async function toRemoteUsableImage(ref: string | undefined): Promise<string | undefined> {
   if (!ref) return undefined;
-  if (ref.startsWith("http") || ref.startsWith("data:")) return ref;
+  if (ref.startsWith("data:")) return normalizeImageDataUri(ref);
+  if (ref.startsWith("http")) return ref;
   const filePath = resolveUploadFilePath(ref);
   if (!filePath) return ref; // not an /api/files path or path traversal — skip disk read, return as-is
   try {
     const buf = await readFile(filePath);
     const ext = filePath.split(".").pop()?.toLowerCase() || "png";
-    const mime = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : ext === "webp" ? "image/webp" : "image/png";
-    return `data:${mime};base64,${buf.toString("base64")}`;
+    const declaredMime = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : ext === "webp" ? "image/webp" : "image/png";
+    return imageDataUri(buf, declaredMime);
   } catch {
     return ref;
   }

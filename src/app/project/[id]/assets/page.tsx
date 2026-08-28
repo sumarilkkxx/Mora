@@ -69,6 +69,7 @@ interface PendingAiTask {
   model: string;
   taskId: string;
   status: "submitted" | "processing" | "completed" | "failed" | "unknown";
+  error?: string | null;
 }
 
 // shot types that "feature the product": when product fidelity is enabled, these AI shots use image-to-image (redraw with product photo to lock in the subject)
@@ -79,7 +80,7 @@ export default function AssetsPage() {
   const tc = useT("common");
   const locale = useLocale();
   const { id } = useParams<{ id: string }>();
-  const { providers, defaultImageModel, defaultVideoModel, customModels, imageParams, videoParams, llm, motionIntensity, setMotionIntensity, motionRealism, setMotionRealism, chainMode, setChainMode, visualLook, setVisualLook } = useSettingsStore();
+  const { providers, defaultImageModel, defaultImageProvider, defaultVideoModel, defaultVideoProvider, customModels, imageParams, videoParams, llm, motionIntensity, setMotionIntensity, motionRealism, setMotionRealism, chainMode, setChainMode, visualLook, setVisualLook } = useSettingsStore();
   // beginner/director split: simple mode hides the director panel, the storyboard-grid button
   // and per-shot camera tooling — beginners see shots + generate, nothing else
   const uiMode = useSettingsStore((st) => st.uiMode);
@@ -373,7 +374,7 @@ export default function AssetsPage() {
         const data = await res.json();
         // merge user-defined custom models so they can also be resolved to their provider
         const merged = mergeCustomModels(data.models ?? [], customModels, "image", new Set(enabled.map((e) => e.name)));
-        const model = merged.find((m) => m.id === defaultImageModel);
+        const model = merged.find((m) => m.id === defaultImageModel && (!defaultImageProvider || m.provider === defaultImageProvider));
         if (cancelled || !model) return;
         const prov = enabled.find((e) => e.name === model.provider);
         if (prov) {
@@ -386,7 +387,7 @@ export default function AssetsPage() {
     return () => {
       cancelled = true;
     };
-  }, [providers, defaultImageModel, customModels]);
+  }, [providers, defaultImageModel, defaultImageProvider, customModels]);
 
   // resolve the provider for the default video model (used for "convert to motion shot")
   useEffect(() => {
@@ -409,7 +410,7 @@ export default function AssetsPage() {
         const data = await res.json();
         // merge user-defined custom video models
         const merged = mergeCustomModels(data.models ?? [], customModels, "video", new Set(enabled.map((e) => e.name)));
-        const model = merged.find((m) => m.id === defaultVideoModel);
+        const model = merged.find((m) => m.id === defaultVideoModel && (!defaultVideoProvider || m.provider === defaultVideoProvider));
         if (cancelled || !model) return;
         const prov = enabled.find((e) => e.name === model.provider);
         if (prov) {
@@ -422,7 +423,7 @@ export default function AssetsPage() {
     return () => {
       cancelled = true;
     };
-  }, [providers, defaultVideoModel, customModels]);
+  }, [providers, defaultVideoModel, defaultVideoProvider, customModels]);
 
   // load cloud tasks whose results were never retrieved (issue #16) so the user can
   // recover a paid task instead of resubmitting (and paying again)
@@ -440,6 +441,16 @@ export default function AssetsPage() {
   useEffect(() => {
     reloadPendingTasks();
   }, [reloadPendingTasks]);
+
+  useEffect(() => {
+    const onTaskUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<{ projectId?: string }>).detail;
+      if (detail?.projectId && detail.projectId !== id) return;
+      void Promise.all([reloadPendingTasks(), reloadAssets()]);
+    };
+    window.addEventListener("mora:ai-task-updated", onTaskUpdate);
+    return () => window.removeEventListener("mora:ai-task-updated", onTaskUpdate);
+  }, [id, reloadAssets, reloadPendingTasks]);
 
   // save a generated video as the shot's asset (shared by the normal flow and task recovery).
   // keyframeUrl = the static first frame the i2v ran from: persisted as thumbnailPath so the
@@ -491,7 +502,7 @@ export default function AssetsPage() {
             apiKey: prov.apiKey,
             baseUrl: prov.baseUrl,
             taskId: task.taskId,
-            wait: true,
+            wait: false,
           }),
         });
         const data = await res.json();
@@ -598,15 +609,16 @@ export default function AssetsPage() {
         finalPrompt = patched.prompt;
         setTaskMsg(t("retakeApplied", { change: locale === "zh" ? patched.change.zh : patched.change.en }));
       }
-      // per-shot duration: the composer's slot follows the script duration (voice-fitted), and the
-      // composer trims overshoot from the TAIL — which would cut a chained ending. Round to the
-      // model's supported range instead of always sending the global 5s default.
+      // The production profile owns the maximum billable clip length. Shorter script beats stay
+      // short; longer beats are capped by the selected profile and the composer fits them into the
+      // voiceover slot. The server performs the final model-capability normalization before submit.
       const videoOptions = buildVideoOptions(videoParams);
       if (projectDirection.negativePrompt) {
         videoOptions.negativePrompt = [videoOptions.negativePrompt, projectDirection.negativePrompt].filter(Boolean).join(", ");
       }
       if (asset?.duration) {
-        videoOptions.duration = Math.min(15, Math.max(4, Math.round(asset.duration)));
+        const profileLimit = typeof videoParams.duration === "number" ? videoParams.duration : asset.duration;
+        videoOptions.duration = Math.min(15, Math.max(4, Math.round(Math.min(asset.duration, profileLimit))));
       }
       try {
         const res = await fetch("/api/ai/video", {
@@ -625,6 +637,7 @@ export default function AssetsPage() {
             // against this project/shot and stays recoverable after timeout or restart
             projectId: id,
             shotId,
+            background: true,
             // user-defined video parameters (aspect ratio / resolution / duration / frame rate / motion / seed / negative prompt)
             options: videoOptions,
           }),
@@ -640,6 +653,12 @@ export default function AssetsPage() {
             );
           }
           throw new Error(data.error || t("errorImageToVideoFailed"));
+        }
+        if (data.queued && data.taskId) {
+          setAssets((prev) => prev.map((a) => a.shotId === shotId ? { ...a, status: "generating", error: undefined } : a));
+          setTaskMsg(t("taskQueuedBackground", { taskId: data.taskId }));
+          await reloadPendingTasks();
+          return;
         }
         const url = data.videoUrls?.[0];
         if (!url) throw new Error(t("errorEmptyResult"));
@@ -816,8 +835,8 @@ export default function AssetsPage() {
           baseUrl: modelTarget.baseUrl,
           ...(presenterSheet && { characterSheetUrl: presenterSheet }),
           ...(productRef && { productImageUrl: productRef }),
-          // the grid itself is 9:16 so each of the 3x3 cells is exactly 9:16 too
-          options: buildImageOptions(imageParams ? { ...imageParams, aspectRatio: "9:16", count: 1 } : undefined),
+          // Match keyframe cells to the selected video aspect ratio.
+          options: buildImageOptions(imageParams ? { ...imageParams, aspectRatio: videoParams.aspectRatio, count: 1 } : undefined),
         }),
       });
       const data = await res.json();
@@ -829,9 +848,9 @@ export default function AssetsPage() {
     } finally {
       setIsGridGenerating(false);
     }
-  }, [id, scriptId, modelTarget, imageParams, isGridGenerating, presenterSheet, productSafe, productImages, reloadAssets, t]);
+  }, [id, scriptId, modelTarget, imageParams, videoParams.aspectRatio, isGridGenerating, presenterSheet, productSafe, productImages, reloadAssets, t]);
 
-  // grid→film (field-proven 2026-08): every shot keyframe rides ONE Seedance 2.5
+  // grid→film: every shot keyframe rides ONE request to the exact configured model
   // reference-to-video call with a timecoded multi-shot prompt — native cuts, dialogue
   // spoken verbatim, continuous audio. Lands in compositions (export page shows it).
   const runStoryboardFilm = useCallback(async () => {
@@ -845,26 +864,27 @@ export default function AssetsPage() {
         body: JSON.stringify({
           scriptId,
           provider: videoModelTarget.provider,
-          // an explicitly configured reference-to-video model wins; anything else upgrades to the 2.5 film default
-          model: videoModelTarget.model.includes("/reference-to-video")
-            ? videoModelTarget.model
-            : "bytedance/seedance-2.5/reference-to-video",
+          // The selected Settings model is authoritative; the server only repairs legacy suffixes.
+          model: videoModelTarget.model,
           apiKey: videoModelTarget.apiKey,
           baseUrl: videoModelTarget.baseUrl,
           // presenter sheet leads reference_images as the identity anchor (@Image1)
           ...(presenterSheet && { characterSheetUrl: presenterSheet }),
-          options: buildVideoOptions(videoParams ? { ...videoParams, aspectRatio: "9:16" } : undefined),
+          options: buildVideoOptions(videoParams),
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || t("filmFailed"));
-      setFilmNotice({ text: t("filmDone"), url: data.url });
+      setFilmNotice(data.queued
+        ? { text: t("filmQueuedBackground", { taskId: data.taskId }) }
+        : { text: t("filmDone"), url: data.url });
+      if (data.queued) await reloadPendingTasks();
     } catch (e) {
       setFilmNotice({ text: e instanceof Error ? e.message : t("filmFailed") });
     } finally {
       setIsFilmGenerating(false);
     }
-  }, [id, scriptId, videoModelTarget, videoParams, isFilmGenerating, presenterSheet, t]);
+  }, [id, scriptId, videoModelTarget, videoParams, isFilmGenerating, presenterSheet, reloadPendingTasks, t]);
 
   // generate all in one click (sequential, to avoid hitting platform rate limits with concurrent requests).
   // With auto-motion on, this runs TWO passes: (1) every static keyframe, (2) keyframe-chained i2v per shot —
@@ -1184,7 +1204,7 @@ export default function AssetsPage() {
         </div>
         )}
 
-        {uiMode === "pro" && videoModelTarget && (
+        {videoModelTarget && (
           <ModelCapabilityPreflight
             modelId={videoModelTarget.model}
             supportsAudio={videoModelTarget.supportsAudio}
@@ -1235,26 +1255,38 @@ export default function AssetsPage() {
                 <p className="text-xs text-blue-300/80 mt-0.5">{t("pendingTasksDesc")}</p>
                 <div className="mt-2 space-y-1.5">
                   {pendingTasks.map((task) => (
-                    <div key={task.id} className="flex items-center gap-2 text-xs text-blue-200/90">
-                      <span className="truncate">
-                        {t("taskLabel", { shot: task.shotId ?? "-", model: task.model, taskId: task.taskId })}
-                      </span>
-                      <Button
-                        onClick={() => resumeTask(task)}
-                        disabled={resumingTasks.has(task.id)}
-                        variant="outline"
-                        size="sm"
-                        className="h-6 px-2 text-[11px] border-blue-500/40 text-blue-300 hover:bg-blue-500/15 shrink-0"
-                      >
-                        {resumingTasks.has(task.id) ? (
-                          <>
-                            <LuLoaderCircle className="animate-spin w-3 h-3 mr-1" />
-                            {t("btnResumingTask")}
-                          </>
-                        ) : (
-                          t("btnResumeTask")
-                        )}
-                      </Button>
+                    <div key={task.id} className="space-y-1 text-xs text-blue-200/90">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate">
+                          {t("taskLabel", { shot: task.shotId ?? "-", model: task.model, taskId: task.taskId })}
+                        </span>
+                        <Button
+                          onClick={() => resumeTask(task)}
+                          disabled={resumingTasks.has(task.id)}
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-[11px] border-blue-500/40 text-blue-300 hover:bg-blue-500/15 shrink-0"
+                        >
+                          {resumingTasks.has(task.id) ? (
+                            <>
+                              <LuLoaderCircle className="animate-spin w-3 h-3 mr-1" />
+                              {t("btnResumingTask")}
+                            </>
+                          ) : (
+                            t("btnResumeTask")
+                          )}
+                        </Button>
+                      </div>
+                      {task.error && (
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-amber-300/90">
+                          <span>{task.error}</span>
+                          {/api key/i.test(task.error) && (
+                            <Link href="/settings" className="font-medium underline underline-offset-2">
+                              {t("taskUpdateCredentials")}
+                            </Link>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

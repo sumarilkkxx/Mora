@@ -16,6 +16,7 @@ export interface CoverVfOpts {
   fontFile?: string;
   /** vertical placement of the title */
   position?: "center" | "lower" | "upper";
+  style?: "editorial" | "commerce" | "contrast";
 }
 
 /**
@@ -43,6 +44,13 @@ export function buildCoverVf(o: CoverVfOpts): string {
       : o.position === "upper"
         ? `h*0.2-${Math.round(blockH / 2)}`
         : `(h-${blockH})/2`;
+  const style = o.style ?? "editorial";
+  const box = style === "commerce"
+    ? { color: "0xff5a47@0.92", borderW: Math.round(o.width * 0.018) }
+    : style === "contrast"
+      ? { color: "black@0.72", borderW: Math.round(o.width * 0.018) }
+      : { color: "0xfff7ed@0.92", borderW: Math.round(o.width * 0.018) };
+  const fontColor = style === "editorial" ? "0x2b211b" : "white";
   return unshellFilter(
     lines
       .map((line, i) =>
@@ -50,9 +58,9 @@ export function buildCoverVf(o: CoverVfOpts): string {
           fontFile: o.fontFile,
           text: line || " ",
           fontSize,
-          fontColor: "white",
-          borderW: Math.max(2, Math.round(o.width * 0.006)),
-          box: { color: "black@0.5", borderW: Math.round(o.width * 0.015) },
+          fontColor,
+          borderW: style === "editorial" ? 0 : Math.max(2, Math.round(o.width * 0.004)),
+          box,
           x: "(w-text_w)/2",
           y: `${base}+${i * lineH}`,
         }),
@@ -61,8 +69,8 @@ export function buildCoverVf(o: CoverVfOpts): string {
   );
 }
 
-/** Probe the video's pixel width via ffprobe (falls back to 1080 on failure). */
-async function probeWidth(videoPath: string): Promise<number> {
+/** Probe the video's pixel dimensions via ffprobe (falls back to portrait 1080p). */
+async function probeDimensions(videoPath: string): Promise<{ width: number; height: number }> {
   const { execFile } = await import("child_process");
   const { promisify } = await import("util");
   const run = promisify(execFile);
@@ -73,33 +81,43 @@ async function probeWidth(videoPath: string): Promise<number> {
       "-select_streams",
       "v:0",
       "-show_entries",
-      "stream=width",
+      "stream=width,height",
       "-of",
-      "default=nw=1:nk=1",
+      "csv=p=0:s=x",
       videoPath,
     ]);
-    const w = parseInt(String(stdout).trim(), 10);
-    return Number.isFinite(w) && w > 0 ? w : 1080;
+    const [w, h] = String(stdout).trim().split("x").map((v) => parseInt(v, 10));
+    return Number.isFinite(w) && w > 0 && Number.isFinite(h) && h > 0
+      ? { width: w, height: h }
+      : { width: 1080, height: 1920 };
   } catch {
-    return 1080;
+    return { width: 1080, height: 1920 };
   }
 }
 
 /** Extract a frame at frameAtSec and overlay the title → a cover PNG written to outPath. */
 export async function generateCover(opts: {
   videoPath: string;
+  backgroundImagePath?: string;
   title: string;
   outPath: string;
   frameAtSec?: number;
   position?: CoverVfOpts["position"];
+  style?: CoverVfOpts["style"];
 }): Promise<void> {
   const { execFile } = await import("child_process");
   const { promisify } = await import("util");
   const run = promisify(execFile);
-  const width = await probeWidth(opts.videoPath);
+  const { width, height } = await probeDimensions(opts.videoPath);
   const t = Math.max(0, opts.frameAtSec ?? 1);
-  const vf = buildCoverVf({ title: opts.title, width, fontFile: resolveChineseFontFile(), position: opts.position });
+  const titleVf = buildCoverVf({ title: opts.title, width, fontFile: resolveChineseFontFile(), position: opts.position, style: opts.style });
+  const vf = opts.backgroundImagePath
+    ? `scale=${width}:${height}:force_original_aspect_ratio=increase,crop=${width}:${height},${titleVf}`
+    : titleVf;
   await mkdir(dirname(opts.outPath), { recursive: true });
   // -ss before -i seeks fast; -frames:v 1 grabs a single frame; -vf applies the title overlay
-  await run(ffmpegBin(), ["-y", "-ss", String(t), "-i", opts.videoPath, "-frames:v", "1", "-vf", vf, opts.outPath]);
+  const inputArgs = opts.backgroundImagePath
+    ? ["-i", opts.backgroundImagePath]
+    : ["-ss", String(t), "-i", opts.videoPath];
+  await run(ffmpegBin(), ["-y", ...inputArgs, "-frames:v", "1", "-vf", vf, opts.outPath]);
 }

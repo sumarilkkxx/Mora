@@ -19,6 +19,8 @@ import { presenters } from "./presenters";
 import { mediaLab } from "./mediaLab";
 import { production } from "./production";
 import { transcript } from "./transcript";
+import { guidedEdit } from "./guidedEdit";
+import { tasksPage } from "./tasksPage";
 
 // 所有命名空间集中注册（新增页面时在此追加一行）
 const namespaces = {
@@ -42,6 +44,8 @@ const namespaces = {
   mediaLab,
   production,
   transcript,
+  guidedEdit,
+  tasksPage,
 };
 
 /** messages[locale][namespace][key] = 翻译文本 */

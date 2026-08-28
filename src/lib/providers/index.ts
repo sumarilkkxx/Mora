@@ -10,6 +10,7 @@ import { AlibabaProvider } from './alibaba'
 import { SiliconFlowProvider } from './siliconflow'
 import { OpenAIProvider } from './openai'
 import { OpenRouterProvider } from './openrouter'
+import { AtlasCloudProvider } from './atlas-cloud'
 
 // ==================== Provider 注册表 ====================
 
@@ -65,6 +66,13 @@ registerProvider({
   displayName: 'OpenRouter',
   description: 'OpenRouter 统一图片与视频 API，一把 Key 可调用多个平台的生成模型',
   factory: (config) => new OpenRouterProvider(config),
+})
+
+registerProvider({
+  name: 'atlas-cloud',
+  displayName: 'Atlas Cloud',
+  description: 'Atlas Cloud 视频生成平台，已接入 Seedance 2.0/2.5 的文生、图生和参考生视频端点',
+  factory: (config) => new AtlasCloudProvider(config),
 })
 
 // ==================== 工厂函数 ====================
@@ -150,3 +158,4 @@ export { AlibabaProvider } from './alibaba'
 export { SiliconFlowProvider } from './siliconflow'
 export { OpenAIProvider } from './openai'
 export { OpenRouterProvider } from './openrouter'
+export { AtlasCloudProvider } from './atlas-cloud'

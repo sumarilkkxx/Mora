@@ -98,6 +98,17 @@ export async function updateAiTaskByProviderTaskId(
   }
 }
 
+/** Resolve the persisted context needed to finalize a recovered provider task. */
+export async function getAiTaskByProviderTaskId(provider: string, taskId: string) {
+  const db = getDb();
+  const [row] = await db
+    .select()
+    .from(aiTasks)
+    .where(and(eq(aiTasks.provider, provider), eq(aiTasks.taskId, taskId)))
+    .limit(1);
+  return row;
+}
+
 /** List a project's tasks, optionally only the ones still needing attention */
 export async function listAiTasks(projectId: string, activeOnly: boolean) {
   const db = getDb();

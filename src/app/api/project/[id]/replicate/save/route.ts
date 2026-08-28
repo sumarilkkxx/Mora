@@ -71,6 +71,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         aigcBadge: false,
       })
       .returning();
+    await db.update(projects).set({ status: "done", updatedAt: new Date() }).where(eq(projects.id, id));
 
     return NextResponse.json({
       compositionId: row.id,

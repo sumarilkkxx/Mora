@@ -13,6 +13,7 @@ const SAFE_ID = /^[a-zA-Z0-9-]+$/;
 // Allowlist of fields that may be updated via PATCH (id/createdAt etc. are blocked to prevent field injection / primary-key corruption)
 const PATCHABLE_FIELDS = [
   "name",
+  "workflowType",
   "productName",
   "productCategory",
   "productDescription",
@@ -39,6 +40,7 @@ const VALID_STATUS = new Set([
   "composing",
   "done",
 ]);
+const VALID_WORKFLOW_TYPES = new Set(["generate", "edit"]);
 
 // Fetch a single project
 export async function GET(
@@ -74,6 +76,13 @@ export async function PATCH(
     const body = await req.json();
     const db = getDb();
 
+    if (body.action === "restore") {
+      const restored = await db.update(projects).set({ deletedAt: null, updatedAt: new Date() })
+        .where(eq(projects.id, id)).returning();
+      if (!restored[0]) return apiError(req, "项目不存在", "Project not found", 404);
+      return NextResponse.json(restored[0]);
+    }
+
     // Only pick allowlisted fields; discard dangerous fields such as id/createdAt
     const updates: Record<string, unknown> = {};
     for (const field of PATCHABLE_FIELDS) {
@@ -85,6 +94,9 @@ export async function PATCH(
     // Validate that the status value is a legal enum member
     if ("status" in updates && !VALID_STATUS.has(String(updates.status))) {
       return apiError(req, "非法的项目状态值", "Invalid project status value", 400);
+    }
+    if ("workflowType" in updates && !VALID_WORKFLOW_TYPES.has(String(updates.workflowType))) {
+      return apiError(req, "非法的项目工作流类型", "Invalid project workflow type", 400);
     }
 
     if (Object.keys(updates).length === 0) {
@@ -111,7 +123,7 @@ export async function PATCH(
   }
 }
 
-// Delete a project
+// Move a project to trash by default; permanent=1 performs the destructive delete.
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -122,6 +134,13 @@ export async function DELETE(
       return apiError(req, "无效的项目ID", "Invalid project ID", 400);
     }
     const db = getDb();
+    const permanent = req.nextUrl.searchParams.get("permanent") === "1";
+    if (!permanent) {
+      const [trashed] = await db.update(projects).set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(eq(projects.id, id)).returning();
+      if (!trashed) return apiError(req, "项目不存在", "Project not found", 404);
+      return NextResponse.json({ success: true, trashed: true });
+    }
     // DB rows cascade (scripts/assets/compositions via onDelete:"cascade" + foreign_keys=ON),
     // but the project's on-disk files do not — remove them too so deletes don't leak orphaned
     // uploads/output directories. force:true ignores missing dirs; failures never block the delete.

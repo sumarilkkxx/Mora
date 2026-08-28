@@ -55,8 +55,12 @@ export interface SettingsState {
   tts: TTSSetting;
   // 默认生图模型
   defaultImageModel: string;
+  // 默认生图平台（同一模型 ID 可同时存在于多个聚合平台）
+  defaultImageProvider: string;
   // 默认生视频模型
   defaultVideoModel: string;
+  // 默认生视频平台（模型 ID 在不同聚合平台间可能重复，必须一并持久化）
+  defaultVideoProvider: string;
   // 默认分辨率
   defaultResolution: "720p" | "1080p";
   // 默认画面比例
@@ -92,8 +96,8 @@ export interface SettingsState {
   setProvider: (name: string, setting: ProviderSetting) => void;
   setLLM: (llm: LLMSetting) => void;
   setTTS: (tts: TTSSetting) => void;
-  setDefaultImageModel: (model: string) => void;
-  setDefaultVideoModel: (model: string) => void;
+  setDefaultImageModel: (model: string, provider?: string) => void;
+  setDefaultVideoModel: (model: string, provider?: string) => void;
   setDefaultResolution: (resolution: "720p" | "1080p") => void;
   setDefaultAspectRatio: (ratio: "9:16" | "16:9" | "1:1") => void;
   addCustomModel: (model: CustomModel) => void;
@@ -126,7 +130,8 @@ const POLLINATIONS_BASE_URL = "https://gen.pollinations.ai/v1";
  * v3：Ollama 预设的 localhost 改成 127.0.0.1。Windows 上 localhost 会先解析到 ::1，而 Ollama 默认
  * 只监听 127.0.0.1，用户会看到一个无从排查的"连不上"（issue #19 追问）。同端口同机，改写无副作用。
  *
- * v6：清理已经下线的 Provider、模型和 TTS 配置，防止旧 localStorage 继续调用已移除的平台。
+ * v6：清理当时已经下线的 Provider、模型和 TTS 配置。
+ * v8：Atlas Cloud 以真实视频适配器重新上线；只继续清理未接入的 fal.ai。
  */
 export function migrateSettings(state: SettingsState): SettingsState {
   const llm = state?.llm;
@@ -152,23 +157,32 @@ export function migrateSettings(state: SettingsState): SettingsState {
     state.activeProductionProfile = "balanced";
   }
   // v6: removed providers must also be removed from persisted browser state.
-  const removedConfigured = Boolean(state.providers?.["atlas-cloud"]?.enabled || state.providers?.["fal-ai"]?.enabled);
+  const removedConfigured = Boolean(state.providers?.["fal-ai"]?.enabled);
   if (state.providers) {
-    delete state.providers["atlas-cloud"];
     delete state.providers["fal-ai"];
+    state.providers["atlas-cloud"] ??= { enabled: false, apiKey: "" };
   }
   state.customModels = (state.customModels ?? []).filter(
-    (model) => model.provider !== "atlas-cloud" && model.provider !== "fal-ai"
+    (model) => model.provider !== "fal-ai"
   );
-  if (/atlascloud\.ai/i.test(state.llm?.baseUrl ?? "")) {
-    state.llm = { provider: "", baseUrl: "", apiKey: "", model: "", visionModel: "" };
-  }
   const legacyTtsProvider = String(state.tts?.provider ?? "");
   if (legacyTtsProvider === "atlas" || legacyTtsProvider === "falai") {
     state.tts = { enabled: false, provider: DEFAULT_TTS_PROVIDER, baseUrl: "", apiKey: "", model: "", voice: "", speed: 1 };
   }
   if (removedConfigured && state.defaultImageModel === "openai/gpt-image-2/text-to-image") state.defaultImageModel = "";
   if (removedConfigured && state.defaultVideoModel === "bytedance/seedance-2.0/text-to-video") state.defaultVideoModel = "";
+  // v7: the old settings page persisted output format twice. The prominent video
+  // fields are authoritative; synchronize the advanced generation object so every
+  // generation path reads the same resolution/aspect ratio after migration.
+  state.defaultResolution ??= state.videoParams?.resolution ?? DEFAULT_VIDEO_PARAMS.resolution;
+  state.defaultAspectRatio ??= state.videoParams?.aspectRatio ?? DEFAULT_VIDEO_PARAMS.aspectRatio;
+  state.defaultVideoProvider ??= "";
+  state.defaultImageProvider ??= "";
+  state.videoParams = {
+    ...(state.videoParams ?? DEFAULT_VIDEO_PARAMS),
+    resolution: state.defaultResolution,
+    aspectRatio: state.defaultAspectRatio,
+  };
   return state;
 }
 
@@ -182,6 +196,7 @@ export const useSettingsStore = create<SettingsState>()(
         siliconflow: { enabled: false, apiKey: "" },
         openai: { enabled: false, apiKey: "" },
         openrouter: { enabled: false, apiKey: "" },
+        "atlas-cloud": { enabled: false, apiKey: "" },
       },
       llm: {
         provider: "",
@@ -200,7 +215,9 @@ export const useSettingsStore = create<SettingsState>()(
         speed: 1,
       },
       defaultImageModel: "",
+      defaultImageProvider: "",
       defaultVideoModel: "",
+      defaultVideoProvider: "",
       defaultResolution: "1080p",
       defaultAspectRatio: "9:16",
       customModels: [],
@@ -225,16 +242,29 @@ export const useSettingsStore = create<SettingsState>()(
         })),
       setLLM: (llm) => set({ llm }),
       setTTS: (tts) => set({ tts }),
-      setDefaultImageModel: (model) => set({ defaultImageModel: model }),
-      setDefaultVideoModel: (model) => set({ defaultVideoModel: model }),
-      setDefaultResolution: (resolution) => set({ defaultResolution: resolution }),
-      setDefaultAspectRatio: (ratio) => set({ defaultAspectRatio: ratio }),
+      setDefaultImageModel: (model, provider) => set({ defaultImageModel: model, ...(provider !== undefined && { defaultImageProvider: provider }) }),
+      setDefaultVideoModel: (model, provider) => set((state) => ({
+        defaultVideoModel: model,
+        defaultVideoProvider: provider ?? (model === state.defaultVideoModel ? state.defaultVideoProvider : ""),
+      })),
+      setDefaultResolution: (resolution) => set((state) => ({
+        defaultResolution: resolution,
+        videoParams: { ...state.videoParams, resolution },
+      })),
+      setDefaultAspectRatio: (ratio) => set((state) => ({
+        defaultAspectRatio: ratio,
+        videoParams: { ...state.videoParams, aspectRatio: ratio },
+      })),
       addCustomModel: (model) =>
         set((state) => ({ customModels: [...state.customModels, model] })),
       removeCustomModel: (id) =>
         set((state) => ({ customModels: state.customModels.filter((m) => m.id !== id) })),
       setImageParams: (params) => set({ imageParams: params }),
-      setVideoParams: (params) => set({ videoParams: params }),
+      setVideoParams: (params) => set({
+        videoParams: params,
+        defaultResolution: params.resolution,
+        defaultAspectRatio: params.aspectRatio,
+      }),
       setMotionIntensity: (intensity) => set({ motionIntensity: intensity }),
       setMotionRealism: (tier) => set({ motionRealism: tier }),
       setChainMode: (mode) => set({ chainMode: mode }),
@@ -252,8 +282,10 @@ export const useSettingsStore = create<SettingsState>()(
       // v3：Ollama 的 localhost:11434 改写成 127.0.0.1:11434（Windows 上 ::1 连不通）。
       // v4：补充面向创作目标的生产方案；旧设置迁移到兼顾质量与成本的 balanced。
       // v5：历史兼容版本。
-      // v6：移除 Atlas Cloud / fal.ai 及其遗留的本地配置。
-      version: 6,
+      // v6：移除当时不可用的 Atlas Cloud / fal.ai 配置。
+      // v8：Atlas Cloud 以真实视频适配器恢复，补回空配置并继续清理 fal.ai。
+      // v9：持久化视频模型所属平台，防止同名模型在 OpenRouter / Atlas 间被静默改道。
+      version: 9,
       migrate: (persisted) => migrateSettings(persisted as SettingsState),
     }
   )

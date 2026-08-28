@@ -18,6 +18,92 @@ import { stripPauseMarks } from "@/lib/voice-markup";
 export const FILM_MIN_SECONDS = 4;
 export const FILM_MAX_SECONDS = 30;
 
+/**
+ * Resolve the model submitted by the one-call storyboard film flow.
+ *
+ * Older builds invented a `/reference-to-video` suffix for OpenRouter. That suffix
+ * is not a model id and produces `Model ... does not exist`. OpenRouter expresses
+ * the mode through `input_references`, so legacy Seedance suffixes are removed.
+ * Apart from that compatibility repair, the user's configured model is preserved
+ * exactly: choosing Seedance 2.0 must never silently submit Seedance 2.5.
+ */
+export function resolveStoryboardFilmModel(providerName: string | undefined, configuredModel: string | undefined): string {
+  const provider = providerName?.trim().toLowerCase();
+  const model = configuredModel?.trim() ?? "";
+  if (provider !== "openrouter") return model;
+
+  if (/^bytedance\/seedance-(?:2\.5|2\.0(?:-fast|-mini)?)\/reference-to-video$/i.test(model)) {
+    return model.replace(/\/reference-to-video$/i, "");
+  }
+  return model;
+}
+
+/** Keep finite positive values and choose the closest supported duration (lower wins a tie). */
+export function closestSupportedFilmDuration(requested: number, supportedDurations?: number[]): number {
+  const values = [...new Set((supportedDurations ?? []).filter((value) => Number.isFinite(value) && value > 0))]
+    .sort((a, b) => a - b);
+  if (values.length === 0) return requested;
+  return values.reduce((best, value) => {
+    const delta = Math.abs(value - requested);
+    const bestDelta = Math.abs(best - requested);
+    return delta < bestDelta || (delta === bestDelta && value < best) ? value : best;
+  }, values[0]);
+}
+
+/** Convert Settings dimensions back into the OpenRouter request vocabulary. */
+export function videoRequestAspectRatio(width?: number, height?: number): string {
+  if (width && height && width === height) return "1:1";
+  return width && height && width > height ? "16:9" : "9:16";
+}
+
+export function videoRequestResolution(width?: number, height?: number): string {
+  const longEdge = Math.max(width ?? 0, height ?? 0);
+  if (longEdge >= 1900) return "1080p";
+  if (longEdge >= 1000) return "720p";
+  return "480p";
+}
+
+/** Never change output format silently: these values are returned in the paid preview. */
+export function supportedVideoSetting(requested: string, supported?: string[], fallback?: string): string {
+  const values = (supported ?? []).filter((value) => typeof value === "string" && value.length > 0);
+  if (values.length === 0 || values.includes(requested)) return requested;
+  if (fallback && values.includes(fallback)) return fallback;
+  return values[0];
+}
+
+export function videoRequestDimensions(resolution: string, aspectRatio: string): { width: number; height: number } {
+  const short = resolution === "1080p" ? 1080 : resolution === "720p" ? 720 : 480;
+  const long = resolution === "1080p" ? 1920 : resolution === "720p" ? 1280 : 854;
+  if (aspectRatio === "1:1") return { width: short, height: short };
+  if (aspectRatio === "16:9") return { width: long, height: short };
+  return { width: short, height: long };
+}
+
+/** Conservative fallback used only when a provider's live model directory is unavailable. */
+export function fallbackFilmDurations(providerName: string | undefined, modelId: string): number[] | undefined {
+  if (providerName?.toLowerCase() === "openrouter" && /^bytedance\/seedance-(?:2\.5|2\.0(?:-fast|-mini)?)$/i.test(modelId)) {
+    return Array.from({ length: 12 }, (_, index) => index + 4);
+  }
+  return undefined;
+}
+
+/** Scale the prompt's shot timecodes to the duration that will actually be submitted. */
+export function fitFilmShotsToDuration(shots: Shot[], targetDuration: number): Shot[] {
+  const total = filmTotalSeconds(shots);
+  if (!Number.isFinite(targetDuration) || targetDuration <= 0 || total <= 0 || Math.abs(total - targetDuration) < 0.01) {
+    return shots;
+  }
+  const factor = targetDuration / total;
+  let allocated = 0;
+  return shots.map((shot, index) => {
+    const duration = index === shots.length - 1
+      ? Math.max(0.1, Number((targetDuration - allocated).toFixed(1)))
+      : Math.max(0.1, Number((shot.duration * factor).toFixed(1)));
+    allocated += duration;
+    return { ...shot, duration };
+  });
+}
+
 /** Shot-type labels for segment lines, zh/en */
 const SHOT_TYPE_LABELS: Record<string, { zh: string; en: string }> = {
   hook: { zh: "钩子镜", en: "hook shot" },
@@ -102,9 +188,21 @@ export interface ReferenceQuotaCheck {
  * sheet = 10 refs against Seedance's 9-image cap.
  */
 export function referenceQuotaCheck(referenceImageCount: number, modelId: string): ReferenceQuotaCheck {
-  // Official providers enforce their own request contracts. Unknown/custom models pass here;
-  // the provider adapter remains the source of truth for model-specific limits.
-  void modelId;
+  // Atlas's exact reference endpoint publishes 30 image slots (50 mixed assets total).
+  if (/^bytedance\/seedance-2\.5\/reference-to-video$/i.test(modelId)) {
+    const limit = 30;
+    return { ok: referenceImageCount <= limit, count: referenceImageCount, limit };
+  }
+  // OpenRouter's base Seedance 2.5 endpoint accepts up to 50 mixed reference assets.
+  // Unknown/custom models pass unchecked; their provider adapter remains the source of truth.
+  if (/^bytedance\/seedance-2\.5(?:\/reference-to-video)?$/i.test(modelId)) {
+    const limit = 50;
+    return { ok: referenceImageCount <= limit, count: referenceImageCount, limit };
+  }
+  if (/^bytedance\/seedance-2\.0(?:-fast|-mini)?\/reference-to-video$/i.test(modelId)) {
+    const limit = 9;
+    return { ok: referenceImageCount <= limit, count: referenceImageCount, limit };
+  }
   return { ok: true, count: referenceImageCount };
 }
 

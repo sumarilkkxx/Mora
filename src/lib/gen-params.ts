@@ -168,7 +168,8 @@ export async function resolveDefaultModelTarget(
   providers: Record<string, { enabled?: boolean; apiKey?: string; baseUrl?: string }>,
   defaultModel: string | undefined,
   customModels: CustomModel[],
-  mediaType: GenMediaType
+  mediaType: GenMediaType,
+  preferredProvider?: string
 ): Promise<GenModelTarget | null> {
   const enabled = Object.entries(providers)
     .filter(([, p]) => p.enabled && p.apiKey)
@@ -183,7 +184,7 @@ export async function resolveDefaultModelTarget(
     if (!res.ok) return null;
     const data = await res.json();
     const merged = mergeCustomModels(data.models ?? [], customModels, mediaType, new Set(enabled.map((e) => e.name)));
-    const model = merged.find((m) => m.id === defaultModel);
+    const model = merged.find((m) => m.id === defaultModel && (!preferredProvider || m.provider === preferredProvider));
     if (!model) return null;
     const prov = enabled.find((e) => e.name === model.provider);
     return prov ? { provider: prov.name, model: defaultModel, apiKey: prov.apiKey, baseUrl: prov.baseUrl } : null;

@@ -17,6 +17,7 @@ import type {
   VideoOptions,
   VideoResult,
 } from './types'
+import { normalizeImageDataUri } from '../image-format'
 
 interface OpenRouterImageModelsResponse {
   data?: Array<{
@@ -38,9 +39,11 @@ interface OpenRouterVideoModelsResponse {
     id?: string
     name?: string
     description?: string
+    supported_durations?: number[]
     supported_resolutions?: string[]
     supported_aspect_ratios?: string[]
     supported_sizes?: string[]
+    generate_audio?: boolean
     pricing_skus?: Record<string, string>
     allowed_passthrough_parameters?: string[]
   }>
@@ -66,7 +69,9 @@ function toAspectRatio(width?: number, height?: number): string | undefined {
 function toResolution(width?: number, height?: number): string | undefined {
   const longEdge = Math.max(width ?? 0, height ?? 0)
   if (!longEdge) return undefined
-  return longEdge >= 1900 ? '1080p' : '720p'
+  if (longEdge >= 1900) return '1080p'
+  if (longEdge >= 1000) return '720p'
+  return '480p'
 }
 
 export class OpenRouterProvider extends BaseProvider {
@@ -107,7 +112,7 @@ export class OpenRouterProvider extends BaseProvider {
     const imageUrls = (response.data ?? []).flatMap((image) => {
       if (image.url) return [image.url]
       if (!image.b64_json) return []
-      return [`data:${image.media_type || 'image/png'};base64,${image.b64_json}`]
+      return [normalizeImageDataUri(`data:${image.media_type || 'image/png'};base64,${image.b64_json}`)]
     })
     if (imageUrls.length === 0) {
       throw new ProviderError('OpenRouter 已完成请求，但没有返回图片', 'NO_RESULT', this.name)
@@ -181,10 +186,14 @@ export class OpenRouterProvider extends BaseProvider {
       errorCode: typeof job.error === 'object' ? job.error.code : undefined,
       extra: { pollingUrl: job.polling_url, generationId: job.generation_id, usage: job.usage },
     }
-    if (status === 'completed' && job.unsigned_urls?.length) {
+    if (status === 'completed') {
+      const urls = (job.unsigned_urls?.length
+        ? job.unsigned_urls
+        : [`${this.config.baseUrl.replace(/\/$/, '')}/videos/${encodeURIComponent(taskId)}/content?index=0`]
+      ).map((url) => new URL(url, `${this.config.baseUrl.replace(/\/$/, '')}/`).toString())
       taskStatus.result = {
         taskId: job.id || taskId,
-        videoUrls: job.unsigned_urls,
+        videoUrls: urls,
         modelId: job.model || '',
         extra: { usage: job.usage },
       }
@@ -231,7 +240,9 @@ export class OpenRouterProvider extends BaseProvider {
         modes: ['text-to-video', 'image-to-video'],
         mediaType: 'video',
         provider: this.name,
+        supportsAudio: model.generate_audio,
         extra: {
+          durationValues: model.supported_durations,
           supportedResolutions: model.supported_resolutions,
           supportedAspectRatios: model.supported_aspect_ratios,
           supportedSizes: model.supported_sizes,

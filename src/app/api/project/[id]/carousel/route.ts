@@ -5,6 +5,7 @@ import { getDb } from "@/lib/db";
 import { getDataDir, fileNameOf } from "@/lib/paths";
 import { scripts as scriptsTable, type Shot } from "@/lib/db/schema";
 import { generateCarousel } from "@/lib/video-composer/carousel";
+import { persistDerivedImage } from "@/lib/derived-image";
 import { apiError, errText } from "@/lib/api-error";
 
 const SAFE_ID = /^[a-zA-Z0-9\-]+$/;
@@ -39,6 +40,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const prefix = `card-${Date.now()}`;
   const outDir = join(getDataDir(), "uploads", id, "carousel");
   try {
+    const heroImagePath = typeof body.heroImageUrl === "string" && body.heroImageUrl
+      ? await persistDerivedImage(id, body.heroImageUrl, "carousel-ai")
+      : undefined;
     const files = await generateCarousel({
       title: script.title || "图文",
       shots,
@@ -47,10 +51,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       width,
       height,
       theme: typeof body.theme === "string" ? body.theme : undefined,
+      heroImagePath,
     });
     // separator-agnostic: join() produces backslash paths on Windows (issue #15)
     const cards = files.map((f) => `/api/files/${id}/carousel/${fileNameOf(f)}`);
-    return NextResponse.json({ count: cards.length, cards });
+    return NextResponse.json({ count: cards.length, cards, mode: heroImagePath ? "ai" : "local", theme: typeof body.theme === "string" ? body.theme : "xiaohongshu" });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : errText(req, "卡片生成失败", "Card generation failed") }, { status: 500 });
   }

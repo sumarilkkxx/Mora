@@ -13,6 +13,8 @@ import { buildStoryboardGridPrompt, computeGridCells, GRID_MAX_SHOTS } from "@/l
 import { ffmpegBin } from "@/lib/ffmpeg-path";
 import { probeMedia } from "@/lib/media-probe";
 import { apiError, errText } from "@/lib/api-error";
+import { detectImageMime, imageExtension } from "@/lib/image-format";
+import { contentPolicyError, isContentPolicyRejection } from "@/lib/content-policy-error";
 
 const execFileAsync = promisify(execFile);
 
@@ -21,7 +23,7 @@ async function persistGridImage(projectId: string, sourceUrl: string): Promise<{
   const dir = join(getDataDir(), "uploads", projectId);
   await mkdir(dir, { recursive: true });
   let buf: Buffer;
-  let ext = "png";
+  let declaredMime = "image/png";
   if (sourceUrl.startsWith("data:")) {
     const comma = sourceUrl.indexOf(",");
     if (comma === -1) throw new Error("无法解析 data URI 图片");
@@ -29,18 +31,16 @@ async function persistGridImage(projectId: string, sourceUrl: string): Promise<{
     buf = /;base64/i.test(meta)
       ? Buffer.from(sourceUrl.slice(comma + 1), "base64")
       : Buffer.from(decodeURIComponent(sourceUrl.slice(comma + 1)), "utf-8");
-    if (meta.includes("webp")) ext = "webp";
-    else if (meta.includes("jpeg") || meta.includes("jpg")) ext = "jpg";
+    declaredMime = meta.split(";")[0] || "image/png";
   } else if (/^https?:\/\//.test(sourceUrl)) {
     const resp = await fetch(sourceUrl);
     if (!resp.ok) throw new Error(`下载九宫格图失败: ${resp.status}`);
     buf = Buffer.from(await resp.arrayBuffer());
-    const ct = resp.headers.get("content-type") || "";
-    if (ct.includes("webp")) ext = "webp";
-    else if (ct.includes("jpeg") || ct.includes("jpg")) ext = "jpg";
+    declaredMime = resp.headers.get("content-type")?.split(";")[0] || "image/png";
   } else {
     throw new Error("不支持的图片来源");
   }
+  const ext = imageExtension(detectImageMime(buf) ?? declaredMime);
   const fileName = `storyboard-grid-${Date.now()}.${ext}`;
   const absPath = join(dir, fileName);
   await writeFile(absPath, buf);
@@ -112,9 +112,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     // 1) one generation renders every shot — consistency is physical, not prompted;
     // with references attached the sheet pins the person and the photo pins the product
+    const requestedWidth = typeof options?.width === "number" ? options.width : 1080;
+    const requestedHeight = typeof options?.height === "number" ? options.height : 1920;
+    const requestedAspectRatio = requestedWidth === requestedHeight
+      ? "1:1"
+      : requestedWidth > requestedHeight ? "16:9" : "9:16";
     const prompt = buildStoryboardGridPrompt(shots, script.characters, {
       characterSheet: !!characterSheetUrl,
       productImage: !!productImageUrl,
+      aspectRatio: requestedAspectRatio,
     });
     const provider = createProvider({ name: providerName, apiKey, baseUrl: baseUrl ?? "" });
     const result = await provider.generateImage({
@@ -165,6 +171,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ gridPath: publicPath, cells: saved, count: saved.length });
   } catch (error) {
     console.error("九宫格分镜生成失败:", error);
+    if (isContentPolicyRejection(error)) {
+      const locale = req.headers.get("accept-language")?.toLowerCase().startsWith("en") ? "en" : "zh";
+      return NextResponse.json({ error: contentPolicyError(locale, "image"), code: "CONTENT_POLICY" }, { status: 422 });
+    }
     return NextResponse.json(
       { error: error instanceof Error ? error.message : errText(req, "九宫格分镜生成失败", "Storyboard grid failed") },
       { status: 500 }

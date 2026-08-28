@@ -16,6 +16,7 @@ const DEFAULT_BASE: Record<string, string> = {
   siliconflow: "https://api.siliconflow.cn/v1",
   openai: "https://api.openai.com/v1",
   openrouter: "https://openrouter.ai/api/v1",
+  "atlas-cloud": "https://api.atlascloud.ai/api/v1",
 };
 
 type Probe = { url: string; headers: Record<string, string>; authFirst?: boolean; method?: "GET" | "POST"; body?: string };
@@ -33,6 +34,12 @@ function buildProbe(name: string, apiKey: string, baseUrl?: string): Probe {
     // OpenRouter's key metadata endpoint validates the supplied bearer token
     // without submitting a generation request or incurring model charges.
     return { url: `${base}/key`, headers: { Authorization: `Bearer ${apiKey}` } };
+  }
+  if (name === "atlas-cloud") {
+    // Official read-only Billing Public API validates the real Atlas key without
+    // creating a generation task or reserving any credits.
+    const publicBase = base.replace(/\/api\/v1$/i, "").replace(/\/$/, "");
+    return { url: `${publicBase}/public/v1/balance`, headers: { Authorization: `Bearer ${apiKey}` } };
   }
   // siliconflow / volcengine / 自定义 OpenAI 兼容：GET /models
   return { url: `${base}/models`, headers: { Authorization: `Bearer ${apiKey}` } };
@@ -55,10 +62,41 @@ export async function POST(req: NextRequest) {
   const timer = setTimeout(() => controller.abort(), 10000);
   try {
     const r = await fetch(probe.url, { method: probe.method ?? "GET", headers: probe.headers, body: probe.body, signal: controller.signal });
+    if (name === "atlas-cloud" && r.status === 403) {
+      // Team keys may be valid for generation but lack account-balance permission.
+      // Fall back to a non-billable prediction lookup: a valid generation key reaches
+      // the endpoint and normally gets 404 for this guaranteed-fake task id.
+      const atlasBase = (baseUrl || DEFAULT_BASE["atlas-cloud"]).replace(/\/$/, "");
+      const fallback = await fetch(`${atlasBase}/model/prediction/mora-connection-probe-does-not-exist`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: controller.signal,
+      });
+      if (fallback.status !== 401 && fallback.status !== 403) {
+        return NextResponse.json({
+          status: "ok",
+          code: "CONNECTED_NO_BALANCE_SCOPE",
+          message: "Atlas Cloud 视频 API 鉴权通过；该 Key 无账户余额读取权限，因此未显示余额（未发起生成）。",
+        });
+      }
+    }
     if (r.status === 401 || r.status === 403) {
       return NextResponse.json({ status: "invalid", code: "INVALID_KEY", message: "平台拒绝了该 Key，请检查是否填错、过期或权限不足。" });
     }
     if (r.ok || probe.authFirst) {
+      if (name === "atlas-cloud" && r.ok) {
+        const data = await r.json().catch(() => null) as { available?: { value?: string; currency?: string } } | null;
+        const value = data?.available?.value;
+        const currency = data?.available?.currency?.toUpperCase() || "USD";
+        return NextResponse.json({
+          status: "ok",
+          code: "CONNECTED",
+          message: value != null
+            ? `Atlas Cloud 鉴权通过，可用余额 ${value} ${currency}（只读查询，未发起生成）`
+            : "Atlas Cloud 鉴权通过（只读查询，未发起生成）。",
+          balance: value != null ? { value, currency: data?.available?.currency || "usd" } : undefined,
+        });
+      }
       // authFirst 平台：非 401/403 即视为鉴权通过
       return NextResponse.json({ status: "ok", code: "CONNECTED", message: "已由本地服务连接并通过平台验证。" });
     }

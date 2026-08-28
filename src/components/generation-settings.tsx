@@ -28,6 +28,7 @@ import {
 const PROVIDER_OPTIONS: { value: string; label: string }[] = [
   { value: "replicate", label: "Replicate" },
   { value: "openrouter", label: "OpenRouter" },
+  { value: "atlas-cloud", label: "Atlas Cloud" },
   { value: "volcengine", label: "火山引擎" },
   { value: "alibaba", label: "阿里百炼" },
   { value: "siliconflow", label: "硅基流动" },
@@ -43,12 +44,14 @@ function NumberField({
   onChange,
   placeholder,
   step,
+  disabled,
 }: {
   label: string;
   value: number | undefined;
   onChange: (v: number | undefined) => void;
   placeholder?: string;
   step?: string;
+  disabled?: boolean;
 }) {
   return (
     <div className="space-y-1.5">
@@ -59,6 +62,7 @@ function NumberField({
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value === "" ? undefined : Number(e.target.value))}
         placeholder={placeholder}
+        disabled={disabled}
         className="font-mono text-xs"
       />
     </div>
@@ -69,7 +73,7 @@ function NumberField({
  * "Custom models + generation params" settings card. Self-contained read/write from the settings store,
  * allowing users to attach arbitrary model IDs to existing providers and set global default params for image/video generation.
  */
-export function GenerationSettings() {
+export function GenerationSettings({ selectedVideoProvider }: { selectedVideoProvider?: string }) {
   const t = useT("generationSettings");
   const {
     customModels,
@@ -101,6 +105,7 @@ export function GenerationSettings() {
   });
 
   const canAdd = form.modelId.trim().length > 0;
+  const unifiedVideo = selectedVideoProvider === "openrouter" || selectedVideoProvider === "atlas-cloud";
   const handleAdd = () => {
     if (!canAdd) return;
     const cm: CustomModel = {
@@ -257,14 +262,17 @@ export function GenerationSettings() {
                 </Select>
               </div>
               <NumberField label={t("duration")} value={videoParams.duration} onChange={(v) => setVideoParams({ ...videoParams, duration: v })} placeholder="5" />
-              <NumberField label={t("fps")} value={videoParams.fps} onChange={(v) => setVideoParams({ ...videoParams, fps: v })} placeholder={t("platformDefault")} />
-              <NumberField label={t("motionStrength")} value={videoParams.motionStrength} onChange={(v) => setVideoParams({ ...videoParams, motionStrength: v })} step="0.1" placeholder={t("platformDefault")} />
+              <NumberField label={t("fps")} value={videoParams.fps} onChange={(v) => setVideoParams({ ...videoParams, fps: v })} placeholder={t("platformDefault")} disabled={unifiedVideo} />
+              <NumberField label={t("motionStrength")} value={videoParams.motionStrength} onChange={(v) => setVideoParams({ ...videoParams, motionStrength: v })} step="0.1" placeholder={t("platformDefault")} disabled={unifiedVideo} />
               <NumberField label={t("seed")} value={videoParams.seed} onChange={(v) => setVideoParams({ ...videoParams, seed: v })} placeholder={t("seedPlaceholder")} />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">{t("negativePrompt")}</Label>
-              <Textarea value={videoParams.negativePrompt ?? ""} onChange={(e) => setVideoParams({ ...videoParams, negativePrompt: e.target.value || undefined })} rows={2} placeholder={t("videoNegativePlaceholder")} className="text-xs resize-none" />
+              <Textarea value={videoParams.negativePrompt ?? ""} onChange={(e) => setVideoParams({ ...videoParams, negativePrompt: e.target.value || undefined })} rows={2} placeholder={t("videoNegativePlaceholder")} className="text-xs resize-none" disabled={unifiedVideo} />
             </div>
+            {unifiedVideo && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">{t(selectedVideoProvider === "atlas-cloud" ? "atlasUnsupportedParams" : "openRouterUnsupportedParams")}</p>
+            )}
           </div>
         </CardContent>
       </Card>

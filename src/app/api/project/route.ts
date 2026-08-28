@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { projects } from "@/lib/db/schema";
-import { desc } from "drizzle-orm";
+import { desc, isNotNull, isNull } from "drizzle-orm";
 
 // fetch project list, most recently edited first (the /start "continue" cards rely on this order)
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const db = getDb();
-    const result = await db.select().from(projects).orderBy(desc(projects.updatedAt));
+    const includeTrash = req.nextUrl.searchParams.get("trash") === "1";
+    const result = await db.select().from(projects)
+      .where(includeTrash ? isNotNull(projects.deletedAt) : isNull(projects.deletedAt))
+      .orderBy(desc(includeTrash ? projects.deletedAt : projects.updatedAt));
     return NextResponse.json(result);
   } catch (error) {
     console.error("获取项目列表失败:", error);
@@ -28,11 +31,13 @@ export async function POST(req: NextRequest) {
     const VIDEO_MODES = ["product_closeup", "graphic_montage", "scene_demo", "live_presenter"];
     const videoMode = VIDEO_MODES.includes(body.videoMode) ? body.videoMode : undefined;
     const sourceType = body.sourceType === "clone" ? "clone" : undefined;
+    const workflowType = body.workflowType === "edit" ? "edit" : "generate";
 
     const newProject = await db
       .insert(projects)
       .values({
         name: body.name || "未命名项目",
+        workflowType,
         productName: body.productName,
         productCategory: body.productCategory,
         productDescription: body.productDescription,

@@ -247,6 +247,19 @@ export interface LLMMessagePair {
 export function explainLLMStatus(status: number | undefined, target: LLMTarget = {}): LLMMessagePair {
   const model = target.model || "?";
   const baseUrl = target.baseUrl || "?";
+  const detail = target.detail || "";
+
+  // OpenRouter can return 403 when the selected upstream provider rejects the
+  // request under its Terms of Service. That is materially different from an
+  // invalid key: rotating the key will not fix a prompt, image, or provider
+  // policy rejection. Keep the generic 403 wording for responses that do not
+  // expose this provider-side reason (including the connection probe).
+  if (status === 403 && /terms?\s+of\s+service|terms?\s+of\s+use|provider terms|policy violation|content policy|safety policy|request is prohibited/i.test(detail)) {
+    return {
+      zh: "请求被 OpenRouter 上游服务商的内容/服务条款拦截，不是普通 Key 无效：请检查提示词、商品图片/参考素材是否触发限制；也可在 OpenRouter 控制台更换或固定其他可用 Provider 后重试",
+      en: "The request was blocked by the upstream provider's content/terms policy on OpenRouter, not necessarily by an invalid key: review the prompt and product/reference media, or pin another eligible provider in OpenRouter and retry",
+    };
+  }
 
   if (status === 401 || status === 403) {
     return {

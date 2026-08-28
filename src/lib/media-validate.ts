@@ -34,7 +34,8 @@ export async function validateMediaFile(filePath: string, kind: MediaKind): Prom
         ["-nostdin", "-v", "error", "-xerror", "-i", filePath, "-map", "0:a:0", "-f", "null", "-"],
         { timeout: 30_000, maxBuffer: 4 * 1024 * 1024 },
       );
-      return true;
+      const probe = await probeMedia(filePath);
+      return probe.duration > 0;
     }
     const probe = await probeMedia(filePath);
     if (probe.width <= 0 || probe.height <= 0) return false;

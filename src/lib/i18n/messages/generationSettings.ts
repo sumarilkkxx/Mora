@@ -40,10 +40,12 @@ export const generationSettings: NamespaceMessages = {
     imageNegativePlaceholder: "不希望出现的元素，如 模糊、文字、水印",
     videoSection: "视频（转动态镜头）",
     resolution: "分辨率",
-    duration: "时长（秒）",
+    duration: "单镜头默认时长（秒）",
     fps: "帧率 fps",
     motionStrength: "运动强度",
     videoNegativePlaceholder: "不希望出现的元素",
+    openRouterUnsupportedParams: "OpenRouter 统一视频接口不接受帧率、运动强度和反向提示词；这些字段已禁用，不会伪装成生效。模型、分辨率、比例、时长和随机种子会真实提交。",
+    atlasUnsupportedParams: "Atlas Cloud 的已校验 Seedance 端点不接受帧率、运动强度和通用反向提示词；这些字段已禁用。模型 ID、分辨率、比例、时长、音频开关和随机种子会按原值提交。",
   },
   en: {
     // Media types
@@ -84,9 +86,11 @@ export const generationSettings: NamespaceMessages = {
     imageNegativePlaceholder: "Elements to avoid, e.g. blur, text, watermark",
     videoSection: "Video (motion shots)",
     resolution: "Resolution",
-    duration: "Duration (s)",
+    duration: "Default shot duration (s)",
     fps: "Frame rate (fps)",
     motionStrength: "Motion strength",
     videoNegativePlaceholder: "Elements to avoid",
+    openRouterUnsupportedParams: "OpenRouter's unified video API does not accept frame rate, motion strength, or a generic negative prompt. These fields are disabled instead of pretending they apply. Model, resolution, aspect ratio, duration, and seed are submitted.",
+    atlasUnsupportedParams: "The verified Atlas Cloud Seedance endpoints do not accept frame rate, motion strength, or a generic negative prompt. These fields are disabled. Model ID, resolution, aspect ratio, duration, audio, and seed are submitted unchanged.",
   },
 };

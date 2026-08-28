@@ -18,6 +18,11 @@ export interface CardVfOpts {
   fontColor?: string;
 }
 
+export interface CardPalette {
+  gradient: [string, string];
+  fontColor: string;
+}
+
 /**
  * Build the -vf drawtext filter for one card: wrap the text to the card width and render each line as
  * its own horizontally-centered drawtext, stacking the lines as a vertically-centered block.
@@ -42,7 +47,7 @@ export function buildCardVf(o: CardVfOpts): string {
           text: line || " ",
           fontSize,
           fontColor: o.fontColor ?? "white",
-          borderW: Math.max(2, Math.round(o.width * 0.004)),
+          borderW: (o.fontColor ?? "white") === "white" ? Math.max(2, Math.round(o.width * 0.004)) : 0,
           x: "(w-text_w)/2",
           y: `(h-${blockH})/2+${i * lineH}`,
         }),
@@ -52,17 +57,33 @@ export function buildCardVf(o: CardVfOpts): string {
 }
 
 /** Card color themes (gradient background + text color) so a feed of cards isn't monotone. */
-export const CARD_THEMES: Record<string, { gradient: [string, string]; fontColor: string }> = {
-  night: { gradient: ["0x0b0b12", "0x2a1248"], fontColor: "white" },
-  warm: { gradient: ["0x2a0e05", "0x6b2810"], fontColor: "white" },
-  mint: { gradient: ["0x07231a", "0x0f4a32"], fontColor: "white" },
-  mono: { gradient: ["0x111111", "0x2b2b2b"], fontColor: "white" },
-  rose: { gradient: ["0x2a0a1a", "0x6b1040"], fontColor: "white" },
+export const CARD_THEMES: Record<string, CardPalette[]> = {
+  // Warm editorial palette for image-first lifestyle feeds. No generic AI-purple.
+  xiaohongshu: [
+    { gradient: ["0xfff8f1", "0xffeee5"], fontColor: "0x2b211b" },
+    { gradient: ["0xff6655", "0xff806d"], fontColor: "white" },
+    { gradient: ["0xfff2bd", "0xffffe1"], fontColor: "0x30271d" },
+    { gradient: ["0xe7f2e3", "0xd3ead5"], fontColor: "0x183126" },
+  ],
+  // High-contrast short-video palette, borrowing platform energy without cloning trade dress.
+  shortvideo: [
+    { gradient: ["0x151719", "0x252a2d"], fontColor: "white" },
+    { gradient: ["0x00b8c8", "0x36d3d2"], fontColor: "0x102326" },
+    { gradient: ["0xff4f5e", "0xff756d"], fontColor: "white" },
+    { gradient: ["0xf4f5f2", "0xe7ebea"], fontColor: "0x181b1c" },
+  ],
+  // Calm solid/light cards for brands that should not inherit a platform look.
+  clean: [
+    { gradient: ["0xf7f3eb", "0xf7f3eb"], fontColor: "0x22201d" },
+    { gradient: ["0xdcecff", "0xdcecff"], fontColor: "0x17283b" },
+    { gradient: ["0xe6f1e8", "0xe6f1e8"], fontColor: "0x183124" },
+    { gradient: ["0xffe7df", "0xffe7df"], fontColor: "0x3b211b" },
+  ],
 };
 
-/** Resolve a theme name to its colors (falls back to "night"). Pure. */
-export function resolveCardTheme(name?: string): { gradient: [string, string]; fontColor: string } {
-  return CARD_THEMES[(name || "").toLowerCase()] ?? CARD_THEMES.night;
+/** Resolve a theme name to its rotating palettes (falls back to Xiaohongshu editorial). Pure. */
+export function resolveCardTheme(name?: string): CardPalette[] {
+  return CARD_THEMES[(name || "").toLowerCase()] ?? CARD_THEMES.xiaohongshu;
 }
 
 /** Render a single card: gradient background (lavfi) + drawtext overlay → PNG at outPath. */
@@ -75,13 +96,25 @@ export async function generateCard(o: {
   fontSize?: number;
   fontColor?: string;
   gradient?: [string, string];
+  backgroundImagePath?: string;
+  imageOverlay?: string;
 }): Promise<void> {
   const { execFile } = await import("child_process");
   const { promisify } = await import("util");
   const run = promisify(execFile);
-  const [c0, c1] = o.gradient ?? ["0x0b0b12", "0x2a1248"];
+  const [c0, c1] = o.gradient ?? CARD_THEMES.xiaohongshu[0].gradient;
   const vf = buildCardVf({ text: o.text, width: o.width, fontFile: o.fontFile, fontSize: o.fontSize, fontColor: o.fontColor });
   await mkdir(dirname(o.outPath), { recursive: true });
+  if (o.backgroundImagePath) {
+    const imageVf = [
+      `scale=${o.width}:${o.height}:force_original_aspect_ratio=increase`,
+      `crop=${o.width}:${o.height}`,
+      `drawbox=x=0:y=0:w=iw:h=ih:color=${o.imageOverlay ?? "black@0.38"}:t=fill`,
+      vf,
+    ].join(",");
+    await run(ffmpegBin(), ["-y", "-i", o.backgroundImagePath, "-vf", imageVf, "-frames:v", "1", o.outPath]);
+    return;
+  }
   await run(ffmpegBin(), [
     "-y",
     "-f",
@@ -112,14 +145,25 @@ export async function generateCarousel(o: {
   height: number;
   fontFile?: string;
   theme?: string;
+  heroImagePath?: string;
 }): Promise<string[]> {
   const fontFile = o.fontFile ?? resolveChineseFontFile();
-  const theme = resolveCardTheme(o.theme);
+  const palettes = resolveCardTheme(o.theme);
   const paths: string[] = [];
 
   // title card — larger font, centered
   const titlePath = join(o.outDir, `${o.prefix}-0.png`);
-  await generateCard({ text: o.title, outPath: titlePath, width: o.width, height: o.height, fontFile, fontSize: Math.round(o.width * 0.085), gradient: theme.gradient, fontColor: theme.fontColor });
+  await generateCard({
+    text: o.title,
+    outPath: titlePath,
+    width: o.width,
+    height: o.height,
+    fontFile,
+    fontSize: Math.round(o.width * 0.085),
+    gradient: palettes[0].gradient,
+    fontColor: o.heroImagePath ? "white" : palettes[0].fontColor,
+    backgroundImagePath: o.heroImagePath,
+  });
   paths.push(titlePath);
 
   // content cards — one per non-empty voiceover, numbered
@@ -129,7 +173,8 @@ export async function generateCarousel(o: {
     const text = (shot.voiceover ?? "").trim();
     if (!text) continue;
     const p = join(o.outDir, `${o.prefix}-${idx}.png`);
-    await generateCard({ text: `${idx}. ${text}`, outPath: p, width: o.width, height: o.height, fontFile, gradient: theme.gradient, fontColor: theme.fontColor });
+    const palette = palettes[idx % palettes.length];
+    await generateCard({ text: `${String(idx).padStart(2, "0")}  ${text}`, outPath: p, width: o.width, height: o.height, fontFile, gradient: palette.gradient, fontColor: palette.fontColor });
     paths.push(p);
     idx++;
   }

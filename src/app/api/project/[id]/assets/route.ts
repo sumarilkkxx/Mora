@@ -8,6 +8,7 @@ import { eq, and } from "drizzle-orm";
 import { validateOrDelete } from "@/lib/media-validate";
 import { MAX_DOWNLOAD_BYTES } from "@/lib/providers/stock-types";
 import { extractLastFrame, LAST_FRAME_SUFFIX } from "@/lib/video-composer/frame-extract";
+import { detectImageMime, imageExtension } from "@/lib/image-format";
 
 /** Decode-level check after writing to disk: AI providers' expiring links often answer with an
  * error page or a truncated body — those must be stopped before the DB row exists, or the
@@ -53,7 +54,9 @@ async function persistSource(projectId: string, sourceUrl: string, shotId: numbe
     const buf = /;base64/i.test(meta)
       ? Buffer.from(payload, "base64")
       : Buffer.from(decodeURIComponent(payload), "utf-8");
-    const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : mime.includes("mp4") ? "mp4" : "jpg";
+    const detectedMime = detectImageMime(buf);
+    const declaredExt = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : mime.includes("mp4") ? "mp4" : "jpg";
+    const ext = detectedMime ? imageExtension(detectedMime) : declaredExt;
     if (buf.byteLength > MAX_DOWNLOAD_BYTES) throw new Error(`素材体积 ${buf.byteLength} 超过上限 ${MAX_DOWNLOAD_BYTES}`);
     const dir = join(getDataDir(), "uploads", projectId);
     await mkdir(dir, { recursive: true });
@@ -71,7 +74,9 @@ async function persistSource(projectId: string, sourceUrl: string, shotId: numbe
     const buf = Buffer.from(await resp.arrayBuffer());
     if (buf.byteLength > MAX_DOWNLOAD_BYTES) throw new Error(`素材体积 ${buf.byteLength} 超过上限 ${MAX_DOWNLOAD_BYTES}`);
     const ct = resp.headers.get("content-type") || "";
-    const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : ct.includes("mp4") ? "mp4" : "jpg";
+    const detectedMime = detectImageMime(buf);
+    const declaredExt = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : ct.includes("mp4") ? "mp4" : "jpg";
+    const ext = detectedMime ? imageExtension(detectedMime) : declaredExt;
     const dir = join(getDataDir(), "uploads", projectId);
     await mkdir(dir, { recursive: true });
     const fileName = `asset-${shotId}-${Date.now()}.${ext}`;

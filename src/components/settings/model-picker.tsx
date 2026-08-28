@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, CircleAlert, LibraryBig, LoaderCircle, RotateCw, Search } from "lucide-react";
+import { Check, ChevronDown, CircleAlert, LibraryBig, LoaderCircle, RotateCw, Search, X } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +12,7 @@ const BRAND_LABELS: Record<string, string> = {
   alibaba: "Alibaba", meta: "Meta", qwen: "Qwen", microsoft: "Microsoft", recraft: "Recraft", xai: "xAI",
   krea: "Krea", "black-forest-labs": "Black Forest Labs", deepseek: "DeepSeek", anthropic: "Anthropic",
   replicate: "Replicate", openrouter: "OpenRouter", volcengine: "ByteDance / Volcengine", siliconflow: "SiliconFlow",
+  "atlas-cloud": "Atlas Cloud",
 };
 
 function normalizeBrand(raw: string) {
@@ -47,12 +48,18 @@ export function modelBrand(model: Pick<ModelChoice, "id" | "name" | "provider">)
   return normalizeBrand(model.provider || cleanModelLabel(model.name).split(":")[0] || "Other");
 }
 
+function modelProviderLabel(model: Pick<ModelChoice, "provider">): string {
+  return model.provider ? normalizeBrand(model.provider) : "Other";
+}
+
 function groupModels(models: ModelChoice[], query: string) {
   const needle = query.trim().toLowerCase();
   const filtered = needle ? models.filter((model) => `${model.name} ${model.id} ${model.provider ?? ""}`.toLowerCase().includes(needle)) : models;
   const groups = new Map<string, ModelChoice[]>();
   for (const model of filtered) {
-    const brand = modelBrand(model);
+    // Provider-backed image/video choices show the execution platform. LLM
+    // discovery only returns canonical IDs, so group those by their namespace.
+    const brand = model.provider ? modelProviderLabel(model) : modelBrand(model);
     groups.set(brand, [...(groups.get(brand) ?? []), model]);
   }
   const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
@@ -72,13 +79,17 @@ function useDismiss(open: boolean, setOpen: (open: boolean) => void) {
   return rootRef;
 }
 
-function ModelMenu({ models, query, onQueryChange, value, onPick }: {
-  models: ModelChoice[]; query: string; onQueryChange: (value: string) => void; value?: string; onPick: (model: ModelChoice) => void;
+function ModelMenu({ models, query, onQueryChange, value, valueProvider, onPick, onClose, capability }: {
+  models: ModelChoice[]; query: string; onQueryChange: (value: string) => void; value?: string; valueProvider?: string; onPick: (model: ModelChoice) => void; onClose?: () => void; capability?: "text" | "vision";
 }) {
   const t = useT("settings");
   const groups = useMemo(() => groupModels(models, query), [models, query]);
   return (
     <div className="mora-model-menu" role="listbox">
+      <div className="mora-model-menu-head">
+        <span><strong>{t(capability === "vision" ? "modelListPanelVision" : capability === "text" ? "modelListPanelText" : "modelListPanelTitle")}</strong><small>{t("modelGroupCount", { count: models.length })}</small></span>
+        {onClose && <button type="button" onClick={onClose} aria-label={t("modelListClose")}><X aria-hidden="true" /></button>}
+      </div>
       <label className="mora-model-search">
         <Search aria-hidden="true" />
         <input aria-label={t("modelListFilter")} value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={t("modelListFilter")} />
@@ -90,9 +101,9 @@ function ModelMenu({ models, query, onQueryChange, value, onPick }: {
               <span className="mora-model-group-copy"><strong>{brand}</strong><small>{t("modelGroupCount", { count: choices.length })}</small></span>
             </div>
             {choices.map((model) => (
-              <button key={`${model.provider ?? ""}:${model.id}`} type="button" role="option" aria-selected={model.id === value} onClick={() => onPick(model)} className="mora-model-option">
+              <button key={`${model.provider ?? ""}:${model.id}`} type="button" role="option" aria-selected={model.id === value && (!valueProvider || model.provider === valueProvider)} onClick={() => onPick(model)} className="mora-model-option">
                 <span><strong>{modelDisplayName(model)}</strong><small>{cleanModelLabel(model.id)}</small></span>
-                <span className="mora-model-option-state">{model.id === value && <><Check aria-hidden="true" /><span>{t("modelSelected")}</span></>}</span>
+                <span className="mora-model-option-state">{model.id === value && (!valueProvider || model.provider === valueProvider) && <><Check aria-hidden="true" /><span>{t("modelSelected")}</span></>}</span>
               </button>
             ))}
           </section>
@@ -103,71 +114,82 @@ function ModelMenu({ models, query, onQueryChange, value, onPick }: {
   );
 }
 
-export function GroupedModelSelect({ value, models, onChange, placeholder, disabled, loading }: {
-  value: string; models: ModelChoice[]; onChange: (model: string) => void; placeholder: string; disabled?: boolean; loading?: boolean;
+export function GroupedModelSelect({ value, valueProvider, models, onChange, placeholder, disabled, loading }: {
+  value: string; valueProvider?: string; models: ModelChoice[]; onChange: (model: string, provider?: string) => void; placeholder: string; disabled?: boolean; loading?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const rootRef = useDismiss(open, setOpen);
-  const selected = models.find((model) => model.id === value);
+  const selected = models.find((model) => model.id === value && (!valueProvider || model.provider === valueProvider));
   return (
     <div ref={rootRef} className="mora-model-picker" data-open={open || undefined}>
       <button type="button" className="mora-model-trigger" aria-haspopup="listbox" aria-expanded={open} disabled={disabled} onClick={() => setOpen((current) => !current)}>
         <span className="mora-model-trigger-copy">
-          {selected && <small>{modelBrand(selected)}</small>}
+          {selected && <small>{modelProviderLabel(selected)} · {modelBrand(selected)}</small>}
           <strong className={cn(!selected && "text-muted-foreground")}>{loading ? "…" : selected ? modelDisplayName(selected) : placeholder}</strong>
         </span>
         <span className="mora-model-trigger-disclosure"><ChevronDown aria-hidden="true" /></span>
       </button>
-      {open && <ModelMenu models={models} query={query} onQueryChange={setQuery} value={value} onPick={(model) => { onChange(model.id); setOpen(false); setQuery(""); }} />}
+      {open && <ModelMenu models={models} query={query} onQueryChange={setQuery} value={value} valueProvider={valueProvider} onClose={() => setOpen(false)} onPick={(model) => { onChange(model.id, model.provider); setOpen(false); setQuery(""); }} />}
     </div>
   );
 }
 
-export function ModelPicker({ value, baseUrl, apiKey, onChange, placeholder }: {
-  value: string; baseUrl: string; apiKey: string; onChange: (model: string) => void; placeholder?: string;
+export function ModelPicker({ value, baseUrl, apiKey, onChange, placeholder, capability = "text" }: {
+  value: string; baseUrl: string; apiKey: string; onChange: (model: string) => void; placeholder?: string; capability?: "text" | "vision";
 }) {
   const t = useT("settings");
   const [state, setState] = useState<"idle" | "loading">("idle");
   const [models, setModels] = useState<ModelChoice[]>([]);
   const [error, setError] = useState("");
+  const [errorCode, setErrorCode] = useState("");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const rootRef = useDismiss(open, setOpen);
 
+  useEffect(() => {
+    setModels([]);
+    setError("");
+    setErrorCode("");
+    setOpen(false);
+  }, [baseUrl, apiKey, capability]);
+
   const load = async () => {
     if (models.length) { setOpen(true); return; }
-    setState("loading"); setError("");
+    setState("loading"); setError(""); setErrorCode("");
     try {
-      const res = await fetch("/api/llm/models", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ baseUrl, apiKey }) });
+      const res = await fetch("/api/llm/models", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ baseUrl, apiKey, capability }) });
       const data = await res.json().catch(() => ({ ok: false }));
       const choices = (Array.isArray(data.models) ? data.models : []).map((id: string) => ({ id, name: id }));
       setModels(choices); setOpen(Boolean(choices.length));
-      if (!data.ok) setError(data.error || t("modelListFailed"));
-    } catch (e) { setError(e instanceof Error ? e.message : t("modelListFailed")); }
+      if (!data.ok) { setError(data.error || t("modelListFailed")); setErrorCode(data.code || "REQUEST_FAILED"); }
+    } catch (e) { setError(e instanceof Error ? e.message : t("modelListFailed")); setErrorCode("REQUEST_FAILED"); }
     finally { setState("idle"); }
   };
 
   return (
-    <div ref={rootRef} className="mora-model-picker" data-open={open || undefined}>
+    <div ref={rootRef} className="mora-model-picker mora-model-picker-editable" data-open={open || undefined} data-state={error ? "error" : models.length ? "ready" : "idle"}>
       <div className="mora-model-input-shell">
-        <input value={value} onChange={(event) => onChange(event.target.value)} onFocus={() => models.length && setOpen(true)} placeholder={placeholder} className="font-mono" />
-        <button type="button" onClick={load} disabled={!baseUrl || state === "loading"} title={t("modelListButton")} aria-label={t("modelListButton")} aria-expanded={open}>
+        <input aria-label={t("modelIdLabel")} value={value} onChange={(event) => onChange(event.target.value)} onFocus={() => models.length && setOpen(true)} placeholder={placeholder} className="font-mono" />
+        <button type="button" className="mora-model-library-button" onClick={load} disabled={!baseUrl || state === "loading"} aria-label={t("modelListBrowse")} aria-expanded={open}>
           {state === "loading" ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : <LibraryBig />}
           <span>{state === "loading" ? t("modelListLoading") : t("modelListButton")}</span>
           {state !== "loading" && <ChevronDown className="mora-model-library-chevron" aria-hidden="true" />}
         </button>
       </div>
+      <p className="mora-model-field-hint">
+        {models.length ? t("modelListReady", { count: models.length }) : error ? t("modelManualStillWorks") : t("modelListIdleHint")}
+      </p>
       {error && (
-        <div className="mora-model-feedback" role="status">
+        <div className="mora-model-feedback" role="alert" data-code={errorCode}>
           <CircleAlert aria-hidden="true" />
-          <span><strong>{t("modelListFailed")}</strong><small>{error}</small></span>
+          <span><strong>{t("modelListFailed")}</strong><small>{error}</small><em>{t("modelManualStillWorks")}</em></span>
           <button type="button" onClick={load} disabled={state === "loading"} aria-label={t("modelListRetry")}>
             <RotateCw aria-hidden="true" />{t("modelListRetry")}
           </button>
         </div>
       )}
-      {open && <ModelMenu models={models} query={query} onQueryChange={setQuery} value={value} onPick={(model) => { onChange(model.id); setOpen(false); setQuery(""); }} />}
+      {open && <ModelMenu models={models} query={query} onQueryChange={setQuery} value={value} capability={capability} onClose={() => setOpen(false)} onPick={(model) => { onChange(model.id); setOpen(false); setQuery(""); }} />}
     </div>
   );
 }

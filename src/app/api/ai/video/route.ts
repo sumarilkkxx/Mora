@@ -4,6 +4,7 @@ import { ProviderError } from "@/lib/providers/base";
 import { toRemoteUsableImage, resolveUploadFilePath } from "@/lib/remote-image";
 import { apiError, errText } from "@/lib/api-error";
 import { recordAiTask, updateAiTask } from "@/lib/ai-tasks";
+import { normalizeVideoOptionsForModel } from "@/lib/normalize-video-options";
 
 // AI video generation.
 //
@@ -13,7 +14,7 @@ import { recordAiTask, updateAiTask } from "@/lib/ai-tasks";
 // so the client can resume via /api/ai/video/task instead of paying again.
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { provider: providerName, model, prompt, imageUrl, lastImageUrl, mode, apiKey, baseUrl, options, projectId, shotId, referenceVideoUrls, referenceImageUrls } = body;
+  const { provider: providerName, model, prompt, imageUrl, lastImageUrl, mode, apiKey, baseUrl, options, projectId, shotId, referenceVideoUrls, referenceImageUrls, background } = body;
 
   if (!providerName || !model) {
     return apiError(req, "缺少必要参数", "Missing required parameters");
@@ -26,10 +27,14 @@ export async function POST(req: NextRequest) {
   try {
     const provider = createProvider({ name: providerName, apiKey, baseUrl });
 
+    // The UI preflight and paid submit share one normalization policy. This is deliberately
+    // completed before media upload or provider submission so unsupported values cannot bill.
+    const normalized = normalizeVideoOptionsForModel(model, options, Boolean(lastImageUrl));
+
     const firstFrameUrl = await toRemoteUsableImage(imageUrl);
     // Keyframe chaining (Dreamina-style first/last frame): pin the clip's last frame to the next
     // shot's keyframe so the transition is generated inside the clip (seamless on hard concat)
-    const lastFrameUrl = lastImageUrl ? await toRemoteUsableImage(lastImageUrl) : undefined;
+    const lastFrameUrl = lastImageUrl && normalized.allowLastFrame ? await toRemoteUsableImage(lastImageUrl) : undefined;
 
     // Reference-to-video inputs (viral replication): reference IMAGES may travel as Base64
     // like first frames, but reference VIDEOS must be real URLs — local /api/files paths
@@ -65,7 +70,7 @@ export async function POST(req: NextRequest) {
       ...(lastFrameUrl && { lastFrameUrl }),
       ...(refVideos?.length && { referenceVideoUrls: refVideos }),
       ...(refImages?.length && { referenceImageUrls: refImages }),
-      ...options,
+      ...normalized.options,
     };
 
     // legacy single-phase path for providers without two-phase task support
@@ -91,6 +96,13 @@ export async function POST(req: NextRequest) {
       taskId,
     });
 
+    // Background mode ends the paid submit request here. The global task center owns
+    // status checks and final persistence, so navigation or closing this page cannot
+    // interrupt retrieval and users never need to stare at a spinner for minutes.
+    if (background) {
+      return NextResponse.json({ taskId, modelId, status: "submitted", queued: true, recoverable: true, adjustments: normalized.adjustments }, { status: 202 });
+    }
+
     // Phase 2: wait. Transient status-query failures are tolerated inside waitForTask;
     // if it still fails, the task is marked "unknown"/"failed" but never dropped.
     try {
@@ -109,9 +121,10 @@ export async function POST(req: NextRequest) {
         taskId,
         videoUrls,
         modelId,
-        duration: videoOptions.duration,
+        duration: typeof normalized.options.duration === "number" ? normalized.options.duration : undefined,
         processingTime: Date.now() - startTime,
-        hasAudio: videoOptions.audioEnabled ?? false,
+        hasAudio: normalized.options.audioEnabled === true,
+        adjustments: normalized.adjustments,
       });
     } catch (error) {
       // definitive provider-side failure vs. lost contact (task may still be running & billed)

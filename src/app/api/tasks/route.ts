@@ -83,6 +83,7 @@ export async function GET() {
         projectId: tsk.projectId,
         projectName: tsk.projectId ? projectName.get(tsk.projectId) ?? "" : "",
         provider: tsk.provider,
+        taskId: tsk.taskId,
         model: tsk.model,
         mediaType: tsk.mediaType,
         status: tsk.status,

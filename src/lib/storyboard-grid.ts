@@ -29,6 +29,24 @@ const SHOT_TYPE_LABELS: Record<string, string> = {
   cta: "转化镜",
 };
 
+const PERSON_VISUAL_RE = /人物|女生|男生|女性|男性|主播|模特|出镜|对镜头|人脸|woman|man|person|presenter|creator|human|face/i;
+
+/**
+ * Keep provider-facing image prompts visual-only. Marketing overlays, prices and
+ * click-through instructions belong to Mora's later typography/composition pass;
+ * sending them to an image model both renders bad text and increases moderation
+ * false positives for otherwise ordinary product imagery.
+ */
+export function neutralizeStoryboardVisual(text: string): string {
+  return text
+    .replace(/[“”"']?[^，。；,.!?\n]{0,24}(?:点击|点开|链接|下单|购买|入手|立即抢|价格|优惠|折扣|促销|销量|好评|回购)[^，。；,.!?\n]{0,36}[“”"']?/gi, "")
+    .replace(/(?:click|tap|buy|purchase|order|shop|sale|discount|price|link|call[ -]?to[ -]?action)[^,.!?\n]{0,48}/gi, "")
+    .replace(/(?:字幕|文字|大字|小字|标签|箭头|水印|二维码|logo)\s*(?:显示|出现|标出|写着|为|：|:)?\s*[“”"']?[^，。；,.!?\n]{0,40}[“”"']?/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/^[\s，。；,.!?-]+|[\s，。；,.!?-]+$/g, "")
+    .trim();
+}
+
 /**
  * Build the one-shot 3x3 storyboard-grid image prompt: global consistency block
  * (same person / outfit / room / light) + one numbered line per cell + realism
@@ -38,7 +56,7 @@ const SHOT_TYPE_LABELS: Record<string, string> = {
 export function buildStoryboardGridPrompt(
   shots: Shot[],
   characters?: ScriptCharacter[] | null,
-  refs?: { characterSheet?: boolean; productImage?: boolean }
+  refs?: { characterSheet?: boolean; productImage?: boolean; aspectRatio?: "9:16" | "16:9" | "1:1" }
 ): string {
   const cells = shots.slice(0, GRID_MAX_SHOTS);
   const cast = (characters ?? [])
@@ -46,9 +64,13 @@ export function buildStoryboardGridPrompt(
     .filter(Boolean)
     .join("；");
 
+  const hasPeople = cast.length > 0 || cells.some((s) => PERSON_VISUAL_RE.test(`${s.prompt ?? ""} ${s.description ?? ""}`));
   const cellLines = cells.map((s, i) => {
     const label = SHOT_TYPE_LABELS[String(s.type)] ?? "分镜";
-    return `第 ${i + 1} 格（${label}）：${s.description}`;
+    // The dedicated generation prompt is already visual-only; description is a fallback
+    // and may contain UI overlay / purchase-copy instructions that must stay out of the model.
+    const visual = neutralizeStoryboardVisual(s.prompt?.trim() || s.description || "") || "商品与使用场景的自然画面";
+    return `第 ${i + 1} 格（${label}）：${visual}`;
   });
 
   // reference-image contract: the images array order is [character sheet?, product photo?],
@@ -68,15 +90,19 @@ export function buildStoryboardGridPrompt(
     }
   }
 
+  const aspectRatio = refs?.aspectRatio ?? "9:16";
+  const aspectLabel = aspectRatio === "16:9" ? "横版" : aspectRatio === "1:1" ? "方形" : "竖版";
   return [
-    `一张 ${GRID_ROWS}x${GRID_COLS} 等分九宫格分镜图，整图 9:16 竖版，格与格之间只留极细的白色分隔缝。`,
-    `全局一致性（最重要）：九格是同一支视频的分镜——同一人物、同一发型与同一身衣服、同一房间、同一光线方向与色调，道具与商品在各格间保持完全一致。`,
+    `一张 ${GRID_ROWS}x${GRID_COLS} 等分九宫格分镜图，整图 ${aspectRatio} ${aspectLabel}，格与格之间只留极细的白色分隔缝。`,
+    hasPeople
+      ? `全局一致性（最重要）：九格是同一支视频的分镜——同一人物、同一发型与同一身衣服、同一房间、同一光线方向与色调，道具与商品在各格间保持完全一致。`
+      : `全局一致性（最重要）：九格是同一支产品视频的分镜——同一商品外观、材质、配色与比例保持一致，各格使用协调的光线方向与自然色调。`,
     ...refLines,
     cast ? `人物设定：${cast}。` : "",
-    `各格内容（每格是一个独立镜头的画面，构图按竖屏 9:16 设计；每格都是该镜动作即将开始前一瞬的定格，姿态里留着正要发生的势能）：`,
+    `各格内容（每格是一个独立镜头的画面，构图按 ${aspectRatio} 设计；每格都是该镜动作即将开始前一瞬的定格，姿态里留着正要发生的势能）：`,
     ...cellLines,
-    REAL_FACE_CONSTRAINT.zh + "。",
-    UGC_FIRST_FRAME_RULES,
+    hasPeople ? REAL_FACE_CONSTRAINT.zh + "。" : "",
+    hasPeople ? UGC_FIRST_FRAME_RULES : "",
     `硬性要求：严格等分九宫格；画面里不出现任何文字、字幕、编号、水印或边框装饰；每格都是完整可独立使用的镜头画面。`,
   ]
     .filter(Boolean)

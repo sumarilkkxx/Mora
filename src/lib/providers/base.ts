@@ -40,6 +40,12 @@ export class ProviderError extends Error {
   }
 }
 
+function networkErrorDetail(error: unknown): string {
+  if (!(error instanceof Error)) return String(error)
+  const cause = error.cause as { code?: string; message?: string } | undefined
+  return [error.message, cause?.code, cause?.message].filter(Boolean).join(" · ")
+}
+
 /** Base Provider abstract class */
 export abstract class BaseProvider implements AIProvider {
   abstract readonly name: string
@@ -154,7 +160,7 @@ export abstract class BaseProvider implements AIProvider {
           ? new ProviderError(timeoutMessage, 'TIMEOUT', this.name)
           : error instanceof ProviderError
             ? error
-            : new ProviderError(`网络请求异常: ${error instanceof Error ? error.message : String(error)}`, 'NETWORK_ERROR', this.name)
+            : new ProviderError(`网络请求异常: ${networkErrorDetail(error)}`, 'NETWORK_ERROR', this.name)
         // network/timeout errors: only idempotent requests may back off and retry
         // (a non-idempotent POST could have reached the server — retrying risks duplicate paid tasks)
         if (idempotent && attempt < maxRetries) {

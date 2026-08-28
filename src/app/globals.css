@@ -453,6 +453,7 @@
 }
 
 .project-header-inner { grid-template-columns:minmax(120px,1fr) auto minmax(120px,1fr); }
+.project-header-inner.is-compact { grid-template-columns:minmax(0,1fr) auto; }
 .project-header-stepper { min-width:0; justify-self:center; }
 .project-header-utilities { justify-self:end; }
 
@@ -905,21 +906,37 @@ html[lang="en"] .mora-studio .cf-tab { padding-inline:7px; font-size:12px; }
 .mora-model-trigger:hover .mora-model-trigger-disclosure { background:color-mix(in srgb,var(--foreground) 6%,transparent); }
 .mora-model-picker[data-open] .mora-model-trigger-disclosure { transform:rotate(180deg); }
 .mora-model-trigger-disclosure svg { width:14px; height:14px; }
-.mora-model-input-shell { padding-left:12px; overflow:hidden; }
-.mora-model-input-shell > input { min-width:0; flex:1; height:42px; border:0; background:transparent; color:var(--foreground); font-size:12px; outline:0!important; box-shadow:none!important; }
-.mora-model-input-shell > button { display:flex; min-height:34px; flex:none; align-items:center; gap:6px; margin-right:4px; padding:0 9px; border-radius:9px; background:transparent; color:var(--muted-foreground); font-size:10.5px; font-weight:620; transition:background-color 140ms ease,color 140ms ease,transform 100ms ease; }
-.mora-model-input-shell > button:hover { background:color-mix(in srgb,var(--foreground) 7%,transparent); color:var(--foreground); }
-.mora-model-input-shell > button:active { transform:scale(.97); }
-.mora-model-input-shell > button:disabled { opacity:.45; }
-.mora-model-input-shell > button svg { width:13px; height:13px; }
-.mora-model-input-shell .mora-model-library-chevron { width:11px; height:11px; }
+.mora-model-settings-grid { position:relative; align-items:start; }
+.mora-model-config-row { min-width:0; }
+.mora-model-config-row > label { display:block; margin-bottom:7px; color:var(--muted-foreground); font-size:11px; font-weight:560; }
+.mora-model-input-shell { min-height:42px; padding-left:12px; overflow:hidden; gap:0; border-radius:8px; background:transparent; box-shadow:none; }
+.mora-model-input-shell:focus-within { border-color:color-mix(in srgb,var(--primary) 56%,var(--border)); box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 10%,transparent); }
+.studio-app-shell .mora-model-input-shell > input { min-width:0; flex:1; height:40px; padding:0; border:0!important; border-radius:0!important; background:transparent!important; color:var(--foreground); font-size:12px; outline:0!important; box-shadow:none!important; }
+.mora-model-library-button { display:inline-flex; align-self:stretch; min-width:88px; flex:none; align-items:center; justify-content:center; gap:5px; padding:0 10px; border:0; border-left:1px solid color-mix(in srgb,var(--border) 70%,transparent); background:color-mix(in srgb,var(--muted) 38%,transparent); color:var(--muted-foreground); font-size:10px; font-weight:630; transition:background-color 140ms ease,color 140ms ease,transform 100ms ease; }
+.mora-model-library-button:hover { background:color-mix(in srgb,var(--primary) 8%,var(--card)); color:var(--primary); }
+.mora-model-library-button:active { transform:scale(.98); }
+.mora-model-library-button:disabled { cursor:not-allowed; opacity:.45; }
+.mora-model-library-button svg { width:13px; height:13px; }
+.mora-model-library-button .mora-model-library-chevron { width:11px; height:11px; }
+.mora-model-picker[data-open] .mora-model-library-button { background:color-mix(in srgb,var(--primary) 10%,var(--card)); color:var(--primary); }
+.mora-model-picker[data-open] .mora-model-library-chevron { transform:rotate(180deg); }
+.mora-model-field-hint { min-height:20px; margin:0; padding:5px 2px 0; overflow:hidden; color:var(--muted-foreground); font-size:9.5px; line-height:1.35; text-overflow:ellipsis; white-space:nowrap; }
+.mora-model-settings-grid > .mora-model-config-row .mora-model-menu { width:calc(200% + 16px); }
+.mora-model-settings-grid > .mora-model-config-row:nth-child(2) .mora-model-menu { right:0; left:auto; }
 .mora-model-menu { position:absolute; z-index:70; top:calc(100% + 7px); left:0; width:100%; overflow:hidden; border:1px solid color-mix(in srgb,var(--border) 72%,transparent); border-radius:16px; background:color-mix(in srgb,var(--popover) 94%,transparent); box-shadow:0 24px 70px rgb(25 39 54 / 18%),inset 0 1px 0 rgb(255 255 255 / 52%); backdrop-filter:blur(28px) saturate(165%); }
 .dark .mora-model-menu { box-shadow:0 28px 76px rgb(0 0 0 / 46%),inset 0 1px 0 rgb(255 255 255 / 5%); }
-.mora-model-search { display:flex; align-items:center; gap:8px; margin:9px; padding:0 10px; border:1px solid color-mix(in srgb,var(--border) 66%,transparent); border-radius:11px; background:color-mix(in srgb,var(--muted) 48%,transparent); transition:border-color 140ms ease,background-color 140ms ease; }
+.mora-model-menu-head { display:flex; min-height:50px; align-items:center; justify-content:space-between; gap:12px; padding:9px 10px 7px 14px; border-bottom:1px solid color-mix(in srgb,var(--border) 48%,transparent); }
+.mora-model-menu-head > span { display:flex; min-width:0; flex-direction:column; gap:1px; }
+.mora-model-menu-head strong { font-size:12px; font-weight:660; }
+.mora-model-menu-head small { color:var(--muted-foreground); font-size:9.5px; }
+.mora-model-menu-head > button { display:grid; width:30px; height:30px; place-items:center; border-radius:9px; color:var(--muted-foreground); }
+.mora-model-menu-head > button:hover { background:color-mix(in srgb,var(--foreground) 6%,transparent); color:var(--foreground); }
+.mora-model-menu-head svg { width:14px; height:14px; }
+.mora-model-search { display:flex; align-items:center; gap:8px; margin:9px; padding:0 10px; border:1px solid color-mix(in srgb,var(--border) 66%,transparent); border-radius:8px; background:transparent; transition:border-color 140ms ease,background-color 140ms ease; }
 .mora-model-search:focus-within { border-color:color-mix(in srgb,var(--foreground) 28%,var(--border)); background:color-mix(in srgb,var(--card) 88%,transparent); }
 .mora-model-search svg { width:15px; height:15px; color:var(--muted-foreground); }
-.mora-model-search input { width:100%; height:36px; border:0; background:transparent; color:var(--foreground); font-size:12px; outline:0!important; box-shadow:none!important; }
-.mora-model-search input:focus,.mora-model-search input:focus-visible { outline:0!important; box-shadow:none!important; }
+.studio-app-shell .mora-model-search > input { width:100%; height:36px; padding:0; border:0!important; border-radius:0!important; background:transparent!important; color:var(--foreground); font-size:12px; outline:0!important; box-shadow:none!important; }
+.studio-app-shell .mora-model-search > input:focus,.studio-app-shell .mora-model-search > input:focus-visible { border:0!important; outline:0!important; box-shadow:none!important; }
 .mora-model-groups { max-height:min(440px,54vh); overflow-y:auto; padding:0 9px 10px; overscroll-behavior:contain; scrollbar-gutter:stable; }
 .mora-model-group { padding:7px 0 9px; }
 .mora-model-group + .mora-model-group { border-top:1px solid color-mix(in srgb,var(--border) 52%,transparent); }
@@ -942,6 +959,7 @@ html[lang="en"] .mora-studio .cf-tab { padding-inline:7px; font-size:12px; }
 .mora-model-feedback > span { display:flex; min-width:0; flex-direction:column; gap:2px; }
 .mora-model-feedback strong { color:var(--foreground); font-size:10.5px; font-weight:650; }
 .mora-model-feedback small { color:var(--muted-foreground); font-size:10px; line-height:1.45; overflow-wrap:anywhere; }
+.mora-model-feedback em { margin-top:2px; color:color-mix(in srgb,var(--foreground) 72%,var(--muted-foreground)); font-size:9.5px; font-style:normal; line-height:1.4; }
 .mora-model-feedback > button { display:inline-flex; min-height:26px; align-items:center; gap:4px; padding:0 7px; border-radius:8px; background:color-mix(in srgb,var(--card) 80%,transparent); color:var(--foreground); font-size:9.5px; font-weight:620; }
 .mora-model-feedback > button:hover { background:var(--card); }
 .mora-model-feedback > button svg { width:11px; height:11px; }
@@ -950,12 +968,16 @@ html[lang="en"] .mora-studio .cf-tab { padding-inline:7px; font-size:12px; }
   .mora-settings-page .studio-settings-nav { border-radius:14px; }
   .mora-settings-nav-item.is-active::before { width:14px; height:3px; }
   .mora-settings-relationship { grid-template-columns:1fr; padding:16px; }
+  .mora-model-settings-grid > .mora-model-config-row .mora-model-menu { width:100%; right:auto; left:0; }
 }
 @media (max-width:540px) {
   .mora-settings-flow { grid-template-columns:1fr; }
   .mora-settings-flow > svg { justify-self:center; transform:rotate(90deg); }
   .mora-settings-flow.is-independent { grid-template-columns:1fr; }
   .mora-settings-flow em { justify-self:start; }
+  .mora-model-library-button { min-width:76px; padding:0 8px; }
+  .mora-model-feedback { grid-template-columns:18px minmax(0,1fr); }
+  .mora-model-feedback > button { grid-column:2; justify-self:start; }
 }
 
 @media (max-width:980px) {

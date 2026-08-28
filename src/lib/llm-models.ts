@@ -15,6 +15,39 @@ export interface ModelHint {
   en: string;
 }
 
+export interface ModelListResult {
+  models: string[];
+  status?: number;
+  code?: "NETWORK_BLOCKED" | "TIMEOUT" | "DNS_FAILED" | "CONNECTION_REFUSED" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "RATE_LIMITED" | "BAD_RESPONSE" | "REQUEST_FAILED";
+  detail?: string;
+}
+
+export type ModelCapability = "text" | "vision";
+
+interface AdvertisedModel {
+  id?: unknown;
+  architecture?: { input_modalities?: unknown; output_modalities?: unknown };
+}
+
+function isOpenRouter(baseUrl: string): boolean {
+  try {
+    return /(^|\.)openrouter\.ai$/i.test(new URL(baseUrl).hostname);
+  } catch {
+    return /openrouter\.ai/i.test(baseUrl);
+  }
+}
+
+function supportsImageInput(model: AdvertisedModel): boolean | undefined {
+  const modalities = model.architecture?.input_modalities;
+  if (!Array.isArray(modalities)) return undefined;
+  return modalities.some((value) => String(value).toLowerCase() === "image");
+}
+
+/** Conservative fallback for compatible services that expose IDs but no capability metadata. */
+function looksLikeVisionModel(id: string): boolean {
+  return /(^|[\/_:.-])(vision|vl|llava|pixtral|internvl|minicpm-v|glm-4v)([\/_:.-]|$)|qwen[^/]*[-_.]vl|gpt-(4o|4\.1|5)|(^|\/)gemini|(^|\/)claude-(3|sonnet|opus|haiku)/i.test(id);
+}
+
 /** Strip trailing slashes so `${base}/models` never doubles up. */
 export function normalizeBase(baseUrl: string): string {
   return String(baseUrl).replace(/\/+$/, "");
@@ -38,17 +71,57 @@ export async function listModels(
   apiKey: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<string[]> {
+  return (await listModelsDetailed(baseUrl, apiKey, fetchImpl)).models;
+}
+
+/** Same discovery request as listModels, but preserves actionable diagnostics for Settings. */
+export async function listModelsDetailed(
+  baseUrl: string,
+  apiKey: string,
+  fetchImpl: typeof fetch = fetch,
+  capability: ModelCapability = "text",
+): Promise<ModelListResult> {
   try {
-    const res = await fetchImpl(`${normalizeChatBase(baseUrl)}/models`, {
+    const base = normalizeChatBase(baseUrl);
+    // OpenRouter officially supports modality filters. Other OpenAI-compatible
+    // endpoints may reject them, so those are filtered locally below.
+    const query = capability === "vision" && isOpenRouter(base)
+      ? "?input_modalities=image&output_modalities=text"
+      : "";
+    const res = await fetchImpl(`${base}/models${query}`, {
       headers: { Authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(MODELS_TIMEOUT_MS),
     });
-    if (!res.ok) return [];
-    const json = (await res.json()) as { data?: Array<{ id?: unknown }> };
-    if (!Array.isArray(json?.data)) return [];
-    return json.data.map((m) => (typeof m?.id === "string" ? m.id : "")).filter(Boolean);
-  } catch {
-    return [];
+    if (!res.ok) {
+      const code = res.status === 401 ? "UNAUTHORIZED"
+        : res.status === 403 ? "FORBIDDEN"
+          : res.status === 404 ? "NOT_FOUND"
+            : res.status === 429 ? "RATE_LIMITED"
+              : "BAD_RESPONSE";
+      const detail = await res.text().catch(() => "");
+      return { models: [], status: res.status, code, detail: detail.replace(/\s+/g, " ").slice(0, 240) };
+    }
+    const json = (await res.json()) as { data?: AdvertisedModel[] };
+    if (!Array.isArray(json?.data)) return { models: [], code: "BAD_RESPONSE" };
+    let advertised = json.data.filter((model) => typeof model?.id === "string");
+    if (capability === "vision") {
+      const hasCapabilityMetadata = advertised.some((model) => supportsImageInput(model) !== undefined);
+      advertised = advertised.filter((model) => {
+        const supported = supportsImageInput(model);
+        return supported !== undefined ? supported : !hasCapabilityMetadata && looksLikeVisionModel(String(model.id));
+      });
+    }
+    return { models: advertised.map((model) => String(model.id)) };
+  } catch (error) {
+    const e = error as Error & { cause?: { code?: string } };
+    const causeCode = e.cause?.code ?? "";
+    const message = e.message || "";
+    const code = e.name === "TimeoutError" || /timed? out|timeout/i.test(message) ? "TIMEOUT"
+      : causeCode === "EACCES" || /access.*socket|访问套接字|权限不允许/i.test(message) ? "NETWORK_BLOCKED"
+        : causeCode === "ENOTFOUND" || /getaddrinfo|name.*resolved/i.test(message) ? "DNS_FAILED"
+          : causeCode === "ECONNREFUSED" || /refused/i.test(message) ? "CONNECTION_REFUSED"
+            : "REQUEST_FAILED";
+    return { models: [], code, detail: message.slice(0, 240) };
   }
 }
 

@@ -1,4 +1,4 @@
-import { createWriteStream } from "fs";
+import { createWriteStream, existsSync } from "fs";
 import { mkdir, rm } from "fs/promises";
 import { basename, extname, join } from "path";
 import { Readable, Transform } from "stream";
@@ -11,6 +11,7 @@ import { compositions, mediaEdits, mediaSources, projects } from "@/lib/db/schem
 import { probeMedia } from "@/lib/media-probe";
 import { validateOrDelete } from "@/lib/media-validate";
 import { fileNameOf, getUploadsDir } from "@/lib/paths";
+import { extractFirstFrame, THUMB_SUFFIX } from "@/lib/video-composer/frame-extract";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,11 +55,20 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       await Promise.all(staleIds.map((sourceId) => db.update(mediaSources).set({ status: "failed", error: errText(req, "转写已中断，可直接重新开始", "Transcription was interrupted; you can restart it"), updatedAt: new Date() }).where(eq(mediaSources.id, sourceId))));
     }
     const sources = sourceRows.map((source) => staleIds.includes(source.id) ? { ...source, status: "failed" as const, error: errText(req, "转写已中断，可直接重新开始", "Transcription was interrupted; you can restart it") } : source);
+    // Older uploads predate source posters. Backfill a small visible batch on
+    // read so existing projects gain covers without requiring another upload.
+    await Promise.all(sources.slice(0, 4).map(async (source) => {
+      const posterPath = `${source.filePath}${THUMB_SUFFIX}`;
+      if (!existsSync(posterPath)) await extractFirstFrame(source.filePath, posterPath);
+    }));
     const compositionById = new Map(projectCompositions.map((composition) => [composition.id, composition]));
     return NextResponse.json({
       sources: sources.map((source) => ({
         ...source,
         url: `/api/files/${id}/imported/${basename(source.filePath)}`,
+        posterUrl: existsSync(`${source.filePath}${THUMB_SUFFIX}`)
+          ? `/api/files/${id}/imported/${basename(source.filePath)}${THUMB_SUFFIX}`
+          : null,
         edits: edits
           .filter((edit) => edit.sourceId === source.id)
           .map((edit) => {
@@ -126,6 +136,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       await rm(filePath, { force: true });
       return apiError(req, "单个视频最长支持 2 小时", "A single video can be up to 2 hours", 413);
     }
+    const posterPath = await extractFirstFrame(filePath);
     const [source] = await db.insert(mediaSources).values({
       projectId: id,
       originalName,
@@ -138,7 +149,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       hasAudio: metadata.hasAudio,
       status: "uploaded",
     }).returning();
-    return NextResponse.json({ ...source, url: `/api/files/${id}/imported/${fileName}`, edits: [] }, { status: 201 });
+    return NextResponse.json({
+      ...source,
+      url: `/api/files/${id}/imported/${fileName}`,
+      posterUrl: posterPath ? `/api/files/${id}/imported/${fileName}${THUMB_SUFFIX}` : null,
+      edits: [],
+    }, { status: 201 });
   } catch (error) {
     await rm(filePath, { force: true }).catch(() => {});
     if (error instanceof Error && error.message === "IMPORT_TOO_LARGE") {

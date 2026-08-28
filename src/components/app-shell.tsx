@@ -3,7 +3,7 @@
 import { useEffect, useState, type ComponentType } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Boxes, ChevronLeft, Clapperboard, FolderKanban, ImagePlus, Library, Menu, Plus, Settings2, Sparkles, UserRound, WandSparkles, Workflow } from "lucide-react";
+import { Boxes, ChevronLeft, Clapperboard, FolderKanban, ImagePlus, Library, Menu, Plus, Scissors, Settings2, Sparkles, UserRound, WandSparkles, Workflow } from "lucide-react";
 
 import { LanguageToggle } from "@/components/language-toggle";
 import { StudioUtilities } from "@/components/studio-utilities";
@@ -43,6 +43,7 @@ const NAV_SECTIONS: { labelKey: string; icon: ComponentType<{ className?: string
     labelKey: "navSectionAutomation",
     icon: Workflow,
     items: [
+      { key: "navGuidedEdit", href: "/project/edit/new", icon: Scissors },
       { key: "navClone", href: "/project/clone", icon: Clapperboard },
       { key: "navBatch", href: "/batch", icon: Workflow },
     ],
@@ -55,7 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const t = useT("common");
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const isProjectWorkspace = /^\/project\/[^/]+\/(script|assets|video|export|production|transcript)/.test(pathname ?? "");
+  const isProjectWorkspace = /^\/project\/[^/]+\/(script|assets|video|export|production|transcript|edit)/.test(pathname ?? "");
 
   useEffect(() => {
     let cancelled = false;
@@ -103,7 +104,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </Link>
 
         <nav className="studio-nav" aria-label="Primary">
-          {NAV_SECTIONS.map((section) => (
+          {NAV_SECTIONS.slice(0, 1).map((section) => (
+            <div className="studio-nav-section" key={section.labelKey}>
+              {!collapsed && <div className="studio-nav-label">{t(section.labelKey)}</div>}
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                const selected = activeHref === item.href;
+                return (
+                  <Link key={item.href} href={item.href} aria-current={selected ? "page" : undefined} title={collapsed ? t(item.key) : undefined} className={cn("studio-nav-item", selected && "is-active")}>
+                    <Icon className="size-[18px]" strokeWidth={1.8} />
+                    {!collapsed && <span>{t(item.key)}</span>}
+                  </Link>
+                );
+              })}
+              <TaskCenter collapsed={collapsed} enableRecovery />
+            </div>
+          ))}
+          {NAV_SECTIONS.slice(1).map((section) => (
             <div className="studio-nav-section" key={section.labelKey}>
               {!collapsed && <div className="studio-nav-label">{t(section.labelKey)}</div>}
               {section.items.map((item) => {
@@ -121,8 +138,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="studio-sidebar-footer">
-          <TaskCenter collapsed={collapsed} />
-          <Link href="/settings" aria-current={pathname?.startsWith("/settings") ? "page" : undefined} title={collapsed ? t("settings") : undefined} className={cn("studio-nav-item", pathname?.startsWith("/settings") && "is-active")}> 
+          <Link href="/settings" aria-current={pathname?.startsWith("/settings") ? "page" : undefined} title={collapsed ? t("settings") : undefined} className={cn("studio-nav-item", pathname?.startsWith("/settings") && "is-active")}>
             <Settings2 className="size-[18px]" strokeWidth={1.8} />
             {!collapsed && <span>{t("settings")}</span>}
           </Link>

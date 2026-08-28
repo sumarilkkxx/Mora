@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDataDir } from "@/lib/paths";
-import { readFile } from "fs/promises";
-import { join } from "path";
 import { generateScript, analyzeProduct } from "@/lib/script-engine/generator";
 import { styleNameMap, type ScriptStyleType } from "@/lib/script-engine/prompts";
 import { hookPatternName, HOOK_PATTERNS } from "@/lib/script-engine/hook-patterns";
@@ -12,6 +9,7 @@ import { eq } from "drizzle-orm";
 import { apiError, errText } from "@/lib/api-error";
 import { llmErrorPair } from "@/lib/llm-error";
 import { topConvertingStyle, topConvertingHook, buildPerformanceHint, type MetricInput } from "@/lib/performance-insights";
+import { toRemoteUsableImage } from "@/lib/remote-image";
 
 /** Allowed enum values for the styleType column in the scripts table */
 const VALID_SCRIPT_STYLE = new Set([
@@ -19,38 +17,6 @@ const VALID_SCRIPT_STYLE = new Set([
   "drama", "reversal", "interview", "unboxing", "product_pov", "talking_head",
   "custom",
 ]);
-
-/** Convert a local image path to a base64 data URI for use with LLM vision models */
-async function imagePathToBase64(imagePath: string): Promise<string> {
-  // Already a full URL or base64 data URI, return as-is
-  if (imagePath.startsWith("http") || imagePath.startsWith("data:")) {
-    return imagePath;
-  }
-
-  // Local API path e.g. /api/files/projectId/filename.png
-  // Extract the actual file path: data/uploads/projectId/filename.png
-  const match = imagePath.match(/\/api\/files\/(.+)/);
-  if (!match) return imagePath;
-
-  const relativePath = match[1];
-  const filePath = join(getDataDir(), "uploads", relativePath);
-
-  try {
-    const buffer = await readFile(filePath);
-    const base64 = buffer.toString("base64");
-    // Infer MIME type from file extension
-    const ext = filePath.split(".").pop()?.toLowerCase() || "png";
-    const mimeMap: Record<string, string> = {
-      jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
-      webp: "image/webp", gif: "image/gif", svg: "image/svg+xml",
-    };
-    const mime = mimeMap[ext] || "image/png";
-    return `data:${mime};base64,${base64}`;
-  } catch {
-    console.warn(`无法读取图片文件: ${filePath}`);
-    return imagePath;
-  }
-}
 
 /** Normalize a frontend category value to a ProductCategory supported by the engine */
 function normalizeCategory(raw: unknown): ProductCategory {
@@ -162,7 +128,7 @@ export async function POST(req: NextRequest) {
     if (!analysis && productImages?.length > 0 && llmConfig) {
       try {
         const imageUrls = await Promise.all(
-          (productImages as string[]).map(imagePathToBase64)
+          (productImages as string[]).map(async (imagePath) => (await toRemoteUsableImage(imagePath)) ?? imagePath)
         );
         analysis = await analyzeProduct(imageUrls, llmConfig);
       } catch (e) {

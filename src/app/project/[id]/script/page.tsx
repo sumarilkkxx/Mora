@@ -508,8 +508,24 @@ export default function ScriptPage() {
   /** dryRun preview of the film pass — the paid submit needs an explicit confirm on this exact prompt */
   const [filmPreview, setFilmPreview] = useState<{
     prompt: string;
+    modelId: string;
     shotCount: number;
     seconds: number;
+    requestedSeconds?: number;
+    durationAdjusted?: boolean;
+    supportedDurations?: number[];
+    requestSettings: {
+      modelId: string;
+      resolution: string;
+      requestedResolution: string;
+      aspectRatio: string;
+      requestedAspectRatio: string;
+      duration: number;
+      requestedDuration: number;
+      generateAudio: boolean;
+      seed?: number;
+    };
+    ignoredSettings?: string[];
     referenceImages: number;
     referenceQuota?: { ok: boolean; count: number; limit?: number };
     dialogueWarnings: { index: number; seconds: number; count: number; limit: number }[];
@@ -518,14 +534,28 @@ export default function ScriptPage() {
   /** Free dryRun call — full film prompt + counts + warnings, nothing submitted, nothing billed. */
   const fetchFilmPreview = async (scriptId: string) => {
     const presenter = presenterLib.find((c) => c.id === presenterParam);
+    const settings = useSettingsStore.getState();
+    const videoTarget = await resolveDefaultModelTarget(
+      settings.providers,
+      settings.defaultVideoModel,
+      settings.customModels,
+      "video",
+      settings.defaultVideoProvider
+    );
+    if (!videoTarget) throw new Error(t("aiFilmNeedModels"));
     const res = await fetch(`/api/project/${id}/storyboard-film`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         scriptId,
         dryRun: true,
+        provider: videoTarget.provider,
+        model: videoTarget.model,
+        apiKey: videoTarget.apiKey,
+        baseUrl: videoTarget.baseUrl,
         // a picked presenter WILL ride as a reference sheet (generated on demand later), so the
         // preview must count its slot now — the dryRun branch only reads truthiness
         ...(presenter && { characterSheetUrl: presenter.referenceImages?.[0] ?? "planned" }),
+        options: buildVideoOptions(settings.videoParams),
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -567,7 +597,11 @@ export default function ScriptPage() {
     try {
       setAiFilmStage(t("aiFilmVerifying"));
       const fresh = await fetchFilmPreview(currentScript.id);
-      if (fresh.prompt !== filmPreview.prompt) {
+      if (
+        fresh.prompt !== filmPreview.prompt ||
+        fresh.modelId !== filmPreview.modelId ||
+        JSON.stringify(fresh.requestSettings) !== JSON.stringify(filmPreview.requestSettings)
+      ) {
         // stale confirmation: show the new preview instead of submitting outdated content
         setFilmPreview(fresh);
         setAiFilming(false);
@@ -579,7 +613,7 @@ export default function ScriptPage() {
       const s = useSettingsStore.getState();
       const [imgTarget, vidTarget] = await Promise.all([
         resolveDefaultModelTarget(s.providers, s.defaultImageModel, s.customModels, "image"),
-        resolveDefaultModelTarget(s.providers, s.defaultVideoModel, s.customModels, "video"),
+        resolveDefaultModelTarget(s.providers, s.defaultVideoModel, s.customModels, "video", s.defaultVideoProvider),
       ]);
       if (!imgTarget || !vidTarget) throw new Error(t("aiFilmNeedModels"));
       // identity/product anchors: presenter sheet (picked at creation) + first product photo
@@ -626,7 +660,7 @@ export default function ScriptPage() {
           baseUrl: imgTarget.baseUrl,
           ...(sheet && { characterSheetUrl: sheet }),
           ...(productRef && { productImageUrl: productRef }),
-          options: buildImageOptions(s.imageParams ? { ...s.imageParams, aspectRatio: "9:16", count: 1 } : undefined),
+          options: buildImageOptions(s.imageParams ? { ...s.imageParams, aspectRatio: s.videoParams.aspectRatio, count: 1 } : undefined),
         }),
       });
       const gridData = await gridRes.json().catch(() => ({}));
@@ -638,13 +672,11 @@ export default function ScriptPage() {
         body: JSON.stringify({
           scriptId: currentScript.id,
           provider: vidTarget.provider,
-          model: vidTarget.model.includes("/reference-to-video")
-            ? vidTarget.model
-            : "bytedance/seedance-2.5/reference-to-video",
+          model: vidTarget.model,
           apiKey: vidTarget.apiKey,
           baseUrl: vidTarget.baseUrl,
           ...(sheet && { characterSheetUrl: sheet }),
-          options: buildVideoOptions(s.videoParams ? { ...s.videoParams, aspectRatio: "9:16" } : undefined),
+          options: buildVideoOptions(s.videoParams),
         }),
       });
       const filmData = await filmRes.json().catch(() => ({}));
@@ -849,6 +881,28 @@ export default function ScriptPage() {
               <p className="text-sm text-muted-foreground">
                 {t("aiFilmPreviewMeta", { shots: filmPreview.shotCount, seconds: filmPreview.seconds, refs: filmPreview.referenceImages })}
               </p>
+              <p className="break-all rounded-lg border border-border/60 bg-muted/20 px-3 py-2 font-mono text-xs text-foreground">
+                {t("aiFilmModel")}: {filmPreview.modelId}
+              </p>
+              <div className="grid grid-cols-2 gap-2 rounded-lg border border-border/60 bg-muted/20 p-3 text-xs sm:grid-cols-4">
+                <span>{t("aiFilmResolution")}: <b>{filmPreview.requestSettings.resolution}</b></span>
+                <span>{t("aiFilmAspectRatio")}: <b>{filmPreview.requestSettings.aspectRatio}</b></span>
+                <span>{t("aiFilmDuration")}: <b>{filmPreview.requestSettings.duration}s</b></span>
+                <span>{t("aiFilmSeed")}: <b>{filmPreview.requestSettings.seed ?? t("aiFilmRandom")}</b></span>
+              </div>
+              {!!filmPreview.ignoredSettings?.length && (
+                <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-600 dark:text-amber-500">
+                  {t("aiFilmIgnoredSettings", { settings: filmPreview.ignoredSettings.join(", ") })}
+                </div>
+              )}
+              {filmPreview.durationAdjusted && (
+                <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-600 dark:text-amber-500">
+                  {t("aiFilmDurationAdjusted", {
+                    requested: filmPreview.requestedSeconds ?? filmPreview.seconds,
+                    effective: filmPreview.seconds,
+                  })}
+                </div>
+              )}
               {overQuota && (
                 <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2.5 text-xs text-destructive">
                   {t("aiFilmQuotaWarn", { count: filmPreview.referenceQuota!.count, limit: filmPreview.referenceQuota!.limit ?? 0 })}

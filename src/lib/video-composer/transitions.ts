@@ -105,7 +105,10 @@ export function getTransitionList(): TransitionConfig[] {
 export function modelSupportsLastFrame(modelId: string): boolean {
   if (!modelId) return false;
   if (TRANSITIONS.ai_start_end.supportedModels.includes(modelId)) return true;
-  return /seedance-2\.[05]/.test(modelId);
+  // OpenRouter uses the family ID without a mode suffix and accepts frame_images.
+  // Atlas exposes separate exact endpoints: only /image-to-video accepts last_image;
+  // reference/text endpoints must never receive a hidden tail-frame constraint.
+  return /^bytedance\/seedance-2\.[05](?:-(?:fast|mini))?(?:\/image-to-video)?$/i.test(modelId);
 }
 
 // recommend the best transition mode based on the user's configured providers

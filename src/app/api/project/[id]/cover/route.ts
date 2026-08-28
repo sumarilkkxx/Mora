@@ -6,13 +6,15 @@ import { getDb } from "@/lib/db";
 import { getDataDir } from "@/lib/paths";
 import { compositions } from "@/lib/db/schema";
 import { generateCover } from "@/lib/video-composer/cover";
+import { persistDerivedImage } from "@/lib/derived-image";
 import { apiError, errText } from "@/lib/api-error";
 
 const SAFE_ID = /^[a-zA-Z0-9\-]+$/;
 
 /**
  * POST /api/project/[id]/cover — generate a cover/thumbnail image from the latest composed video,
- * overlaying a bold title. body: { title: string, frameAt?: number, position?: "center"|"lower"|"upper" }
+ * overlaying an exact local title. An optional AI-generated background is first
+ * persisted locally so an expiring provider URL cannot break FFmpeg halfway through.
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -45,10 +47,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const fileName = `cover-${Date.now()}.png`;
   const outPath = join(getDataDir(), "uploads", id, fileName);
   const position = body.position === "lower" || body.position === "upper" ? body.position : "center";
+  const style = body.style === "commerce" || body.style === "contrast" ? body.style : "editorial";
   try {
-    await generateCover({ videoPath, title, outPath, frameAtSec: Number(body.frameAt) || 1, position });
+    const backgroundImagePath = typeof body.backgroundImageUrl === "string" && body.backgroundImageUrl
+      ? await persistDerivedImage(id, body.backgroundImageUrl, "cover-ai")
+      : undefined;
+    await generateCover({ videoPath, backgroundImagePath, title, outPath, frameAtSec: Number(body.frameAt) || 1, position, style });
+    return NextResponse.json({ cover: `/api/files/${id}/${fileName}`, title, mode: backgroundImagePath ? "ai" : "local", style });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : errText(req, "封面生成失败", "Cover generation failed") }, { status: 500 });
   }
-  return NextResponse.json({ cover: `/api/files/${id}/${fileName}`, title });
 }

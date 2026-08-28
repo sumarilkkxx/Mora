@@ -3,6 +3,7 @@ import { getDataDir } from "@/lib/paths";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { apiError } from "@/lib/api-error";
+import { detectImageMime, imageExtension } from "@/lib/image-format";
 
 /** Allowlist of permitted upload MIME types */
 const ALLOWED_MIME_TYPES = new Set([
@@ -74,8 +75,8 @@ export async function POST(req: NextRequest) {
 
     // Extract and validate the extension from the original filename (prevent path traversal)
     const rawName = file.name.replace(/[/\\]/g, ""); // strip path separators
-    const ext = rawName.split(".").pop()?.toLowerCase() || "jpg";
-    if (!ALLOWED_EXTENSIONS.has(ext)) {
+    const originalExt = rawName.split(".").pop()?.toLowerCase() || "jpg";
+    if (!ALLOWED_EXTENSIONS.has(originalExt)) {
       return apiError(
         req,
         `文件 ${file.name} 扩展名不支持`,
@@ -85,6 +86,8 @@ export async function POST(req: NextRequest) {
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+    const detectedMime = detectImageMime(buffer);
+    const ext = detectedMime ? imageExtension(detectedMime) : originalExt;
 
     // Generate a unique filename (do not use the original filename to avoid security issues)
     const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;

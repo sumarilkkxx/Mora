@@ -29,6 +29,7 @@ import {
   type TTSProvider,
 } from "@/lib/tts-presets";
 import { mergeCustomModels } from "@/lib/gen-params";
+import { getVideoModelCapabilities } from "@/lib/model-capabilities";
 import { LLM_PRESETS } from "@/lib/llm-presets";
 import { GroupedModelSelect, ModelPicker } from "@/components/settings/model-picker";
 import { GenerationSettings } from "@/components/generation-settings";
@@ -64,6 +65,13 @@ const SETTINGS_TABS: string[] = SETTINGS_SECTIONS.map((s) => s.id);
 
 // AI platform configuration list
 const AI_PROVIDERS = [
+  {
+    key: "atlas-cloud",
+    name: "Atlas Cloud",
+    descKey: "providerAtlasCloudDesc",
+    tipKey: "providerAtlasCloudTip",
+    logo: "/provider-logos/atlascloud.svg",
+  },
   {
     key: "openrouter",
     name: "OpenRouter",
@@ -191,7 +199,9 @@ export default function SettingsPage() {
     defaultResolution,
     defaultAspectRatio,
     defaultImageModel,
+    defaultImageProvider,
     defaultVideoModel,
+    defaultVideoProvider,
     customModels,
     setProvider,
     setLLM,
@@ -302,23 +312,47 @@ export default function SettingsPage() {
   const enabledNames = new Set(enabledProviders.map((p) => p.name));
   const imageModelOptions = mergeCustomModels(imageModels, customModels, "image", enabledNames);
   const videoModelOptions = mergeCustomModels(videoModels, customModels, "video", enabledNames);
+  const selectedVideoModel = videoModelOptions.find((model) =>
+    model.id === defaultVideoModel && (!defaultVideoProvider || model.provider === defaultVideoProvider)
+  );
+  const selectedVideoProvider = selectedVideoModel?.provider;
+  const selectedVideoCapabilities = getVideoModelCapabilities(defaultVideoModel);
+  const compatibleResolutionOptions = selectedVideoCapabilities.resolutionValues?.length
+    ? resolutionOptions.filter((option) => selectedVideoCapabilities.resolutionValues!.includes(option.value))
+    : resolutionOptions;
 
   // auto-select a default model after enabling a provider: if nothing is selected (or the selection is gone) and options exist, fall back to the first one
   // — prevents the beginner trap of "set up a Key but generation fails because no default model was chosen"
-  const imageIds = imageModelOptions.map((m) => m.id).join(",");
-  const videoIds = videoModelOptions.map((m) => m.id).join(",");
+  const imageIds = imageModelOptions.map((m) => `${m.provider}:${m.id}`).join(",");
+  const videoIds = videoModelOptions.map((m) => `${m.provider}:${m.id}`).join(",");
   useEffect(() => {
-    if (imageModelOptions.length && !imageModelOptions.some((m) => m.id === defaultImageModel)) {
-      setDefaultImageModel(imageModelOptions[0].id);
+    if (!imageModelOptions.length) return;
+    const selected = imageModelOptions.find((m) =>
+      m.id === defaultImageModel && (!defaultImageProvider || m.provider === defaultImageProvider)
+    );
+    if (!selected) {
+      setDefaultImageModel(imageModelOptions[0].id, imageModelOptions[0].provider);
+    } else if (!defaultImageProvider && selected.provider) {
+      // One-time migration for older browser state: persist the provider that the
+      // picker is actually displaying so duplicate model IDs cannot route elsewhere.
+      setDefaultImageModel(selected.id, selected.provider);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageIds]);
   useEffect(() => {
-    if (videoModelOptions.length && !videoModelOptions.some((m) => m.id === defaultVideoModel)) {
-      setDefaultVideoModel(videoModelOptions[0].id);
+    if (videoModelOptions.length && !videoModelOptions.some((m) =>
+      m.id === defaultVideoModel && (!defaultVideoProvider || m.provider === defaultVideoProvider)
+    )) {
+      setDefaultVideoModel(videoModelOptions[0].id, videoModelOptions[0].provider);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoIds]);
+  useEffect(() => {
+    if (compatibleResolutionOptions.length && !compatibleResolutionOptions.some((option) => option.value === defaultResolution)) {
+      setDefaultResolution(compatibleResolutionOptions[0].value as "720p" | "1080p");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultVideoModel, defaultVideoProvider, compatibleResolutionOptions.map((option) => option.value).join(",")]);
 
   // LLM connection test state
   const [llmTestStatus, setLlmTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
@@ -628,12 +662,13 @@ export default function SettingsPage() {
                     </div>
 
                     {/* model name */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
+                    <div className="mora-model-settings-grid grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="mora-model-config-row">
                         <Label className="text-xs text-muted-foreground">
                           {t("llmTextModel")}
                         </Label>
                         <ModelPicker
+                          capability="text"
                           value={llm.model}
                           baseUrl={llm.baseUrl}
                           apiKey={llm.apiKey}
@@ -641,11 +676,12 @@ export default function SettingsPage() {
                           placeholder="gpt-4o"
                         />
                       </div>
-                      <div className="space-y-1.5">
+                      <div className="mora-model-config-row">
                         <Label className="text-xs text-muted-foreground">
                           {t("llmVisionModel")}
                         </Label>
                         <ModelPicker
+                          capability="vision"
                           value={llm.visionModel ?? ""}
                           baseUrl={llm.baseUrl}
                           apiKey={llm.apiKey}
@@ -877,6 +913,7 @@ export default function SettingsPage() {
                       </Label>
                       <GroupedModelSelect
                         value={defaultImageModel}
+                        valueProvider={defaultImageProvider}
                         onChange={setDefaultImageModel}
                         models={imageModelOptions}
                         loading={modelsLoading}
@@ -917,6 +954,7 @@ export default function SettingsPage() {
                       </Label>
                       <GroupedModelSelect
                         value={defaultVideoModel}
+                        valueProvider={defaultVideoProvider}
                         onChange={setDefaultVideoModel}
                         models={videoModelOptions}
                         loading={modelsLoading}
@@ -938,11 +976,11 @@ export default function SettingsPage() {
                         <SelectTrigger className="w-full">
                           {/* Base UI Select.Value shows the raw value by default; use a function child to map it to a label */}
                           <SelectValue>
-                            {(value: string) => resolutionOptions.find((o) => o.value === value)?.label ?? value}
+                            {(value: string) => compatibleResolutionOptions.find((o) => o.value === value)?.label ?? value}
                           </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                          {resolutionOptions.map((o) => (
+                          {compatibleResolutionOptions.map((o) => (
                             <SelectItem key={o.value} value={o.value}>
                               {o.label}
                             </SelectItem>
@@ -1011,7 +1049,7 @@ export default function SettingsPage() {
                   <svg className="size-4 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6" /></svg>
                 </summary>
                 <div className="px-1 pb-1 space-y-4">
-                  <GenerationSettings />
+                  <GenerationSettings selectedVideoProvider={selectedVideoProvider} />
                 </div>
               </details>
         </div>

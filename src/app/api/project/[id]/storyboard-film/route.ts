@@ -3,10 +3,9 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { getDataDir } from "@/lib/paths";
 import { getDb } from "@/lib/db";
-import { scripts, assets, compositions } from "@/lib/db/schema";
+import { scripts, assets, compositions, projects } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { createProvider } from "@/lib/providers";
-import { ProviderError } from "@/lib/providers/base";
 import { GRID_MAX_SHOTS } from "@/lib/storyboard-grid";
 import {
   buildStoryboardFilmPrompt,
@@ -14,15 +13,22 @@ import {
   filmTotalSeconds,
   filmRequestSeconds,
   referenceQuotaCheck,
+  resolveStoryboardFilmModel,
+  closestSupportedFilmDuration,
+  fallbackFilmDurations,
+  fitFilmShotsToDuration,
+  supportedVideoSetting,
+  videoRequestAspectRatio,
+  videoRequestDimensions,
+  videoRequestResolution,
   FILM_MAX_SECONDS,
 } from "@/lib/storyboard-film";
 import { toRemoteUsableImage } from "@/lib/remote-image";
 import { probeMedia } from "@/lib/media-probe";
-import { recordAiTask, updateAiTask } from "@/lib/ai-tasks";
+import { recordAiTask } from "@/lib/ai-tasks";
 import { apiError, errText } from "@/lib/api-error";
-
-/** Default model for the one-call film pass — Seedance 2.5 reference-to-video (4-30s, native speech) */
-const DEFAULT_FILM_MODEL = "bytedance/seedance-2.5/reference-to-video";
+import { contentPolicyError, isContentPolicyRejection } from "@/lib/content-policy-error";
+import type { GenAspectRatio, GenResolution } from "@/lib/gen-params";
 
 const IMAGE_EXT_RE = /\.(png|jpe?g|webp|bmp|gif)$/i;
 
@@ -96,19 +102,111 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       );
     }
 
+    const resolvedModel = resolveStoryboardFilmModel(providerName, model);
+    if (!resolvedModel) {
+      return apiError(req, "缺少视频模型 ID，请在设置中选择视频模型", "Missing video model id — select a video model in Settings", 400);
+    }
+    const requestedDuration = filmRequestSeconds(shots);
+    const opts = (options ?? {}) as {
+      width?: number;
+      height?: number;
+      fps?: number;
+      motionStrength?: number;
+      negativePrompt?: string;
+      seed?: number;
+    };
+    const requestedResolution = videoRequestResolution(opts.width, opts.height);
+    const requestedAspectRatio = videoRequestAspectRatio(opts.width, opts.height);
+    let supportedDurations = fallbackFilmDurations(providerName, resolvedModel);
+    let supportedResolutions: string[] | undefined;
+    let supportedAspectRatios: string[] | undefined;
+    let provider = providerName && (dryRun || apiKey)
+      ? createProvider({ name: providerName, apiKey: apiKey ?? "", baseUrl: baseUrl ?? "" })
+      : undefined;
+    if (provider) {
+      try {
+        const availableModels = await provider.listModels("video");
+        const liveModel = availableModels.find((entry) => entry.id === resolvedModel);
+        if (["openrouter", "atlas-cloud"].includes(providerName?.toLowerCase() ?? "") && !liveModel) {
+          return apiError(
+            req,
+            `${providerName} 当前已校验的视频模型目录中不存在 ${resolvedModel}，请回到设置重新选择模型`,
+            `${resolvedModel} is not present in ${providerName}'s verified video model directory — select the model again in Settings`,
+            400
+          );
+        }
+        if (providerName?.toLowerCase() === "atlas-cloud" && liveModel && !/\/reference-to-video$/i.test(liveModel.id)) {
+          return apiError(
+            req,
+            `一键整片需要 Atlas Cloud 的 reference-to-video 端点，当前选择的是 ${liveModel.id}`,
+            `The film pass requires an Atlas Cloud reference-to-video endpoint; ${liveModel.id} is selected`,
+            400
+          );
+        }
+        const liveValues = liveModel?.extra?.durationValues;
+        const liveResolutions = liveModel?.extra?.supportedResolutions;
+        const liveAspectRatios = liveModel?.extra?.supportedAspectRatios;
+        if (Array.isArray(liveValues)) {
+          const normalized = liveValues.filter(
+            (value): value is number => typeof value === "number" && Number.isFinite(value) && value > 0
+          );
+          if (normalized.length > 0) supportedDurations = normalized;
+        }
+        if (Array.isArray(liveResolutions)) {
+          supportedResolutions = liveResolutions.filter((value): value is string => typeof value === "string");
+        }
+        if (Array.isArray(liveAspectRatios)) {
+          supportedAspectRatios = liveAspectRatios.filter((value): value is string => typeof value === "string");
+        }
+      } catch (error) {
+        console.warn(`读取 ${providerName} 模型时长能力失败，使用安全兜底:`, error);
+      }
+    }
+    const duration = closestSupportedFilmDuration(requestedDuration, supportedDurations);
+    const resolution = supportedVideoSetting(requestedResolution, supportedResolutions, "720p");
+    const aspectRatio = supportedVideoSetting(requestedAspectRatio, supportedAspectRatios, "9:16");
+    if (!(resolution === "720p" || resolution === "1080p")) {
+      return apiError(req, `该模型只支持当前界面尚未提供的分辨率 ${resolution}`, `This model only supports ${resolution}, which is not available in the current settings UI`, 400);
+    }
+    if (!(aspectRatio === "9:16" || aspectRatio === "16:9" || aspectRatio === "1:1")) {
+      return apiError(req, `该模型只支持当前界面尚未提供的画面比例 ${aspectRatio}`, `This model only supports ${aspectRatio}, which is not available in the current settings UI`, 400);
+    }
+    const dimensions = videoRequestDimensions(resolution, aspectRatio);
+    const ignoredSettings = ["openrouter", "atlas-cloud"].includes(providerName?.toLowerCase() ?? "")
+      ? [opts.fps != null ? "fps" : "", opts.motionStrength != null ? "motionStrength" : "", opts.negativePrompt ? "negativePrompt" : ""].filter(Boolean)
+      : [];
+    const effectiveShots = fitFilmShotsToDuration(shots, duration);
+    const prompt = buildStoryboardFilmPrompt(effectiveShots, script.characters, { characterSheet: !!characterSheetUrl });
+    const dialogueWarnings = dialogueDensityWarnings(effectiveShots);
+
     if (dryRun) {
-      const prompt = buildStoryboardFilmPrompt(shots, script.characters, { characterSheet: !!characterSheetUrl });
       // planned reference count: one keyframe per shot (+ the identity sheet when present) —
       // computable before the grid pass has actually rendered the keyframes
       const plannedRefs = shots.length + (characterSheetUrl ? 1 : 0);
       return NextResponse.json({
         dryRun: true,
+        modelId: resolvedModel,
         prompt,
         shotCount: shots.length,
-        seconds: filmRequestSeconds(shots),
+        seconds: duration,
+        requestedSeconds: requestedDuration,
+        durationAdjusted: duration !== requestedDuration,
+        supportedDurations,
+        requestSettings: {
+          modelId: resolvedModel,
+          resolution,
+          requestedResolution,
+          aspectRatio,
+          requestedAspectRatio,
+          duration,
+          requestedDuration,
+          generateAudio: true,
+          ...(opts.seed != null ? { seed: opts.seed } : {}),
+        },
+        ignoredSettings,
         referenceImages: plannedRefs,
-        referenceQuota: referenceQuotaCheck(plannedRefs, model || DEFAULT_FILM_MODEL),
-        dialogueWarnings: dialogueDensityWarnings(shots),
+        referenceQuota: referenceQuotaCheck(plannedRefs, resolvedModel),
+        dialogueWarnings,
       });
     }
 
@@ -120,7 +218,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!apiKey) {
       return apiError(req, "缺少 API Key，请先在设置中配置视频平台", "Missing API key — configure a video provider in settings first", 400);
     }
-
     // every shot needs a keyframe IMAGE (grid cells or per-shot stills) to cite as @ImageN
     const assetRows = await db.select().from(assets).where(eq(assets.projectId, id));
     const byShot = new Map(assetRows.map((a) => [a.shotId, a]));
@@ -144,7 +241,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const refInputs = [...(characterSheetUrl ? [characterSheetUrl] : []), ...keyframes];
     // pre-spend quota gate: a reference count over the model's schema limit is a guaranteed
     // upstream rejection — block BEFORE the paid submit instead of paying to find out
-    const quota = referenceQuotaCheck(refInputs.length, model || DEFAULT_FILM_MODEL);
+    const quota = referenceQuotaCheck(refInputs.length, resolvedModel);
     if (!quota.ok) {
       return apiError(
         req,
@@ -157,24 +254,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       (u): u is string => !!u
     );
 
-    const prompt = buildStoryboardFilmPrompt(shots, script.characters, { characterSheet: !!characterSheetUrl });
-    const duration = filmRequestSeconds(shots);
     // lip-sync guardrail (advisory, never blocks): overstuffed lines drift out of sync near the
     // end of a segment — surfaced so the UI/CLI can suggest trimming before the paid generation
-    const dialogueWarnings = dialogueDensityWarnings(shots);
-    const provider = createProvider({ name: providerName, apiKey, baseUrl: baseUrl ?? "" });
+    provider ??= createProvider({ name: providerName, apiKey, baseUrl: baseUrl ?? "" });
 
-    const opts = (options ?? {}) as { width?: number; height?: number };
     const videoOptions = {
       ...(options ?? {}),
-      modelId: model || DEFAULT_FILM_MODEL,
+      modelId: resolvedModel,
       mode: "video-to-video" as const,
       prompt,
       referenceImageUrls,
       duration,
       // portrait 720p unless the caller asked otherwise — maps to resolution+ratio provider-side
-      width: opts.width ?? 720,
-      height: opts.height ?? 1280,
+      width: dimensions.width,
+      height: dimensions.height,
       // native speech IS the feature: dialogue lives in the prompt, audio must be on
       audioEnabled: true,
     };
@@ -182,59 +275,52 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // legacy single-phase path for providers without two-phase task support
     if (!provider.submitVideoTask || !provider.waitForTask) {
       const result = await provider.generateVideo(videoOptions);
-      const saved = await persistFilm(id, result.videoUrls?.[0], model || DEFAULT_FILM_MODEL);
-      return NextResponse.json({ ...saved, taskId: result.taskId, modelId: result.modelId, seconds: duration, dialogueWarnings });
+      const saved = await persistFilm(id, result.videoUrls?.[0], resolvedModel, resolution, aspectRatio);
+      return NextResponse.json({
+        ...saved,
+        taskId: result.taskId,
+        modelId: result.modelId,
+        seconds: duration,
+        requestedSeconds: requestedDuration,
+        durationAdjusted: duration !== requestedDuration,
+        supportedDurations,
+        dialogueWarnings,
+      });
     }
 
     // Phase 1: submit, then persist the paid task ID before polling (issue #16)
     const { taskId, modelId } = await provider.submitVideoTask(videoOptions);
-    const rowId = await recordAiTask({
+    await recordAiTask({
       projectId: id,
       provider: providerName,
       model: modelId,
       mediaType: "video",
-      mode: "video-to-video",
+      mode: "storyboard-film",
       prompt,
       taskId,
     });
 
-    // Phase 2: wait; a lost poll marks the row "unknown" but never drops the paid task
-    try {
-      const finalStatus = await provider.waitForTask(taskId, { interval: 5000 });
-      const result = finalStatus.result;
-      const videoUrl = result && "videoUrls" in result ? result.videoUrls?.[0] : undefined;
-      if (!videoUrl) {
-        await updateAiTask(rowId, { status: "unknown", error: "任务完成但未返回视频地址" });
-        return NextResponse.json(
-          { error: errText(req, "任务完成但未返回视频地址", "Task completed but returned no video URL"), taskId, modelId, recoverable: true },
-          { status: 502 }
-        );
-      }
-      await updateAiTask(rowId, { status: "completed", resultUrls: [videoUrl], error: null });
-      const saved = await persistFilm(id, videoUrl, modelId);
-      return NextResponse.json({ ...saved, taskId, modelId, seconds: duration, dialogueWarnings });
-    } catch (error) {
-      const failed = error instanceof ProviderError && error.code === "TASK_FAILED";
-      const message = error instanceof Error ? error.message : String(error);
-      await updateAiTask(rowId, { status: failed ? "failed" : "unknown", error: message });
-      return NextResponse.json(
-        {
-          error: failed
-            ? message
-            : errText(
-                req,
-                `${message}。任务 ID ${taskId} 已保存，请勿重复提交`,
-                `${message}. Task ID ${taskId} has been saved — do not resubmit`
-              ),
-          taskId,
-          modelId,
-          recoverable: !failed,
-        },
-        { status: failed ? 500 : 504 }
-      );
-    }
+    // A one-call film can take minutes. Submission is the only foreground step;
+    // the app-wide task center polls and persists the completed composition.
+    return NextResponse.json({
+      queued: true,
+      status: "submitted",
+      recoverable: true,
+      taskId,
+      modelId,
+      seconds: duration,
+      requestedSeconds: requestedDuration,
+      durationAdjusted: duration !== requestedDuration,
+      supportedDurations,
+      dialogueWarnings,
+    }, { status: 202 });
+
   } catch (error) {
     console.error("一键整片生成失败:", error);
+    if (isContentPolicyRejection(error)) {
+      const locale = req.headers.get("accept-language")?.toLowerCase().startsWith("en") ? "en" : "zh";
+      return NextResponse.json({ error: contentPolicyError(locale, "video"), code: "CONTENT_POLICY" }, { status: 422 });
+    }
     return NextResponse.json(
       { error: error instanceof Error ? error.message : errText(req, "一键整片生成失败", "Storyboard film failed") },
       { status: 500 }
@@ -243,7 +329,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 /** Download the generated film into the project's output dir and register it as a composition. */
-async function persistFilm(projectId: string, videoUrl: string | undefined, model: string) {
+async function persistFilm(
+  projectId: string,
+  videoUrl: string | undefined,
+  model: string,
+  resolution: GenResolution,
+  aspectRatio: GenAspectRatio
+) {
   if (!videoUrl) throw new Error("生成完成但未返回视频地址");
   const resp = await fetch(videoUrl);
   if (!resp.ok) throw new Error(`下载成片失败: ${resp.status}`);
@@ -261,8 +353,8 @@ async function persistFilm(projectId: string, videoUrl: string | undefined, mode
     .values({
       projectId,
       outputPath,
-      resolution: "720p",
-      aspectRatio: "9:16",
+      resolution,
+      aspectRatio,
       ...(probe?.duration ? { duration: Math.round(probe.duration * 1000) } : {}),
       // one-call native generation: no badge burned in — the release gate reports this honestly
       aigcBadge: false,
@@ -270,5 +362,6 @@ async function persistFilm(projectId: string, videoUrl: string | undefined, mode
       status: "done",
     })
     .returning();
+  await db.update(projects).set({ status: "done", updatedAt: new Date() }).where(eq(projects.id, projectId));
   return { url: `/api/output/${projectId}/${fileName}`, compositionId: comp.id, fileName };
 }

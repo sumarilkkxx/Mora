@@ -3,7 +3,7 @@
  * In frontend catch blocks, call setError(friendlyError(e, locale)) directly — never expose raw strings
  * like "Failed to fetch" or "401" to the user.
  */
-export type ErrorKind = "network" | "auth" | "ratelimit" | "server" | "unknown";
+export type ErrorKind = "network" | "auth" | "ratelimit" | "content-policy" | "server" | "unknown";
 
 /** Classification only (makes unit-testing the classification logic easier, decoupled from copy) */
 export function classifyError(e: unknown): ErrorKind {
@@ -11,6 +11,7 @@ export function classifyError(e: unknown): ErrorKind {
   if (/failed to fetch|networkerror|econnrefused|fetch failed|network request failed|aborted|timeout|etimedout/.test(raw)) return "network";
   if (/\b401\b|\b403\b|unauthorized|forbidden|invalid.*key|api[ _-]?key|缺少.*key|key 无效/.test(raw)) return "auth";
   if (/\b429\b|rate.?limit|too many requests|限流|频繁/.test(raw)) return "ratelimit";
+  if (/content management policy|content policy|safety policy|moderation|response was filtered|prompt.*filtered|内容审核|内容策略|安全策略/.test(raw)) return "content-policy";
   if (/\b5\d\d\b|server error|internal error|bad gateway|service unavailable/.test(raw)) return "server";
   return "unknown";
 }
@@ -19,6 +20,10 @@ const MESSAGES: Record<ErrorKind, { zh: string; en: string }> = {
   network: { zh: "网络异常——请检查网络连接后重试。", en: "Network error — check your connection and try again." },
   auth: { zh: "API Key 无效或缺失——请到「设置」配置对应平台的 Key。", en: "API key invalid or missing — open Settings to configure it." },
   ratelimit: { zh: "平台限流了——请稍等片刻再重试。", en: "Rate-limited by the provider — wait a moment and retry." },
+  "content-policy": {
+    zh: "模型平台按内容策略拒绝了请求——请检查分镜描述、台词或参考图后重试。",
+    en: "The model provider rejected the request under its content policy — review the shot descriptions, dialogue, or reference images and retry.",
+  },
   server: { zh: "平台服务异常——请稍后再试。", en: "Provider service error — please try again later." },
   unknown: { zh: "", en: "" },
 };

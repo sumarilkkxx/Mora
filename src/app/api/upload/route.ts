@@ -3,6 +3,7 @@ import { getDataDir } from "@/lib/paths";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { apiError } from "@/lib/api-error";
+import { detectImageMime, imageExtension } from "@/lib/image-format";
 
 /** Whitelist of allowed upload MIME types */
 const ALLOWED_MIME_TYPES = new Set([
@@ -92,8 +93,10 @@ export async function POST(req: NextRequest) {
   const savedPaths = await Promise.all(
     files.map(async (file, index) => {
       const rawName = file.name.replace(/[/\\]/g, "");
-      const ext = rawName.split(".").pop()?.toLowerCase() || "jpg";
+      const originalExt = rawName.split(".").pop()?.toLowerCase() || "jpg";
       const bytes = await file.arrayBuffer();
+      const detectedMime = detectImageMime(new Uint8Array(bytes));
+      const ext = detectedMime ? imageExtension(detectedMime) : originalExt;
       const fileName = `${Date.now()}-${index}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
       await writeFile(join(uploadDir, fileName), Buffer.from(bytes));
       return `/api/files/${projectId}/${fileName}`;

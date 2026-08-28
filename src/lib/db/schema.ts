@@ -7,12 +7,14 @@ import type {
   WorkflowStagePlan,
 } from "@/lib/production-system";
 import type { TimeRange, TranscriptDocument, TranscriptEditPlan } from "@/lib/transcript-editor";
+import type { GuidedEditPlanDocument, GuidedScene } from "@/lib/guided-edit";
 
 // Projects table
 export const projects = sqliteTable("projects", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull(),
   status: text("status", { enum: ["draft", "scripting", "assets", "video", "composing", "done"] }).notNull().default("draft"),
+  workflowType: text("workflow_type", { enum: ["generate", "edit"] }).notNull().default("generate"),
   // Content type: product=commerce (product-centred), topic=topic-based video (no product; one-sentence topic → narration script → auto-matched free footage)
   contentType: text("content_type", { enum: ["product", "topic"] }).default("product"),
   // One-sentence topic entered by the user in topic mode (e.g. "在家如何泡一杯手冲咖啡")
@@ -42,6 +44,7 @@ export const projects = sqliteTable("projects", {
   mediaInsights: text("media_insights", { mode: "json" }).$type<ProjectMediaInsight[]>().default([]),
   productionWorkflow: text("production_workflow", { mode: "json" }).$type<WorkflowStagePlan[]>(),
   versionSnapshots: text("version_snapshots", { mode: "json" }).$type<ProductionSnapshot[]>().default([]),
+  deletedAt: integer("deleted_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
@@ -185,6 +188,24 @@ export const mediaSources = sqliteTable("media_sources", {
   device: text("device", { enum: ["webgpu", "wasm"] }),
   language: text("language"),
   transcript: text("transcript", { mode: "json" }).$type<TranscriptDocument>(),
+  sceneStatus: text("scene_status", { enum: ["pending", "analyzing", "ready", "failed"] }).notNull().default("pending"),
+  scenes: text("scenes", { mode: "json" }).$type<GuidedScene[]>().default([]),
+  error: text("error"),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+});
+
+// Guided editing plans turn merchant-authored promotion copy and explicitly labelled source
+// scenes into a deterministic timeline. They deliberately contain no generated claims: every
+// spoken/subtitle line is user-authored, and revisions remain reproducible.
+export const guidedEditPlans = sqliteTable("guided_edit_plans", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  sourceId: text("source_id").notNull().references(() => mediaSources.id, { onDelete: "cascade" }),
+  revision: integer("revision").notNull().default(1),
+  document: text("document", { mode: "json" }).$type<GuidedEditPlanDocument>().notNull(),
+  compositionId: text("composition_id").references(() => compositions.id, { onDelete: "set null" }),
+  status: text("status", { enum: ["draft", "ready", "rendering", "done", "failed"] }).notNull().default("draft"),
   error: text("error"),
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),

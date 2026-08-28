@@ -55,6 +55,7 @@ interface RecentProject {
   name: string;
   productName: string | null;
   status: string;
+  workflowType?: "generate" | "edit";
   updatedAt: string | null;
 }
 
@@ -189,16 +190,19 @@ export default function StartPage() {
     let request: AbortController | null = null;
     const refreshTrends = async () => {
       request?.abort();
-      request = new AbortController();
+      const controller = new AbortController();
+      request = controller;
+      const timeout = window.setTimeout(() => controller.abort(), 15_000);
       setTrendsState("loading");
       try {
         const res = await fetch(
           locale === "zh" ? "/api/trends?source=cn&limit=48" : "/api/trends?source=global&limit=48",
-          { signal: request.signal, cache: "no-store" }
+          { signal: controller.signal, cache: "no-store" }
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        if (cancelled || !Array.isArray(data.topics)) return;
+        if (cancelled || request !== controller) return;
+        if (!Array.isArray(data.topics)) throw new Error("INVALID_TRENDS");
         // Keep the source-board order, deduplicate titles, and remove only the
         // society/risk headlines. Unclassified trends still belong in “All”; dropping
         // them used to leave one short page and made “shuffle” appear broken.
@@ -210,8 +214,15 @@ export default function StartPage() {
         setTrendsCat("all");
         setTrendsLocale(locale);
         setTrendsState("ready");
-      } catch (error) {
-        if (!cancelled && !(error instanceof Error && error.name === "AbortError")) setTrendsState("error");
+      } catch {
+        if (!cancelled && request === controller) {
+          setTrends([]);
+          setTrendsSource("");
+          setTrendsLocale(locale);
+          setTrendsState("error");
+        }
+      } finally {
+        window.clearTimeout(timeout);
       }
     };
     void refreshTrends();
@@ -308,8 +319,8 @@ export default function StartPage() {
   };
 
   // navigate to the appropriate step based on project status
-  const stepFor = (status: string) =>
-    status === "done" || status === "composing" || status === "video" ? "video" : status === "assets" ? "assets" : "script";
+  const stepFor = (status: string, workflowType?: "generate" | "edit") =>
+    workflowType === "edit" ? "edit" : status === "done" || status === "composing" || status === "video" ? "video" : status === "assets" ? "assets" : "script";
 
   // map project status to the short stage-label i18n key shown on recent-project cards
   const stageKeyFor = (status: string) =>
@@ -672,6 +683,11 @@ export default function StartPage() {
           <h1 className="cf-h1">{t("h1Lead")}<span className="hl">{t("h1Highlight")}</span></h1>
           <p className="cf-sub">{t("sub")}</p>
 
+          <Link href="/project/edit/new" className="mx-auto mb-4 flex max-w-[620px] items-center justify-between gap-4 rounded-2xl border border-primary/25 bg-primary/[.055] px-4 py-3 text-left no-underline transition-[border-color,background-color,transform] hover:border-primary/45 hover:bg-primary/[.085] active:scale-[.995]">
+            <span className="flex min-w-0 items-center gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="m8.7 8.4 10.8 6.2"/><path d="m8.7 15.6 10.8-6.2"/></svg></span><span className="min-w-0"><strong className="block text-sm font-semibold text-foreground">{t("guidedEditTitle")}</strong><small className="mt-0.5 block text-xs leading-5 text-muted-foreground">{t("guidedEditDesc")}</small></span></span>
+            <span className="shrink-0 text-xs font-semibold text-primary">{t("guidedEditCta")} →</span>
+          </Link>
+
           <div className="cf-studio-grid">
           <div className="cf-primary-column">
           <div className="cf-card" ref={cardRef}>
@@ -865,7 +881,7 @@ export default function StartPage() {
                 {recent.map((p) => {
                   const rel = formatRelativeTime(p.updatedAt, locale);
                   return (
-                    <Link key={p.id} href={`/project/${p.id}/${stepFor(p.status)}`} className="cf-pj">
+                    <Link key={p.id} href={`/project/${p.id}/${stepFor(p.status, p.workflowType)}`} className="cf-pj">
                       <span className="dot" />
                       <span className="col">
                         <span className="nm">{p.name || p.productName || t("untitledProject")}</span>

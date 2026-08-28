@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { existsSync } from "fs";
 import { getDb } from "@/lib/db";
 import { compositions, projects } from "@/lib/db/schema";
@@ -35,7 +35,7 @@ export async function GET() {
       })
       .from(compositions)
       .innerJoin(projects, eq(compositions.projectId, projects.id))
-      .where(eq(compositions.status, "done"))
+      .where(and(eq(compositions.status, "done"), isNull(projects.deletedAt)))
       .orderBy(desc(compositions.createdAt))
       .limit(200);
 

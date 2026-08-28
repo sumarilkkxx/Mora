@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { LuCheck, LuCircleCheck, LuFilm, LuDownload, LuLink2, LuFileText, LuPlus, LuHouse, LuSmartphone, LuShuffle, LuLoaderCircle, LuSparkles, LuImage, LuLayoutGrid, LuQrCode, LuScanLine, LuLanguages, LuShieldCheck, LuTriangleAlert, LuCircleX, LuClipboardCheck } from "react-icons/lu";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +14,8 @@ import { useT, useLocale } from "@/lib/i18n";
 import { ProjectHeader } from "@/components/project-header";
 import { PerformanceFeedback } from "@/components/performance-feedback";
 import { Checkbox } from "@/components/ui/checkbox";
+import { exportDurationSeconds } from "@/lib/export-metadata";
+import { buildImageOptions, resolveDefaultModelTarget, toEditVariant, type GenModelTarget } from "@/lib/gen-params";
 
 // platform export config (planned feature, for display). name uses an i18n key (nameKey) resolved to the translated text at render time
 const platformConfigs = [
@@ -53,6 +55,7 @@ interface Composition {
   resolution: string | null;
   aspectRatio: string | null;
   status: string;
+  duration: number | null;
   createdAt: string | null;
 }
 
@@ -66,6 +69,8 @@ export default function ExportPage() {
   const t = useT("exportPage");
   const locale = useLocale();
   const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const fromTaskCenter = searchParams.get("from") === "tasks";
   const [toast, setToast] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [projectName, setProjectName] = useState("");
@@ -75,8 +80,8 @@ export default function ExportPage() {
   const [scriptInfo, setScriptInfo] = useState<ScriptInfo | null>(null);
   const [fileSize, setFileSize] = useState<string>("");
   // publish copy
-  const { llm } = useSettingsStore();
-  const [productMeta, setProductMeta] = useState<{ productName: string; category: string; description: string; shopUrl?: string; affiliateCode?: string } | null>(null);
+  const { llm, providers, defaultImageModel, defaultImageProvider, customModels, imageParams } = useSettingsStore();
+  const [productMeta, setProductMeta] = useState<{ productName: string; category: string; description: string; productImages: string[]; shopUrl?: string; affiliateCode?: string } | null>(null);
   const [publish, setPublish] = useState<{ loading: boolean; titles: string[]; hashtags: string[]; caption: string; commentKit?: CommentKit; shopLink?: string; error?: string; template?: boolean }>({ loading: false, titles: [], hashtags: [], caption: "" });
   // A/B variant generation (re-render with different subtitle styles and BGM, one each, for ad comparison)
   const [abVariants, setAbVariants] = useState<{ key: string; labelKey: string; status: "running" | "done" | "error"; url?: string }[]>([]);
@@ -139,27 +144,90 @@ export default function ExportPage() {
   const [more, setMore] = useState<Record<string, ToolState>>({});
   const setTool = (k: string, v: ToolState) => setMore((m) => ({ ...m, [k]: { ...m[k], ...v } }));
   const [coverTitle, setCoverTitle] = useState("");
+  const [coverStyle, setCoverStyle] = useState<"editorial" | "commerce" | "contrast">("editorial");
+  const [carouselTheme, setCarouselTheme] = useState<"xiaohongshu" | "shortvideo" | "clean">("xiaohongshu");
+  const [derivedMode, setDerivedMode] = useState<"ai" | "local">("ai");
+  const [imageTarget, setImageTarget] = useState<GenModelTarget | null>(null);
   const [dubLang, setDubLang] = useState("en");
   const hasShopUrl = !!productMeta?.shopUrl;
+
+  useEffect(() => {
+    let cancelled = false;
+    void resolveDefaultModelTarget(providers, defaultImageModel, customModels, "image", defaultImageProvider).then((target) => {
+      if (!cancelled) setImageTarget(target);
+    });
+    return () => { cancelled = true; };
+  }, [providers, defaultImageModel, defaultImageProvider, customModels]);
+
+  const generateAiBackdrop = async (kind: "cover" | "carousel", style: string): Promise<string | undefined> => {
+    if (!imageTarget) return undefined;
+    const productName = productMeta?.productName || projectName || "the featured product";
+    const productDescription = productMeta?.description?.trim();
+    const reference = productMeta?.productImages?.[0];
+    const prompt = [
+      `Create a premium vertical ecommerce ${kind === "cover" ? "video cover background" : "editorial carousel hero image"} for ${productName}.`,
+      productDescription ? `Product context: ${productDescription}.` : "",
+      style === "xiaohongshu" || style === "editorial"
+        ? "Warm ivory editorial styling, soft daylight, tactile lifestyle composition, restrained vermilion accent, generous clean space for a Chinese headline."
+        : style === "shortvideo" || style === "contrast"
+          ? "Crisp high-contrast short-video styling, charcoal and clean white with restrained cyan and coral accents, energetic product framing, clear headline safe area."
+          : style === "commerce"
+            ? "Bright conversion-focused product styling, warm coral accent, clean studio light, strong product hierarchy and clear headline safe area."
+            : "Calm modern solid-color art direction, clean light palette, restrained geometry and clear headline safe area.",
+      reference ? "Keep the referenced product shape, material, colors, logo and printed details unchanged." : "",
+      "No words, letters, logos, captions, watermarks, UI, borders, or decorative fake text. The application will typeset exact copy locally.",
+    ].filter(Boolean).join(" ");
+    const response = await fetch("/api/ai/image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        provider: imageTarget.provider,
+        model: reference ? toEditVariant(imageTarget.model) : imageTarget.model,
+        apiKey: imageTarget.apiKey,
+        baseUrl: imageTarget.baseUrl,
+        mode: reference ? "image-to-image" : "text-to-image",
+        prompt,
+        ...(reference && { imageUrl: reference }),
+        options: buildImageOptions({ ...imageParams, aspectRatio: "9:16", count: 1 }),
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || t("moreAiFailed"));
+    const url = Array.isArray(data.imageUrls) ? data.imageUrls[0] : undefined;
+    if (!url) throw new Error(t("moreAiEmpty"));
+    return url;
+  };
 
   const genCover = async () => {
     const title = (coverTitle || productMeta?.productName || projectName).trim();
     if (!title) { setTool("cover", { error: t("moreCoverNeedTitle") }); return; }
     setTool("cover", { loading: true, error: undefined, images: undefined });
     try {
-      const r = await fetch(`/api/project/${id}/cover`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title }) });
+      let backgroundImageUrl: string | undefined;
+      let warning: string | undefined;
+      if (derivedMode === "ai") {
+        try { backgroundImageUrl = await generateAiBackdrop("cover", coverStyle); }
+        catch (e) { warning = t("moreAiFallback", { error: e instanceof Error ? e.message : t("moreAiFailed") }); }
+      }
+      const r = await fetch(`/api/project/${id}/cover`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, style: coverStyle, backgroundImageUrl }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || t("moreFailed"));
-      setTool("cover", { loading: false, images: [d.cover] });
+      setTool("cover", { loading: false, images: [d.cover], warning, note: d.mode === "ai" ? t("moreAiUsed") : t("moreLocalUsed") });
     } catch (e) { setTool("cover", { loading: false, error: e instanceof Error ? e.message : t("moreFailed") }); }
   };
   const genCarousel = async () => {
     setTool("carousel", { loading: true, error: undefined, images: undefined });
     try {
-      const r = await fetch(`/api/project/${id}/carousel`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ theme: "night" }) });
+      let heroImageUrl: string | undefined;
+      let warning: string | undefined;
+      if (derivedMode === "ai") {
+        try { heroImageUrl = await generateAiBackdrop("carousel", carouselTheme); }
+        catch (e) { warning = t("moreAiFallback", { error: e instanceof Error ? e.message : t("moreAiFailed") }); }
+      }
+      const r = await fetch(`/api/project/${id}/carousel`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ theme: carouselTheme, heroImageUrl }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || t("moreFailed"));
-      setTool("carousel", { loading: false, images: Array.isArray(d.cards) ? d.cards : [] });
+      setTool("carousel", { loading: false, images: Array.isArray(d.cards) ? d.cards : [], warning, note: d.mode === "ai" ? t("moreAiUsed") : t("moreLocalUsed") });
     } catch (e) { setTool("carousel", { loading: false, error: e instanceof Error ? e.message : t("moreFailed") }); }
   };
   const genQr = async () => {
@@ -283,6 +351,7 @@ export default function ExportPage() {
 
   // platform AI-disclosure kit (static, path-independent: shown with both the template pack and LLM copy)
   const aiDecl = buildAiDeclaration(locale === "en" ? "en" : "zh");
+  const displayedDuration = exportDurationSeconds(composition?.duration, scriptInfo?.totalDuration);
 
   const generatePublish = async () => {
     // UTM-tagged shop link (only when the project has a shopUrl) — surfaced alongside the copy so the
@@ -339,6 +408,7 @@ export default function ExportPage() {
               productName: proj.productName ?? proj.name ?? "",
               category: proj.productCategory ?? "",
               description: proj.productDescription ?? "",
+              productImages: Array.isArray(proj.productImages) ? proj.productImages : [],
               shopUrl: proj.shopUrl ?? undefined,
               affiliateCode: proj.affiliateCode ?? undefined,
             });
@@ -428,7 +498,15 @@ export default function ExportPage() {
     : "";
 
   // slim context strip (shared by loading, empty and normal states); global chrome lives in AppShell
-  const headerBar = <ProjectHeader projectName={projectName || t("projectFallback")} />;
+  const headerBar = (
+    <ProjectHeader
+      projectName={projectName || t("projectFallback")}
+      showStepper={false}
+      centerLabel={t("headerTitle")}
+      backHref={fromTaskCenter ? "/tasks" : "/projects"}
+      backLabel={t(fromTaskCenter ? "backToTasks" : "backToProjects")}
+    />
+  );
 
   if (loading) {
     return (
@@ -952,15 +1030,25 @@ export default function ExportPage() {
         {/* more outputs: monetization + localization tools (cover / carousel / shop QR / end-card / dub) */}
         <Card className="glass-card mb-6">
           <CardContent className="p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <LuSparkles className="w-4 h-4 text-primary" />
-              <h3 className="text-sm font-semibold">{t("moreTitle")}</h3>
+            <div className="flex items-center justify-between gap-3 mb-1">
+              <div className="flex items-center gap-2">
+                <LuSparkles className="w-4 h-4 text-primary" />
+                <h3 className="text-sm font-semibold">{t("moreTitle")}</h3>
+              </div>
+              <select aria-label={t("moreModeLabel")} className="rounded-md border border-border/50 bg-background/70 px-2 py-1.5 text-xs" value={derivedMode} onChange={(e) => setDerivedMode(e.target.value as typeof derivedMode)}>
+                <option value="ai">{t("moreModeAi")}</option>
+                <option value="local">{t("moreModeLocal")}</option>
+              </select>
             </div>
             <p className="text-xs text-muted-foreground mb-4">{t("moreDesc")}</p>
+            {derivedMode === "ai" && <p className="-mt-2 mb-4 text-[11px] text-amber-600 dark:text-amber-400">{imageTarget ? t("moreAiBillingHint") : t("moreAiNotConfigured")}</p>}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {/* cover */}
               <div className="rounded-lg border border-border/50 bg-muted/10 p-3">
-                <div className="flex items-center gap-2 mb-2"><LuImage className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("moreCover")}</span></div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2"><LuImage className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("moreCover")}</span></div>
+                  <Badge variant="secondary" className="text-[10px] font-normal">{derivedMode === "ai" && imageTarget ? t("moreAiReady") : t("moreLocalReady")}</Badge>
+                </div>
                 <div className="flex gap-2">
                   <input
                     className="flex-1 min-w-0 rounded-md border border-border/50 bg-background/50 px-2 py-1 text-xs"
@@ -972,7 +1060,14 @@ export default function ExportPage() {
                     {more.cover?.loading ? <LuLoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("moreGenerate")}
                   </Button>
                 </div>
+                <select aria-label={t("moreStyleLabel")} className="mt-2 w-full rounded-md border border-border/50 bg-background/70 px-2 py-1.5 text-xs" value={coverStyle} onChange={(e) => setCoverStyle(e.target.value as typeof coverStyle)}>
+                  <option value="editorial">{t("moreStyleEditorial")}</option>
+                  <option value="commerce">{t("moreStyleCommerce")}</option>
+                  <option value="contrast">{t("moreStyleContrast")}</option>
+                </select>
                 {more.cover?.error && <p className="mt-1.5 text-[11px] text-destructive">{more.cover.error}</p>}
+                {more.cover?.warning && <p className="mt-1.5 text-[11px] text-amber-600 dark:text-amber-400">{more.cover.warning}</p>}
+                {more.cover?.note && <p className="mt-1.5 text-[11px] text-emerald-600 dark:text-emerald-400">{more.cover.note}</p>}
                 {more.cover?.images?.[0] && (
                   <a href={`${more.cover.images[0]}?download=1`} download className="mt-2 block">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -988,7 +1083,17 @@ export default function ExportPage() {
                     {more.carousel?.loading ? <LuLoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("moreGenerate")}
                   </Button>
                 </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <select aria-label={t("moreStyleLabel")} className="min-w-0 flex-1 rounded-md border border-border/50 bg-background/70 px-2 py-1.5 text-xs" value={carouselTheme} onChange={(e) => setCarouselTheme(e.target.value as typeof carouselTheme)}>
+                    <option value="xiaohongshu">{t("moreStyleXiaohongshu")}</option>
+                    <option value="shortvideo">{t("moreStyleShortVideo")}</option>
+                    <option value="clean">{t("moreStyleClean")}</option>
+                  </select>
+                  <Badge variant="secondary" className="shrink-0 text-[10px] font-normal">{derivedMode === "ai" && imageTarget ? t("moreAiReady") : t("moreLocalReady")}</Badge>
+                </div>
                 {more.carousel?.error && <p className="text-[11px] text-destructive">{more.carousel.error}</p>}
+                {more.carousel?.warning && <p className="text-[11px] text-amber-600 dark:text-amber-400">{more.carousel.warning}</p>}
+                {more.carousel?.note && <p className="text-[11px] text-emerald-600 dark:text-emerald-400">{more.carousel.note}</p>}
                 {more.carousel?.images && more.carousel.images.length > 0 && (
                   <div className="flex gap-1.5 overflow-x-auto pb-1">
                     {more.carousel.images.map((img, i) => (
@@ -1057,7 +1162,7 @@ export default function ExportPage() {
               <div className="space-y-3">
                 <div>
                   <p className="text-xs text-muted-foreground mb-0.5">{t("detailDuration")}</p>
-                  <p className="text-sm">{scriptInfo?.totalDuration ? t("durationSeconds", { n: scriptInfo.totalDuration }) : t("emptyValue")}</p>
+                  <p className="text-sm">{displayedDuration ? t("durationSeconds", { n: displayedDuration }) : t("emptyValue")}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-0.5">{t("detailResolution")}</p>

@@ -49,7 +49,7 @@ interface VideoModelTarget {
 export default function ClonePage() {
   const t = useT("clone");
   const router = useRouter();
-  const { llm, providers, defaultVideoModel, customModels, videoParams } = useSettingsStore();
+  const { llm, providers, defaultVideoModel, defaultVideoProvider, customModels, videoParams } = useSettingsStore();
 
   // video URL and analysis state
   const [videoUrl, setVideoUrl] = useState("");
@@ -75,6 +75,7 @@ export default function ClonePage() {
   const [isReplicating, setIsReplicating] = useState(false);
   const [replicateError, setReplicateError] = useState("");
   const [replicateResult, setReplicateResult] = useState<{ url: string; projectId: string } | null>(null);
+  const [replicateQueued, setReplicateQueued] = useState<{ taskId: string; projectId: string } | null>(null);
 
   // drag-and-drop upload state
   const [isDragging, setIsDragging] = useState(false);
@@ -108,7 +109,9 @@ export default function ClonePage() {
         if (!res.ok) return;
         const data = await res.json();
         const merged = mergeCustomModels(data.models ?? [], customModels, "video", new Set(enabled.map((e) => e.name)));
-        const model = merged.find((m) => m.id === defaultVideoModel);
+        const model = merged.find(
+          (m) => m.id === defaultVideoModel && (!defaultVideoProvider || m.provider === defaultVideoProvider)
+        );
         if (cancelled || !model) return;
         const prov = enabled.find((e) => e.name === model.provider);
         if (prov) setVideoModelTarget({ provider: prov.name, model: defaultVideoModel, apiKey: prov.apiKey, baseUrl: prov.baseUrl });
@@ -119,7 +122,7 @@ export default function ClonePage() {
     return () => {
       cancelled = true;
     };
-  }, [providers, defaultVideoModel, customModels]);
+  }, [providers, defaultVideoModel, defaultVideoProvider, customModels]);
 
   /**
    * Analyze the reference. With an uploaded video file this is REAL analysis:
@@ -218,6 +221,7 @@ export default function ClonePage() {
     setIsReplicating(true);
     setReplicateError("");
     setReplicateResult(null);
+    setReplicateQueued(null);
     try {
       const { projectId, paths } = await createCloneProject();
       const videoOptions = buildVideoOptions(videoParams);
@@ -235,11 +239,16 @@ export default function ClonePage() {
           referenceVideoUrls: [refAnalysis.path],
           referenceImageUrls: paths,
           projectId,
+          background: true,
           options: { ...videoOptions, audioEnabled: true },
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || t("modelTierFailed"));
+      if (data.queued && data.taskId) {
+        setReplicateQueued({ taskId: data.taskId, projectId });
+        return;
+      }
       const videoUrlOut = data.videoUrls?.[0];
       if (!videoUrlOut) throw new Error(t("modelTierFailed"));
       // persist as a finished composition (provider URLs expire) → export page
@@ -755,6 +764,16 @@ export default function ClonePage() {
                     <div className="flex items-center gap-3 text-xs">
                       <span className="text-emerald-600">{t("modelTierDone")}</span>
                       <Link href={`/project/${replicateResult.projectId}/export`} className="text-primary underline">
+                        {t("modelTierViewExport")}
+                      </Link>
+                    </div>
+                  </div>
+                ) : replicateQueued ? (
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs leading-relaxed">
+                    <p>{t("modelTierQueued")}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-3">
+                      <span className="font-mono text-muted-foreground">{replicateQueued.taskId}</span>
+                      <Link href={`/project/${replicateQueued.projectId}/export`} className="text-primary underline">
                         {t("modelTierViewExport")}
                       </Link>
                     </div>

@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createProvider } from "@/lib/providers";
 import { ProviderError } from "@/lib/providers/base";
 import { apiError, errText } from "@/lib/api-error";
-import { updateAiTaskByProviderTaskId, type AiTaskStatus } from "@/lib/ai-tasks";
+import { getAiTaskByProviderTaskId, updateAiTaskByProviderTaskId, type AiTaskStatus } from "@/lib/ai-tasks";
+import { persistRecoveredComposition, persistRecoveredShotVideo } from "@/lib/generated-video-persistence";
+import { withAiTaskFinalizationLock } from "@/lib/ai-task-finalization";
 import type { TaskStatusEnum } from "@/lib/providers/types";
 
 // Query / resume a previously submitted video task by its provider task ID (issue #16).
@@ -36,6 +38,45 @@ export async function POST(req: NextRequest) {
       const result = status.result;
       const videoUrls = result && "videoUrls" in result ? result.videoUrls : undefined;
 
+      let persisted: Awaited<ReturnType<typeof persistRecoveredComposition>> | Awaited<ReturnType<typeof persistRecoveredShotVideo>> | undefined;
+      if (status.status === "completed" && videoUrls?.[0]) {
+        try {
+          persisted = await withAiTaskFinalizationLock(providerName, taskId, async () => {
+            const task = await getAiTaskByProviderTaskId(providerName, taskId);
+            // A second request may arrive after the first lock completed. The durable
+            // completed marker prevents another download/insert in that small window.
+            if (!task?.projectId || task.status === "completed") return undefined;
+            const saved = task.shotId != null
+              ? await persistRecoveredShotVideo({
+                  projectId: task.projectId,
+                  shotId: task.shotId,
+                  videoUrl: videoUrls[0],
+                  provider: providerName,
+                  model: task.model,
+                  prompt: task.prompt,
+                  apiKey,
+                })
+              : await persistRecoveredComposition({
+                  projectId: task.projectId,
+                  videoUrl: videoUrls[0],
+                  provider: providerName,
+                  model: task.model,
+                  apiKey,
+                });
+            await updateAiTaskByProviderTaskId(providerName, taskId, {
+              status: "completed",
+              resultUrls: videoUrls,
+              error: null,
+            });
+            return saved;
+          });
+        } catch (error) {
+          const message = `视频已在云端完成，但自动保存到本地失败: ${error instanceof Error ? error.message : String(error)}`;
+          await updateAiTaskByProviderTaskId(providerName, taskId, { status: "unknown", error: message });
+          return NextResponse.json({ error: message, taskId, recoverable: true }, { status: 502 });
+        }
+      }
+
       await updateAiTaskByProviderTaskId(providerName, taskId, {
         status: toRowStatus(status.status),
         ...(videoUrls && { resultUrls: videoUrls }),
@@ -46,20 +87,28 @@ export async function POST(req: NextRequest) {
         taskId,
         status: status.status,
         videoUrls,
+        persisted,
         error: status.error,
       });
     } catch (error) {
       // definitive failure vs. lost contact — a paid task must never be downgraded to
       // "failed" just because we couldn't reach the status endpoint
       const failed = error instanceof ProviderError && error.code === "TASK_FAILED";
-      const message = error instanceof Error ? error.message : String(error);
+      const credentialRequired = error instanceof ProviderError && (error.statusCode === 401 || error.statusCode === 403);
+      const message = credentialRequired
+        ? errText(
+            req,
+            `${providerName} API Key 无效、已过期或已被撤销，请在设置中重新填写后再恢复任务`,
+            `${providerName} API key is invalid, expired, or revoked. Update it in Settings to resume this task`
+          )
+        : error instanceof Error ? error.message : String(error);
       await updateAiTaskByProviderTaskId(providerName, taskId, {
         status: failed ? "failed" : "unknown",
         error: message,
       });
       return NextResponse.json(
-        { error: message, taskId, recoverable: !failed },
-        { status: failed ? 500 : 504 }
+        { error: message, taskId, recoverable: !failed, credentialRequired },
+        { status: credentialRequired ? 401 : failed ? 500 : 504 }
       );
     }
   } catch (error) {
