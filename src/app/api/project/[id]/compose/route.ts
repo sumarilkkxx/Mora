@@ -22,6 +22,8 @@ import { buildComplianceOverlays } from "@/lib/compliance-overlays";
 import { fetchFreeBgm, moodQueryForCategory, moodQueryForMood } from "@/lib/free-bgm";
 import type { Shot, ScriptCharacter } from "@/lib/db/schema";
 import { assignCharacterVoices } from "@/lib/character-voices";
+import { readyAssetsByShot } from "@/lib/assets-view";
+import { normalizeProductionMode } from "@/lib/production-mode";
 import { desc, and } from "drizzle-orm";
 
 // 获取该项目最新一条合成记录（导出页读取真实成片）
@@ -146,10 +148,10 @@ export async function POST(
 
     // 已生成的素材（assets 表，按 shotId 索引）
     const assetRows = await db.select().from(assetsTable).where(eq(assetsTable.projectId, id));
-    const assetByShot = new Map<number, string>();
-    for (const a of assetRows) {
-      if (a.filePath) assetByShot.set(a.shotId, a.filePath);
-    }
+    const readyAssets = readyAssetsByShot(assetRows, normalizeProductionMode(project.productionMode));
+    const assetByShot = new Map(
+      [...readyAssets].flatMap(([shotId, asset]) => asset.filePath ? [[shotId, asset.filePath] as const] : []),
+    );
 
     // 可选 TTS 配音配置（前端从设置带入）
     const ttsConfig: TTSConfig | undefined =

@@ -71,7 +71,7 @@ registerProvider({
 registerProvider({
   name: 'atlas-cloud',
   displayName: 'Atlas Cloud',
-  description: 'Atlas Cloud 视频生成平台，已接入 Seedance 2.0/2.5 的文生、图生和参考生视频端点',
+  description: 'Atlas Cloud 全量视频模型目录，按任务自动路由并依据官方 Schema 适配参数',
   factory: (config) => new AtlasCloudProvider(config),
 })
 

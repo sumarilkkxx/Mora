@@ -360,6 +360,19 @@
 .studio-nav-item.is-active svg { color:var(--primary); }
 .studio-nav-item.is-active::before { display:none; }
 .studio-nav-item > span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.task-center-nav { border:1px solid transparent; }
+.task-center-nav.is-running { border-color:color-mix(in srgb,var(--primary) 24%,transparent); background:color-mix(in srgb,var(--primary) 8%,transparent); color:var(--foreground); box-shadow:0 5px 16px color-mix(in srgb,var(--primary) 9%,transparent); }
+.task-center-nav.is-running:hover { background:color-mix(in srgb,var(--primary) 12%,transparent); }
+.task-center-nav.is-attention { border-color:color-mix(in srgb,#d97706 32%,transparent); background:color-mix(in srgb,#f59e0b 10%,transparent); color:color-mix(in srgb,#92400e 88%,var(--foreground)); box-shadow:0 5px 16px rgb(180 112 20 / 10%); }
+.dark .task-center-nav.is-attention { color:#fcd79a; }
+.task-center-nav.has-new { border-color:color-mix(in srgb,#059669 25%,transparent); background:color-mix(in srgb,#10b981 8%,transparent); color:var(--foreground); }
+.task-center-icon { display:grid; place-items:center; overflow:visible!important; }
+.task-center-nav.is-running .task-center-icon::after { position:absolute; inset:-5px; border:1px solid color-mix(in srgb,var(--primary) 34%,transparent); border-radius:999px; content:""; animation:task-center-breathe 1.8s ease-in-out infinite; }
+.task-center-badge { box-shadow:0 0 0 2px var(--sidebar); }
+.task-center-state-dot { width:7px; height:7px; flex:0 0 auto; border-radius:999px; background:var(--primary); box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 12%,transparent); }
+.task-center-nav.is-attention .task-center-state-dot { background:#d97706; box-shadow:0 0 0 3px rgb(245 158 11 / 14%); }
+.task-center-nav.has-new .task-center-state-dot { background:#059669; box-shadow:0 0 0 3px rgb(16 185 129 / 14%); }
+@keyframes task-center-breathe { 0%,100% { opacity:.25; transform:scale(.88); } 50% { opacity:.8; transform:scale(1.08); } }
 .is-collapsed .studio-nav-item { justify-content:center; padding-inline:0; }
 .studio-sidebar-footer { padding:8px; border-top:1px solid color-mix(in srgb,var(--sidebar-border) 65%,transparent); }
 .studio-sidebar-footer > * + * { margin-top:2px; }
@@ -457,15 +470,62 @@
 .project-header-stepper { min-width:0; justify-self:center; }
 .project-header-utilities { justify-self:end; }
 
+/* Project production path — a single, quiet material surface with explicit
+   hierarchy. The mode is context, the rail connects the route, and the node
+   marks the current place without covering either rail. */
+.project-flow { --flow-line-width:22px; display:flex; align-items:center; min-width:0; height:46px; padding:5px; border:1px solid color-mix(in srgb,var(--border) 64%,transparent); border-radius:15px; background:color-mix(in srgb,var(--background) 68%,transparent); box-shadow:inset 0 1px 0 rgb(255 255 255 / 48%),0 1px 2px rgb(15 23 42 / 5%),0 8px 24px rgb(42 70 101 / 6%); backdrop-filter:blur(22px) saturate(165%); -webkit-backdrop-filter:blur(22px) saturate(165%); }
+.dark .project-flow { background:color-mix(in srgb,var(--card) 76%,transparent); box-shadow:inset 0 1px 0 rgb(255 255 255 / 7%),0 10px 28px rgb(0 0 0 / 20%); }
+.project-flow-context { display:flex; align-items:center; gap:8px; height:34px; padding:0 12px 0 8px; color:var(--foreground); }
+.project-flow-context-icon { display:grid; place-items:center; width:27px; height:27px; border-radius:9px; color:var(--primary); background:color-mix(in srgb,var(--primary) 11%,transparent); }
+.project-flow-context-icon svg { width:15px; height:15px; stroke-width:2; }
+.project-flow-context-copy { display:flex; align-items:center; min-width:0; line-height:1; }
+.project-flow-context-copy strong { font-size:12px; font-weight:680; letter-spacing:.01em; white-space:nowrap; }
+.project-flow-divider { width:1px; height:18px; margin:0 3px; background:color-mix(in srgb,var(--border) 72%,transparent); }
+.project-flow-steps { display:flex; align-items:center; min-width:0; }
+.project-flow-step-wrap { display:flex; align-items:center; min-width:0; }
+.project-flow-line { position:relative; z-index:2; flex:0 0 var(--flow-line-width); width:var(--flow-line-width); height:2px; border-radius:999px; background:color-mix(in srgb,var(--border) 88%,transparent); transition:background-color 180ms ease; }
+.project-flow-line.is-complete { background:color-mix(in srgb,var(--primary) 62%,var(--border)); }
+.project-flow-step { position:relative; z-index:1; display:flex; align-items:center; gap:6px; height:34px; padding:0 6px; border:1px solid transparent; border-radius:10px; color:var(--muted-foreground); font-size:12px; font-weight:570; white-space:nowrap; transition:background-color 160ms ease,color 160ms ease,box-shadow 160ms ease,transform 100ms ease; }
+.project-flow-step:hover { color:var(--foreground); background:color-mix(in srgb,var(--muted) 42%,transparent); }
+.project-flow-step:active { transform:scale(.97); }
+.project-flow-step:focus-visible { outline:2px solid color-mix(in srgb,var(--primary) 72%,white); outline-offset:1px; }
+.project-flow-step.is-current { color:var(--foreground); background:transparent; box-shadow:none; }
+.dark .project-flow-step.is-current { background:transparent; box-shadow:none; }
+.project-flow-step.is-complete { color:color-mix(in srgb,var(--primary) 84%,var(--foreground)); }
+.project-flow-index { display:grid; place-items:center; width:20px; height:20px; border-radius:999px; color:var(--muted-foreground); background:color-mix(in srgb,var(--muted) 78%,transparent); font-size:10px; font-variant-numeric:tabular-nums; }
+.project-flow-index svg { width:12px; height:12px; stroke-width:2.6; }
+.project-flow-step.is-current .project-flow-index { color:var(--primary-foreground); background:var(--primary); box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 12%,transparent); }
+.project-flow-step.is-current .project-step-label { font-weight:680; letter-spacing:-.005em; }
+.project-flow-step.is-complete .project-flow-index { color:var(--primary); background:color-mix(in srgb,var(--primary) 12%,transparent); }
+
 @media (min-width:768px) and (max-width:1099px) {
   .project-workspace-header .project-step-label { display:none; }
-  .project-workspace-header .studio-segmented a { padding-inline:8px; }
+  .project-flow-step { padding-inline:5px; }
 }
 
 @media (max-width:767px) {
   .project-header-inner { grid-template-columns:minmax(0,1fr) auto; }
   .project-header-stepper { justify-self:end; }
   .project-header-utilities { display:none; }
+  .project-flow { height:38px; border-radius:12px; }
+  .project-flow-context { height:30px; padding-right:6px; }
+  .project-flow-context-icon { display:none; }
+  .project-flow-step { height:30px; padding-inline:5px; }
+  .project-flow-step:not(.is-current) .project-step-label { display:none; }
+  .project-flow { --flow-line-width:8px; }
+  .project-flow-line { width:var(--flow-line-width); }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .project-flow-step,.project-flow-line { transition:none; }
+  .project-flow-step:active { transform:none; }
+}
+@media (prefers-reduced-transparency:reduce) {
+  .project-flow { background:var(--background); backdrop-filter:none; -webkit-backdrop-filter:none; }
+}
+@media (prefers-contrast:more) {
+  .project-flow { border-color:var(--foreground); background:var(--background); }
+  .project-flow-step.is-current { outline:1px solid var(--foreground); }
 }
 
 /* Transitional page adapter: keeps feature-heavy routes visually aligned while their

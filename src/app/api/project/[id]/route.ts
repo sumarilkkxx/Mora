@@ -6,6 +6,7 @@ import { projects } from "@/lib/db/schema";
 import { getUploadsDir, getOutputDir } from "@/lib/paths";
 import { eq } from "drizzle-orm";
 import { apiError, errText } from "@/lib/api-error";
+import { normalizeTargetVideoDuration } from "@/lib/target-video-duration";
 
 // Project ids are UUIDs; validate before using one in a filesystem path (guards the rm below against traversal)
 const SAFE_ID = /^[a-zA-Z0-9-]+$/;
@@ -14,6 +15,8 @@ const SAFE_ID = /^[a-zA-Z0-9-]+$/;
 const PATCHABLE_FIELDS = [
   "name",
   "workflowType",
+  "productionMode",
+  "targetDuration",
   "productName",
   "productCategory",
   "productDescription",
@@ -41,6 +44,7 @@ const VALID_STATUS = new Set([
   "done",
 ]);
 const VALID_WORKFLOW_TYPES = new Set(["generate", "edit"]);
+const VALID_PRODUCTION_MODES = new Set(["ai", "local"]);
 
 // Fetch a single project
 export async function GET(
@@ -97,6 +101,22 @@ export async function PATCH(
     }
     if ("workflowType" in updates && !VALID_WORKFLOW_TYPES.has(String(updates.workflowType))) {
       return apiError(req, "非法的项目工作流类型", "Invalid project workflow type", 400);
+    }
+    if ("productionMode" in updates && !VALID_PRODUCTION_MODES.has(String(updates.productionMode))) {
+      return apiError(req, "制作模式无效", "Invalid production mode", 400);
+    }
+    if ("targetDuration" in updates) {
+      updates.targetDuration = normalizeTargetVideoDuration(updates.targetDuration);
+    }
+    if ("shopUrl" in updates) {
+      const raw = typeof updates.shopUrl === "string" ? updates.shopUrl.trim() : "";
+      try {
+        const parsed = new URL(raw);
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error("invalid protocol");
+        updates.shopUrl = parsed.toString();
+      } catch {
+        return apiError(req, "商品链接必须是有效的 http/https 地址", "Product link must be a valid HTTP(S) URL", 400);
+      }
     }
 
     if (Object.keys(updates).length === 0) {

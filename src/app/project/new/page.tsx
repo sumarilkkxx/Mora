@@ -418,19 +418,25 @@ export default function NewProjectPage() {
     });
   }, []);
 
-  // one-click fill with example product (including a real sample image) to let beginners try without any setup
+  // One-click fill with the full five-image real-product example set.
   const fillExample = useCallback(async (ex: ExampleProduct) => {
     setProductName(ex.name);
     setCategory(ex.category);
     setSellingPoints(ex.sellingPoints);
     try {
-      const res = await fetch(ex.image);
-      const blob = await res.blob();
-      const file = new File([blob], `${ex.id}.png`, { type: blob.type || "image/png" });
+      const blobs = await Promise.all(ex.images.slice(0, 5).map(async (src) => {
+        const res = await fetch(src);
+        if (!res.ok) throw new Error(`EXAMPLE_IMAGE_${res.status}`);
+        return res.blob();
+      }));
+      const next = blobs.map((blob, index) => {
+        const file = new File([blob], `${ex.id}-${index + 1}.webp`, { type: blob.type || "image/webp" });
+        return { id: crypto.randomUUID(), url: URL.createObjectURL(file), file };
+      });
       // revoke old preview URLs to avoid memory leaks
       setImages((prev) => {
         prev.forEach((img) => URL.revokeObjectURL(img.url));
-        return [{ id: crypto.randomUUID(), url: URL.createObjectURL(file), file }];
+        return next;
       });
     } catch {
       // fetching the example image is non-fatal; the text fields are already filled and the user can upload manually

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { ProjectStepper } from "@/components/project-stepper";
 import { StudioUtilities } from "@/components/studio-utilities";
+import type { ProductionMode } from "@/lib/production-mode";
 
 /**
  * Slim sticky context strip for the four project pipeline pages
@@ -20,12 +21,14 @@ export function ProjectHeader({
   centerLabel,
   backHref,
   backLabel,
+  productionMode,
 }: {
   projectName?: string;
   showStepper?: boolean;
   centerLabel?: string;
   backHref?: string;
   backLabel?: string;
+  productionMode?: ProductionMode | null;
 }) {
   const hasCenter = showStepper || Boolean(centerLabel);
   return (
@@ -40,7 +43,7 @@ export function ProjectHeader({
           ) : null}
           <span className="min-w-0 truncate text-[13px] font-semibold tracking-[-0.01em] text-foreground">{projectName ?? ""}</span>
         </div>
-        {showStepper ? <div className="project-header-stepper"><ProjectStepper /></div> : centerLabel ? <div className="project-header-stepper text-[13px] font-semibold tracking-[-0.01em] text-foreground">{centerLabel}</div> : null}
+        {showStepper ? <div className="project-header-stepper"><ProjectStepper productionMode={productionMode} /></div> : centerLabel ? <div className="project-header-stepper text-[13px] font-semibold tracking-[-0.01em] text-foreground">{centerLabel}</div> : null}
         <StudioUtilities className="project-header-utilities" compactLanguage />
       </div>
     </div>

@@ -9,6 +9,8 @@ import { parseProductFromHtml } from "@/lib/product-ingest";
 import { inferExtension, MAX_DOWNLOAD_BYTES } from "@/lib/providers/stock-types";
 import { safeFetch } from "@/lib/ssrf-guard";
 import { apiError, errText } from "@/lib/api-error";
+import { productionModeForCreation } from "@/lib/production-mode";
+import { normalizeTargetVideoDuration } from "@/lib/target-video-duration";
 
 const UA = "Mozilla/5.0 (compatible; Mora/1.0; +https://github.com/xixihhhh/mora)";
 const MAX_HTML_BYTES = 3 * 1024 * 1024;
@@ -112,6 +114,8 @@ export async function POST(req: NextRequest) {
       // Preserve the storefront link so it can flow into publish copy (UTM-tagged) and an end-card QR code
       shopUrl: url,
       productImages: [],
+      productionMode: productionModeForCreation(body.productionMode),
+      targetDuration: normalizeTargetVideoDuration(body.targetDuration),
     })
     .returning();
 

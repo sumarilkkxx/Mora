@@ -4,8 +4,8 @@ import { cachedTrends, fetchDomesticTrends, fetchGlobalCreatorTrends, fetchTikTo
 /**
  * GET /api/trends —— "what should I post today" trending topics, no API key needed.
  *
- * - `?source=cn` (or no params at all): domestic boards — Douyin hot search with real-time
- *   hot values, Toutiao hot board as fallback. This is the Chinese-first default for the web UI.
+ * - `?source=cn` (or no params at all): Douyin hot search with real-time hot values.
+ *   No other platform is used as a fallback.
  * - `?source=global`: commerce-safe Google Trending Now topics merged from the US, UK,
  *   Australia, and New Zealand. Political and sensitive social/news topics are removed.
  * - `?source=tiktok`: retained for compatible callers, but no longer used by the start page.
@@ -24,6 +24,12 @@ export async function GET(req: NextRequest) {
   if (source === "cn" || (!source && !geoParam)) {
     const cn = await cachedTrends("cn", () => fetchDomesticTrends());
     const topics = cn.topics.slice(0, limit);
+    if (topics.length === 0) {
+      return NextResponse.json(
+        { source: "douyin", count: 0, topics: [], error: "DOUYIN_UPSTREAM_UNAVAILABLE" },
+        { status: 503 }
+      );
+    }
     return NextResponse.json({ source: cn.source, count: topics.length, topics });
   }
 

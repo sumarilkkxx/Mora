@@ -68,7 +68,7 @@ export default function ProductsPage() {
         name: ex.name,
         category: ex.category,
         description: ex.sellingPoints,
-        images: [ex.image],
+        images: ex.images.slice(0, 5),
         price: ex.price,
         targetAudience: "",
         videoCount: 0,

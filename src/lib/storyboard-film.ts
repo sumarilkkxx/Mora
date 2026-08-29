@@ -13,6 +13,7 @@
  */
 import type { Shot, ScriptCharacter } from "@/lib/db/schema";
 import { stripPauseMarks } from "@/lib/voice-markup";
+import { atlasVideoFamilyId } from "@/lib/atlas-video-models";
 
 /** Seedance 2.5 duration bounds (schema: integer 4-30 seconds) */
 export const FILM_MIN_SECONDS = 4;
@@ -30,6 +31,7 @@ export const FILM_MAX_SECONDS = 30;
 export function resolveStoryboardFilmModel(providerName: string | undefined, configuredModel: string | undefined): string {
   const provider = providerName?.trim().toLowerCase();
   const model = configuredModel?.trim() ?? "";
+  if (provider === "atlas-cloud") return atlasVideoFamilyId(model) ?? model;
   if (provider !== "openrouter") return model;
 
   if (/^bytedance\/seedance-(?:2\.5|2\.0(?:-fast|-mini)?)\/reference-to-video$/i.test(model)) {
@@ -81,7 +83,17 @@ export function videoRequestDimensions(resolution: string, aspectRatio: string):
 
 /** Conservative fallback used only when a provider's live model directory is unavailable. */
 export function fallbackFilmDurations(providerName: string | undefined, modelId: string): number[] | undefined {
-  if (providerName?.toLowerCase() === "openrouter" && /^bytedance\/seedance-(?:2\.5|2\.0(?:-fast|-mini)?)$/i.test(modelId)) {
+  const provider = providerName?.toLowerCase();
+  if ((provider === "openrouter" || provider === "atlas-cloud") && /(?:^|\/)wan[-_.]?3(?:\.0)?(?:[-_/]|$)/i.test(modelId)) {
+    return Array.from({ length: 29 }, (_, index) => index + 2);
+  }
+  if ((provider === "openrouter" || provider === "atlas-cloud") && /^bytedance\/seedance-2\.5(?:\/reference-to-video)?$/i.test(modelId)) {
+    return Array.from({ length: 27 }, (_, index) => index + 4);
+  }
+  if ((provider === "openrouter" || provider === "atlas-cloud") && /^bytedance\/seedance-2\.0(?:-fast|-mini)?(?:\/reference-to-video)?$/i.test(modelId)) {
+    return Array.from({ length: 12 }, (_, index) => index + 4);
+  }
+  if (provider === "atlas-cloud" && /^minimax\/h3(?:-developer)?(?:\/reference-to-video)?$/i.test(modelId)) {
     return Array.from({ length: 12 }, (_, index) => index + 4);
   }
   return undefined;
@@ -187,19 +199,27 @@ export interface ReferenceQuotaCheck {
  * (never block on a guess); the classic overflow is 9 grid keyframes + 1 presenter
  * sheet = 10 refs against Seedance's 9-image cap.
  */
-export function referenceQuotaCheck(referenceImageCount: number, modelId: string): ReferenceQuotaCheck {
+export function referenceQuotaCheck(referenceImageCount: number, modelId: string, providerName?: string): ReferenceQuotaCheck {
+  const provider = providerName?.toLowerCase();
   // Atlas's exact reference endpoint publishes 30 image slots (50 mixed assets total).
-  if (/^bytedance\/seedance-2\.5\/reference-to-video$/i.test(modelId)) {
+  if (
+    (provider === "atlas-cloud" && /^bytedance\/seedance-2\.5(?:\/reference-to-video)?$/i.test(modelId))
+      || (!provider && /^bytedance\/seedance-2\.5\/reference-to-video$/i.test(modelId))
+  ) {
     const limit = 30;
     return { ok: referenceImageCount <= limit, count: referenceImageCount, limit };
   }
   // OpenRouter's base Seedance 2.5 endpoint accepts up to 50 mixed reference assets.
   // Unknown/custom models pass unchecked; their provider adapter remains the source of truth.
-  if (/^bytedance\/seedance-2\.5(?:\/reference-to-video)?$/i.test(modelId)) {
+  if (provider !== "atlas-cloud" && /^bytedance\/seedance-2\.5(?:\/reference-to-video)?$/i.test(modelId)) {
     const limit = 50;
     return { ok: referenceImageCount <= limit, count: referenceImageCount, limit };
   }
-  if (/^bytedance\/seedance-2\.0(?:-fast|-mini)?\/reference-to-video$/i.test(modelId)) {
+  if (/^bytedance\/seedance-2\.0(?:-fast|-mini)?(?:\/reference-to-video)?$/i.test(modelId)) {
+    const limit = 9;
+    return { ok: referenceImageCount <= limit, count: referenceImageCount, limit };
+  }
+  if (provider === "atlas-cloud" && /^minimax\/h3(?:-developer)?(?:\/reference-to-video)?$/i.test(modelId)) {
     const limit = 9;
     return { ok: referenceImageCount <= limit, count: referenceImageCount, limit };
   }

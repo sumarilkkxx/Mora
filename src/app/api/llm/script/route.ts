@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateScript, analyzeProduct } from "@/lib/script-engine/generator";
+import { generateScript, analyzeProduct, type LLMConfig } from "@/lib/script-engine/generator";
+import { bindProductImageToLocalShots } from "@/lib/local-production";
+import { normalizeTargetVideoDuration } from "@/lib/target-video-duration";
 import { styleNameMap, type ScriptStyleType } from "@/lib/script-engine/prompts";
 import { hookPatternName, HOOK_PATTERNS } from "@/lib/script-engine/hook-patterns";
 import type { ProductCategory } from "@/lib/script-engine/templates";
@@ -10,6 +12,10 @@ import { apiError, errText } from "@/lib/api-error";
 import { llmErrorPair } from "@/lib/llm-error";
 import { topConvertingStyle, topConvertingHook, buildPerformanceHint, type MetricInput } from "@/lib/performance-insights";
 import { toRemoteUsableImage } from "@/lib/remote-image";
+import {
+  isOpenRouterPolicyRejection,
+  openRouterPolicyFallbackConfig,
+} from "@/lib/openrouter-llm-fallback";
 
 /** Allowed enum values for the styleType column in the scripts table */
 const VALID_SCRIPT_STYLE = new Set([
@@ -110,7 +116,7 @@ export async function POST(req: NextRequest) {
   const rawStyle = String(body.styleType ?? "").toLowerCase();
   const isAutoStyle = rawStyle === "" || rawStyle === "auto";
   let styleType = normalizeStyle(body.styleType);
-  const duration = body.targetDuration ?? body.duration ?? 30;
+  const duration = normalizeTargetVideoDuration(body.targetDuration ?? body.duration);
   // data flywheel: performance feedback is on by default; pass insightMode:false to opt out
   const useInsights = body.insightMode !== false;
 
@@ -123,6 +129,9 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const primaryLLMConfig = llmConfig as LLMConfig;
+    let activeLLMConfig = primaryLLMConfig;
+    const fallbacks: Array<{ capability: "text" | "vision"; from: string; to: string }> = [];
     // Product image analysis: convert local paths to base64 before passing to the vision model
     let analysis = body.productAnalysis;
     if (!analysis && productImages?.length > 0 && llmConfig) {
@@ -130,10 +139,28 @@ export async function POST(req: NextRequest) {
         const imageUrls = await Promise.all(
           (productImages as string[]).map(async (imagePath) => (await toRemoteUsableImage(imagePath)) ?? imagePath)
         );
-        analysis = await analyzeProduct(imageUrls, llmConfig);
+        analysis = await analyzeProduct(imageUrls, activeLLMConfig);
       } catch (e) {
-        // Image analysis failure should not block script generation
-        console.warn("商品图片分析失败（已跳过）:", e);
+        const fallback = isOpenRouterPolicyRejection(e, primaryLLMConfig.baseUrl)
+          ? openRouterPolicyFallbackConfig(primaryLLMConfig, "vision")
+          : null;
+        if (fallback) {
+          const from = primaryLLMConfig.visionModel || primaryLLMConfig.model;
+          try {
+            const imageUrls = await Promise.all(
+              (productImages as string[]).map(async (imagePath) => (await toRemoteUsableImage(imagePath)) ?? imagePath)
+            );
+            analysis = await analyzeProduct(imageUrls, fallback);
+            fallbacks.push({ capability: "vision", from, to: fallback.visionModel || fallback.model });
+          } catch (fallbackError) {
+            // Image analysis is best-effort; script generation can still use the
+            // product name and selling points with the recovered model.
+            console.warn("商品图片分析备用模型失败（已跳过）:", fallbackError);
+          }
+        } else {
+          // Image analysis failure should not block script generation
+          console.warn("商品图片分析失败（已跳过）:", e);
+        }
       }
     }
 
@@ -146,7 +173,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate script (category/styleType/duration already normalized above)
-    const scripts = await generateScript({
+    const scriptInput = {
       productName,
       category,
       productDescription,
@@ -168,8 +195,20 @@ export async function POST(req: NextRequest) {
         typeof body.preferredHookId === "string" && HOOK_PATTERNS.some((p) => p.id === body.preferredHookId)
           ? body.preferredHookId
           : undefined,
-      llmConfig,
-    });
+      llmConfig: activeLLMConfig,
+    };
+    let scripts;
+    try {
+      scripts = await generateScript(scriptInput);
+    } catch (error) {
+      const fallback = isOpenRouterPolicyRejection(error, primaryLLMConfig.baseUrl)
+        ? openRouterPolicyFallbackConfig(primaryLLMConfig, "text")
+        : null;
+      if (!fallback) throw error;
+      activeLLMConfig = fallback;
+      scripts = await generateScript({ ...scriptInput, llmConfig: activeLLMConfig });
+      fallbacks.push({ capability: "text", from: primaryLLMConfig.model, to: activeLLMConfig.model });
+    }
 
     // Persist: write generated scripts to the scripts table so the script/assets pages can read them by projectId
     let savedScripts = scripts;
@@ -178,7 +217,7 @@ export async function POST(req: NextRequest) {
       const db = getDb();
       // Refuse to overwrite a one-liner topic project with a commerce script (contentType mismatch — would delete its topic scripts)
       const proj = await db
-        .select({ contentType: projects.contentType })
+        .select({ contentType: projects.contentType, productionMode: projects.productionMode })
         .from(projects)
         .where(eq(projects.id, projectId));
       if (proj.length > 0 && proj[0].contentType === "topic") {
@@ -187,6 +226,12 @@ export async function POST(req: NextRequest) {
           { status: 409 }
         );
       }
+      scripts = bindProductImageToLocalShots(
+        scripts,
+        proj[0]?.productionMode,
+        Array.isArray(productImages) && productImages.length > 0
+      );
+      savedScripts = scripts;
       try {
         // Delete existing scripts for this project first (overwrite on regenerate)
         await db.delete(scriptsTable).where(eq(scriptsTable.projectId, projectId));
@@ -220,7 +265,7 @@ export async function POST(req: NextRequest) {
         // Sync project status and analysis result
         await db
           .update(projects)
-          .set({ status: "scripting", ...(analysis && { productAnalysis: analysis }), updatedAt: new Date() })
+          .set({ status: "scripting", targetDuration: duration, ...(analysis && { productAnalysis: analysis }), updatedAt: new Date() })
           .where(eq(projects.id, projectId));
       } catch (e) {
         // DB write failure must surface as an error — returning 200 would let the frontend navigate away thinking it succeeded, then read empty scripts from the DB (which may already have had their old scripts deleted)
@@ -229,7 +274,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ scripts: savedScripts, analysis });
+    return NextResponse.json({
+      scripts: savedScripts,
+      analysis,
+      ...(fallbacks.length > 0 && {
+        llmFallbacks: fallbacks,
+        llmFallback: {
+          reason: "openrouter_provider_policy",
+          from: fallbacks[fallbacks.length - 1].from,
+          to: fallbacks[fallbacks.length - 1].to,
+        },
+      }),
+    });
   } catch (error) {
     console.error("脚本生成失败:", error);
     // LLM failures carry an actionable bilingual message (bad key / dead free endpoint / rate limit)

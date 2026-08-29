@@ -20,6 +20,7 @@ import { useT, useLocale } from "@/lib/i18n";
 import { formatRelativeTime } from "@/lib/relative-time";
 import { classifyTrendTitle, curateCreatorTrends, pickDailyTrend, TRENDS_CACHE_TTL_MS, TREND_CATEGORY_IDS } from "@/lib/trends";
 import type { TrendTopic, TrendCategoryId } from "@/lib/trends";
+import { projectContinuePath, projectScriptReviewPath, type ProductionMode } from "@/lib/production-mode";
 
 /** How many trend chips are shown at once; "shuffle" pages through the full board. */
 const TRENDS_PAGE_SIZE = 8;
@@ -56,6 +57,7 @@ interface RecentProject {
   productName: string | null;
   status: string;
   workflowType?: "generate" | "edit";
+  productionMode?: ProductionMode;
   updatedAt: string | null;
 }
 
@@ -63,7 +65,7 @@ export default function StartPage() {
   const router = useRouter();
   const t = useT("start");
   const locale = useLocale();
-  const { llm } = useSettingsStore();
+  const { llm, targetVideoDuration } = useSettingsStore();
   const llmReady = llm.apiKey.trim().length > 0;
   // example products follow the UI language
   const examples = getExampleProducts(locale);
@@ -318,10 +320,6 @@ export default function StartPage() {
     }
   };
 
-  // navigate to the appropriate step based on project status
-  const stepFor = (status: string, workflowType?: "generate" | "edit") =>
-    workflowType === "edit" ? "edit" : status === "done" || status === "composing" || status === "video" ? "video" : status === "assets" ? "assets" : "script";
-
   // map project status to the short stage-label i18n key shown on recent-project cards
   const stageKeyFor = (status: string) =>
     status === "done" ? "pjStageDone" : status === "video" || status === "composing" ? "pjStageVideo" : status === "assets" ? "pjStageAssets" : "pjStageScript";
@@ -346,18 +344,25 @@ export default function StartPage() {
       return prev.filter((i) => i.id !== id);
     });
 
-  // one-click fill example: fetch the example image as a File into the upload zone + populate name/selling points
+  // One-click example: fill the upload area to its five-image limit using locally bundled,
+  // attributed real-product photos. Fetch concurrently so the example never creates a waterfall.
   const fillExample = useCallback(async (ex: ExampleProduct) => {
     setMode("upload");
     setProductName(ex.name);
     setSellingPoints(ex.sellingPoints);
     try {
-      const res = await fetch(ex.image);
-      const blob = await res.blob();
-      const file = new File([blob], `${ex.id}.png`, { type: blob.type || "image/png" });
+      const blobs = await Promise.all(ex.images.slice(0, 5).map(async (src) => {
+        const res = await fetch(src);
+        if (!res.ok) throw new Error(`EXAMPLE_IMAGE_${res.status}`);
+        return res.blob();
+      }));
+      const picked = blobs.map((blob, index) => {
+        const file = new File([blob], `${ex.id}-${index + 1}.webp`, { type: blob.type || "image/webp" });
+        return { id: crypto.randomUUID(), url: URL.createObjectURL(file), file };
+      });
       setImages((prev) => {
         prev.forEach((i) => URL.revokeObjectURL(i.url));
-        return [{ id: crypto.randomUUID(), url: URL.createObjectURL(file), file }];
+        return picked;
       });
     } catch {
       /* image fetch failure is fine; the text fields are already filled */
@@ -374,19 +379,20 @@ export default function StartPage() {
   // read LLM config live from the store: after one-click setup the newly written Key is immediately available in the same tick, avoiding stale closure values
   const llmConfig = () => {
     const l = useSettingsStore.getState().llm;
-    return { baseUrl: l.baseUrl, apiKey: l.apiKey, model: l.model, visionModel: l.visionModel };
+    return {
+      baseUrl: l.baseUrl,
+      apiKey: l.apiKey,
+      model: l.model,
+      visionModel: l.visionModel,
+      fallbackModel: l.fallbackModel,
+      fallbackVisionModel: l.fallbackVisionModel,
+    };
   };
 
   // creation-time choices flow into script generation and the script page's finishing gate
   const creationPreset = () => (genMode === "ai" ? FORM_PRESETS[form] : FORM_PRESETS.auto);
-  const genQuery = () => {
-    if (genMode !== "ai") return "";
-    const p =
-      (form === "presenter" || form === "drama") && presenterId
-        ? `&presenter=${encodeURIComponent(presenterId)}`
-        : "";
-    return `&gen=ai${p}`;
-  };
+  const creationPresenterId = () =>
+    genMode === "ai" && (form === "presenter" || form === "drama") ? presenterId : "";
   const creationCharacter = () => {
     if (genMode !== "ai" || (form !== "presenter" && form !== "drama") || !presenterId) return null;
     const c = characters.find((x) => x.id === presenterId);
@@ -407,11 +413,17 @@ export default function StartPage() {
     const res = await fetch("/api/topic/script", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topic: topic.trim(), narrationStyle: "knowledge", targetDuration: 25, llmConfig: llmConfig() }),
+      body: JSON.stringify({
+        topic: topic.trim(),
+        narrationStyle: "knowledge",
+        targetDuration: targetVideoDuration,
+        productionMode: genMode === "ai" ? "ai" : "local",
+        llmConfig: llmConfig(),
+      }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok && !data.projectId) throw new Error(data.error || t("errTopicScript"));
-    router.push(`/project/${data.projectId}/script?auto=1${genQuery()}`);
+    router.push(projectScriptReviewPath(data.projectId, creationPresenterId()));
   };
 
   const startUpload = async () => {
@@ -420,7 +432,15 @@ export default function StartPage() {
     const projectRes = await fetch("/api/project", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: t("projectName", { name: productName }), productName, productCategory: "other", productDescription: sellingPoints, productImages: [] }),
+      body: JSON.stringify({
+        name: t("projectName", { name: productName }),
+        productName,
+        productCategory: "other",
+        productDescription: sellingPoints,
+        productImages: [],
+        productionMode: genMode === "ai" ? "ai" : "local",
+        targetDuration: targetVideoDuration,
+      }),
     });
     if (!projectRes.ok) {
       const errData = await projectRes.json().catch(() => ({}));
@@ -452,7 +472,7 @@ export default function StartPage() {
         productName,
         category: "other",
         productDescription: sellingPoints,
-        targetDuration: 30,
+        targetDuration: targetVideoDuration,
         styleType: creationPreset().styleType,
         videoMode: creationPreset().videoMode,
         productImages: paths,
@@ -460,11 +480,11 @@ export default function StartPage() {
         ...(creationCharacter() && { character: creationCharacter() }),
       }),
     });
+    const scriptData = await scriptRes.json().catch(() => ({}));
     if (!scriptRes.ok) {
-      const errData = await scriptRes.json().catch(() => ({}));
-      throw new Error(errData.error ? `${t("errScript")}: ${errData.error}` : t("errScript"));
+      throw new Error(scriptData.error ? `${t("errScript")}: ${scriptData.error}` : t("errScript"));
     }
-    router.push(`/project/${project.id}/script?auto=1${genQuery()}`);
+    router.push(projectScriptReviewPath(project.id, creationPresenterId()));
   };
 
   // paste a product URL → ingest (fetch page, parse title/price/images, create project) → auto-generate script → script page
@@ -474,7 +494,12 @@ export default function StartPage() {
     const ingestRes = await fetch("/api/ingest/product", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: link.trim(), createProject: true }),
+      body: JSON.stringify({
+        url: link.trim(),
+        createProject: true,
+        productionMode: genMode === "ai" ? "ai" : "local",
+        targetDuration: targetVideoDuration,
+      }),
     });
     const data = await ingestRes.json().catch(() => ({}));
     if (!ingestRes.ok || !data.projectId) throw new Error(data.error || t("errIngest"));
@@ -482,7 +507,7 @@ export default function StartPage() {
     setStageIdx(1);
     setStage(t("stageScript"));
     // even if script gen fails, the project exists with product data — the script page offers retry
-    await fetch("/api/llm/script", {
+    const scriptRes = await fetch("/api/llm/script", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -490,7 +515,7 @@ export default function StartPage() {
         productName: p.title || t("linkProductFallback"),
         category: "other",
         productDescription: p.description || "",
-        targetDuration: 30,
+        targetDuration: targetVideoDuration,
         styleType: creationPreset().styleType,
         videoMode: creationPreset().videoMode,
         productImages: data.productImages || [],
@@ -498,7 +523,8 @@ export default function StartPage() {
         ...(creationCharacter() && { character: creationCharacter() }),
       }),
     });
-    router.push(`/project/${data.projectId}/script?auto=1${genQuery()}`);
+    await scriptRes.json().catch(() => ({}));
+    router.push(projectScriptReviewPath(data.projectId, creationPresenterId()));
   };
 
   // actually run generation (shared by all modes); restore busy/stage on failure
@@ -881,7 +907,7 @@ export default function StartPage() {
                 {recent.map((p) => {
                   const rel = formatRelativeTime(p.updatedAt, locale);
                   return (
-                    <Link key={p.id} href={`/project/${p.id}/${stepFor(p.status, p.workflowType)}`} className="cf-pj">
+                    <Link key={p.id} href={projectContinuePath(p.id, p.status, p.productionMode, p.workflowType)} className="cf-pj">
                       <span className="dot" />
                       <span className="col">
                         <span className="nm">{p.name || p.productName || t("untitledProject")}</span>

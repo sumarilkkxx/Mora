@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useT } from "@/lib/i18n";
 import { useSettingsStore } from "@/lib/stores/settings-store";
 import { EMPTY_TASK_FEED, type TaskFeed, type TaskRow } from "@/lib/task-feed";
+import { TASKS_SEEN_STORAGE_KEY, taskTimestamp, unreadCompletedCount } from "@/lib/task-notifications";
 
 const POLL_MS = 15_000;
 
@@ -20,6 +21,7 @@ export function TaskCenter({ collapsed = false, enableRecovery = false }: { coll
   const pathname = usePathname();
   const providers = useSettingsStore((state) => state.providers);
   const [feed, setFeed] = useState<TaskFeed>(EMPTY_TASK_FEED);
+  const [lastSeenAt, setLastSeenAt] = useState<number | null>(null);
   const recovering = useRef(false);
   const rejectedCredentials = useRef(new Map<string, string>());
 
@@ -108,33 +110,79 @@ export function TaskCenter({ collapsed = false, enableRecovery = false }: { coll
   }, [busy, refresh, recoverPaidTasks]);
 
   const badgeCount = feed.active.length + feed.attention.length;
+  const unreadCount = unreadCompletedCount(feed.recent, lastSeenAt);
+  const hasAttention = feed.attention.length > 0;
+  const hasRunning = feed.active.length > 0;
+
+  const markTasksSeen = useCallback(() => {
+    const newest = feed.recent.reduce((latest, task) => Math.max(latest, taskTimestamp(task.createdAt)), Date.now());
+    window.localStorage.setItem(TASKS_SEEN_STORAGE_KEY, String(newest));
+    setLastSeenAt(newest);
+    window.dispatchEvent(new CustomEvent("mora:tasks-seen", { detail: newest }));
+  }, [feed.recent]);
+
+  useEffect(() => {
+    const stored = Number(window.localStorage.getItem(TASKS_SEEN_STORAGE_KEY));
+    if (Number.isFinite(stored) && stored > 0) {
+      setLastSeenAt(stored);
+    } else {
+      const baseline = Date.now();
+      window.localStorage.setItem(TASKS_SEEN_STORAGE_KEY, String(baseline));
+      setLastSeenAt(baseline);
+    }
+    const syncSeen = (event: Event) => {
+      const detail = (event as CustomEvent<number>).detail;
+      const next = Number.isFinite(detail) ? detail : Number(window.localStorage.getItem(TASKS_SEEN_STORAGE_KEY));
+      if (Number.isFinite(next) && next > 0) setLastSeenAt(next);
+    };
+    window.addEventListener("mora:tasks-seen", syncSeen);
+    window.addEventListener("storage", syncSeen);
+    return () => {
+      window.removeEventListener("mora:tasks-seen", syncSeen);
+      window.removeEventListener("storage", syncSeen);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (pathname === "/tasks" && unreadCount > 0) markTasksSeen();
+  }, [markTasksSeen, pathname, unreadCount]);
+
+  const stateClass = hasAttention ? "is-attention" : hasRunning ? "is-running" : unreadCount > 0 ? "has-new" : "";
+  const stateLabel = hasAttention
+    ? t("taskCenterNeedsAttention", { n: feed.attention.length })
+    : hasRunning
+      ? t("taskCenterRunning", { n: feed.active.length })
+      : unreadCount > 0
+        ? t("taskCenterNewResult", { n: unreadCount })
+        : "";
 
   return (
     <Link
         href="/tasks"
         aria-current={pathname === "/tasks" ? "page" : undefined}
-        aria-label={t("taskCenter")}
-        title={t("taskCenter")}
-        className={`studio-nav-item relative flex items-center gap-2.5 ${pathname === "/tasks" ? "is-active" : ""} ${
+        aria-label={stateLabel ? `${t("taskCenter")} · ${stateLabel}` : t("taskCenter")}
+        title={stateLabel || t("taskCenter")}
+        onClick={markTasksSeen}
+        className={`task-center-nav studio-nav-item relative flex items-center gap-2.5 ${stateClass} ${pathname === "/tasks" ? "is-active" : ""} ${
           collapsed ? "h-11 w-11 justify-center" : "w-full px-3 py-2"
         }`}
       >
-        <span className="relative shrink-0">
+        <span className="task-center-icon relative shrink-0">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
             <path d="M13.7 21a2 2 0 0 1-3.4 0" />
           </svg>
-          {badgeCount > 0 && (
+          {(badgeCount > 0 || unreadCount > 0) && (
             <span
-              className={`absolute -right-1.5 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[9px] font-bold text-white ${
-                feed.attention.length > 0 ? "bg-amber-500" : "bg-primary"
+              className={`task-center-badge absolute -right-2 -top-2 flex h-[17px] min-w-[17px] items-center justify-center rounded-full px-1 text-[9px] font-bold text-white ${
+                hasAttention ? "bg-amber-600" : unreadCount > 0 && !hasRunning ? "bg-emerald-600" : "bg-primary"
               }`}
             >
-              {badgeCount}
+              {badgeCount || unreadCount}
             </span>
           )}
         </span>
-        {!collapsed && t("taskCenter")}
+        {!collapsed && <><span className="min-w-0 flex-1">{t("taskCenter")}</span>{stateLabel ? <span className="task-center-state-dot" aria-hidden="true" /> : null}</>}
     </Link>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { LuCheck, LuCircleCheck, LuFilm, LuDownload, LuLink2, LuFileText, LuPlus, LuHouse, LuSmartphone, LuShuffle, LuLoaderCircle, LuSparkles, LuImage, LuLayoutGrid, LuQrCode, LuScanLine, LuLanguages, LuShieldCheck, LuTriangleAlert, LuCircleX, LuClipboardCheck } from "react-icons/lu";
 import Link from "next/link";
@@ -16,6 +16,7 @@ import { PerformanceFeedback } from "@/components/performance-feedback";
 import { Checkbox } from "@/components/ui/checkbox";
 import { exportDurationSeconds } from "@/lib/export-metadata";
 import { buildImageOptions, resolveDefaultModelTarget, toEditVariant, type GenModelTarget } from "@/lib/gen-params";
+import { normalizeProductionMode, type ProductionMode } from "@/lib/production-mode";
 
 // platform export config (planned feature, for display). name uses an i18n key (nameKey) resolved to the translated text at render time
 const platformConfigs = [
@@ -65,16 +66,31 @@ interface ScriptInfo {
   shotCount: number;
 }
 
+interface CloudVideoTask {
+  id: string;
+  taskId: string;
+  provider: string;
+  model: string;
+  mode?: string | null;
+  status: "submitted" | "processing" | "completed" | "failed" | "unknown";
+  error?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
 export default function ExportPage() {
   const t = useT("exportPage");
   const locale = useLocale();
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const fromTaskCenter = searchParams.get("from") === "tasks";
+  const requestedTaskId = searchParams.get("taskId");
   const [toast, setToast] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [projectName, setProjectName] = useState("");
+  const [productionMode, setProductionMode] = useState<ProductionMode>("local");
   const [composition, setComposition] = useState<Composition | null>(null);
+  const [cloudTask, setCloudTask] = useState<CloudVideoTask | null>(null);
   // full output history (variant-matrix renders carry a label) — the latest-only view hid variants
   const [history, setHistory] = useState<Array<{ id: string; url: string | null; label?: string | null; createdAt?: string | number | null }>>([]);
   const [scriptInfo, setScriptInfo] = useState<ScriptInfo | null>(null);
@@ -149,6 +165,9 @@ export default function ExportPage() {
   const [derivedMode, setDerivedMode] = useState<"ai" | "local">("ai");
   const [imageTarget, setImageTarget] = useState<GenModelTarget | null>(null);
   const [dubLang, setDubLang] = useState("en");
+  const [shopUrlDraft, setShopUrlDraft] = useState("");
+  const [shopUrlSaving, setShopUrlSaving] = useState(false);
+  const [shopUrlFeedback, setShopUrlFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const hasShopUrl = !!productMeta?.shopUrl;
 
   useEffect(() => {
@@ -238,6 +257,47 @@ export default function ExportPage() {
       if (!r.ok) throw new Error(d.error || t("moreFailed"));
       setTool("qr", { loading: false, images: [d.qr], shopLink: d.shopLink, warning: d.warning ? (locale === "en" ? d.warning.en : d.warning.zh) : undefined });
     } catch (e) { setTool("qr", { loading: false, error: e instanceof Error ? e.message : t("moreFailed") }); }
+  };
+
+  const saveShopUrl = async () => {
+    const raw = shopUrlDraft.trim();
+    let normalized: string;
+    try {
+      const parsed = new URL(raw);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error("invalid protocol");
+      normalized = parsed.toString();
+    } catch {
+      setShopUrlFeedback({ type: "error", text: t("shopLinkInvalid") });
+      return;
+    }
+
+    setShopUrlSaving(true);
+    setShopUrlFeedback(null);
+    try {
+      const response = await fetch(`/api/project/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shopUrl: normalized }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || t("shopLinkSaveFailed"));
+
+      setShopUrlDraft(normalized);
+      setProductMeta((current) => current ? { ...current, shopUrl: normalized } : current);
+      setMore((current) => ({ ...current, qr: {}, endcard: {} }));
+      setPublish((current) => ({
+        ...current,
+        shopLink: buildShopLink(normalized, { affiliateCode: productMeta?.affiliateCode }),
+      }));
+      setShopUrlFeedback({ type: "success", text: t("shopLinkSaved") });
+    } catch (error) {
+      setShopUrlFeedback({
+        type: "error",
+        text: error instanceof Error ? error.message : t("shopLinkSaveFailed"),
+      });
+    } finally {
+      setShopUrlSaving(false);
+    }
   };
   const genEndCard = async () => {
     setTool("endcard", { loading: true, error: undefined, video: undefined });
@@ -389,58 +449,79 @@ export default function ExportPage() {
     }
   };
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        // list *successful* compositions (a failed retry on top must not blank this page)
-        const [compRes, projRes, scriptsRes] = await Promise.all([
-          fetch(`/api/project/${id}/compositions`),
-          fetch(`/api/project/${id}`),
-          fetch(`/api/project/${id}/scripts`),
-        ]);
-        if (projRes.ok) {
-          const proj = await projRes.json();
-          if (!cancelled) {
-            setProjectName(proj.name ?? proj.productName ?? "");
-            setProductMeta({
-              productName: proj.productName ?? proj.name ?? "",
-              category: proj.productCategory ?? "",
-              description: proj.productDescription ?? "",
-              productImages: Array.isArray(proj.productImages) ? proj.productImages : [],
-              shopUrl: proj.shopUrl ?? undefined,
-              affiliateCode: proj.affiliateCode ?? undefined,
-            });
-          }
-        }
-        if (compRes.ok) {
-          const data = await compRes.json();
-          const latestDone = Array.isArray(data.compositions) ? data.compositions[0] : null;
-          if (!cancelled && latestDone) setComposition(latestDone);
-          if (!cancelled && Array.isArray(data.compositions)) setHistory(data.compositions.slice(0, 12));
-        }
-        if (scriptsRes.ok) {
-          const arr = await scriptsRes.json();
-          const sel = Array.isArray(arr) ? (arr.find((s: { selected?: boolean }) => s.selected) ?? arr[0]) : null;
-          if (!cancelled && sel) {
-            setScriptInfo({
-              styleType: sel.styleType,
-              totalDuration: sel.totalDuration ?? 0,
-              shotCount: Array.isArray(sel.shots) ? sel.shots.length : 0,
-            });
-          }
-        }
-      } catch {
-        // ignore, fall through to empty state
-      } finally {
-        if (!cancelled) setLoading(false);
+  const loadExportState = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true);
+    try {
+      // These reads are independent. Keep them parallel so the generation state appears
+      // without waiting for the heavier project/script payloads.
+      const [compRes, projRes, scriptsRes, tasksRes] = await Promise.all([
+        fetch(`/api/project/${id}/compositions`, { cache: "no-store" }),
+        fetch(`/api/project/${id}`),
+        fetch(`/api/project/${id}/scripts`),
+        fetch(`/api/ai/tasks?projectId=${id}`, { cache: "no-store" }),
+      ]);
+
+      let latestDone: Composition | null = null;
+      if (compRes.ok) {
+        const data = await compRes.json();
+        latestDone = Array.isArray(data.compositions) ? data.compositions[0] ?? null : null;
+        if (latestDone) setComposition(latestDone);
+        if (Array.isArray(data.compositions)) setHistory(data.compositions.slice(0, 12));
       }
-    })();
+      if (projRes.ok) {
+        const proj = await projRes.json();
+        setProjectName(proj.name ?? proj.productName ?? "");
+        setProductionMode(normalizeProductionMode(proj.productionMode));
+        setProductMeta({
+          productName: proj.productName ?? proj.name ?? "",
+          category: proj.productCategory ?? "",
+          description: proj.productDescription ?? "",
+          productImages: Array.isArray(proj.productImages) ? proj.productImages : [],
+          shopUrl: proj.shopUrl ?? undefined,
+          affiliateCode: proj.affiliateCode ?? undefined,
+        });
+        setShopUrlDraft(proj.shopUrl ?? "");
+      }
+      if (scriptsRes.ok) {
+        const arr = await scriptsRes.json();
+        const sel = Array.isArray(arr) ? (arr.find((s: { selected?: boolean }) => s.selected) ?? arr[0]) : null;
+        if (sel) {
+          setScriptInfo({
+            styleType: sel.styleType,
+            totalDuration: sel.totalDuration ?? 0,
+            shotCount: Array.isArray(sel.shots) ? sel.shots.length : 0,
+          });
+        }
+      }
+      if (tasksRes.ok) {
+        const rows = await tasksRes.json();
+        const tasks = Array.isArray(rows) ? rows as CloudVideoTask[] : [];
+        const selectedTask = requestedTaskId
+          ? tasks.find((task) => task.taskId === requestedTaskId)
+          : [...tasks].reverse().find((task) => task.mode === "storyboard-film" && ["submitted", "processing", "unknown"].includes(task.status));
+        setCloudTask(selectedTask?.status === "completed" && latestDone ? null : selectedTask ?? null);
+      }
+    } catch {
+      // Keep the most recent known state through a transient local/network failure.
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  }, [id, requestedTaskId]);
+
+  useEffect(() => {
+    void loadExportState(true);
+  }, [loadExportState]);
+
+  useEffect(() => {
+    if (!cloudTask || cloudTask.status === "failed") return;
+    const refresh = () => void loadExportState(false);
+    const timer = window.setInterval(refresh, 10_000);
+    window.addEventListener("mora:ai-task-updated", refresh);
     return () => {
-      cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener("mora:ai-task-updated", refresh);
     };
-  }, [id]);
+  }, [cloudTask, loadExportState]);
 
   // once the real composed video is available, HEAD-probe for the file size
   useEffect(() => {
@@ -501,8 +582,9 @@ export default function ExportPage() {
   const headerBar = (
     <ProjectHeader
       projectName={projectName || t("projectFallback")}
-      showStepper={false}
-      centerLabel={t("headerTitle")}
+      productionMode={productionMode}
+      showStepper={!fromTaskCenter}
+      centerLabel={fromTaskCenter ? t("headerTitle") : undefined}
       backHref={fromTaskCenter ? "/tasks" : "/projects"}
       backLabel={t(fromTaskCenter ? "backToTasks" : "backToProjects")}
     />
@@ -520,6 +602,69 @@ export default function ExportPage() {
     );
   }
 
+  if (cloudTask) {
+    const needsAttention = cloudTask.status === "unknown" || cloudTask.status === "failed";
+    const isFailed = cloudTask.status === "failed";
+    const taskTime = cloudTask.createdAt
+      ? new Date(cloudTask.createdAt).toLocaleString(locale === "en" ? "en-US" : "zh-CN", { hour12: false })
+      : "";
+    return (
+      <div className="min-h-screen grid-bg legacy-studio-page">
+        {headerBar}
+        <main className="mx-auto flex max-w-2xl flex-col items-center px-6 py-20 text-center sm:py-28">
+          <div
+            className={`grid h-20 w-20 place-items-center rounded-[24px] border shadow-[0_18px_50px_rgba(64,74,92,.1)] ${
+              isFailed
+                ? "border-destructive/30 bg-destructive/[.07] text-destructive"
+                : needsAttention
+                ? "border-amber-500/30 bg-amber-500/[.09] text-amber-700 dark:text-amber-300"
+                : "border-primary/20 bg-primary/[.08] text-primary"
+            }`}
+            aria-hidden="true"
+          >
+            {needsAttention
+              ? <LuTriangleAlert className="h-8 w-8" />
+              : <LuLoaderCircle className="h-8 w-8 animate-spin motion-reduce:animate-none" />}
+          </div>
+          <p className={`mt-6 text-xs font-semibold tracking-[.12em] ${isFailed ? "text-destructive" : needsAttention ? "text-amber-700 dark:text-amber-300" : "text-primary"}`}>
+            {t(needsAttention ? "cloudTaskAttentionEyebrow" : "cloudTaskRunningEyebrow")}
+          </p>
+          <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+            {t(isFailed ? "cloudTaskFailedTitle" : needsAttention ? "cloudTaskAttentionTitle" : "cloudTaskRunningTitle")}
+          </h1>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
+            {t(isFailed ? "cloudTaskFailedDesc" : needsAttention ? "cloudTaskAttentionDesc" : "cloudTaskRunningDesc")}
+          </p>
+
+          <div className="mt-7 w-full rounded-[22px] border border-border/65 bg-card p-4 text-left shadow-[0_14px_40px_rgba(42,74,105,.06)] sm:p-5">
+            <div className="flex items-center justify-between gap-3 border-b border-border/55 pb-3">
+              <div>
+                <p className="text-sm font-semibold">{projectName || t("emptyProjectFallback")}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">{t("cloudTaskPersisted")}</p>
+              </div>
+              <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${isFailed ? "bg-destructive/[.08] text-destructive" : needsAttention ? "bg-amber-500/10 text-amber-700 dark:text-amber-300" : "bg-primary/[.08] text-primary"}`}>
+                {t(`cloudTaskStatus_${cloudTask.status}`)}
+              </span>
+            </div>
+            <dl className="mt-4 grid gap-3 text-xs sm:grid-cols-2">
+              <div><dt className="text-muted-foreground">{t("cloudTaskProvider")}</dt><dd className="mt-1 font-medium text-foreground">{cloudTask.provider}</dd></div>
+              <div><dt className="text-muted-foreground">{t("cloudTaskModel")}</dt><dd className="mt-1 break-all font-medium text-foreground">{cloudTask.model}</dd></div>
+              <div><dt className="text-muted-foreground">{t("cloudTaskId")}</dt><dd className="mt-1 break-all font-mono text-[11px] text-foreground">{cloudTask.taskId}</dd></div>
+              <div><dt className="text-muted-foreground">{t("cloudTaskSubmittedAt")}</dt><dd className="mt-1 font-medium text-foreground">{taskTime || t("emptyValue")}</dd></div>
+            </dl>
+            {cloudTask.error ? <p className="mt-4 rounded-xl bg-amber-500/[.07] px-3 py-2.5 text-xs leading-5 text-amber-800 dark:text-amber-200">{cloudTask.error}</p> : null}
+          </div>
+
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+            <Link href="/tasks"><Button className="brand-gradient text-white">{t("cloudTaskOpenTasks")}</Button></Link>
+            <Link href={`/project/${id}/ai-video`}><Button variant="outline">{t("cloudTaskBackToWork")}</Button></Link>
+          </div>
+          {!needsAttention ? <p className="mt-4 text-xs leading-5 text-muted-foreground">{t("cloudTaskAutoRefresh")}</p> : null}
+        </main>
+      </div>
+    );
+  }
+
   // empty state: no composed video yet
   if (!composition || !composition.url) {
     return (
@@ -531,11 +676,11 @@ export default function ExportPage() {
           </div>
           <h2 className="text-lg font-semibold mb-2">{t("emptyTitle")}</h2>
           <p className="text-sm text-muted-foreground mb-6">
-            {t("emptyDesc", { name: projectName || t("emptyProjectFallback") })}
+            {t(productionMode === "ai" ? "emptyDescAi" : "emptyDesc", { name: projectName || t("emptyProjectFallback") })}
           </p>
           <div className="flex items-center gap-3">
-            <Link href={`/project/${id}/video`}>
-              <Button className="brand-gradient text-white">{t("goCompose")}</Button>
+            <Link href={productionMode === "ai" ? `/project/${id}/assets` : `/project/${id}/compose`}>
+              <Button className="brand-gradient text-white">{t(productionMode === "ai" ? "goAiProduction" : "goCompose")}</Button>
             </Link>
             <Link href="/projects">
               <Button variant="outline">{t("backToProjects")}</Button>
@@ -1042,6 +1187,48 @@ export default function ExportPage() {
             </div>
             <p className="text-xs text-muted-foreground mb-4">{t("moreDesc")}</p>
             {derivedMode === "ai" && <p className="-mt-2 mb-4 text-[11px] text-amber-600 dark:text-amber-400">{imageTarget ? t("moreAiBillingHint") : t("moreAiNotConfigured")}</p>}
+            <div className="mb-4 rounded-xl border border-border/60 bg-muted/10 p-3">
+              <div className="mb-2 flex items-start gap-2">
+                <LuLink2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                <div>
+                  <p className="text-xs font-medium">{t("shopLinkTitle")}</p>
+                  <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">{t("shopLinkDesc")}</p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="url"
+                  inputMode="url"
+                  autoComplete="url"
+                  aria-label={t("shopLinkTitle")}
+                  className="h-9 min-w-0 flex-1 rounded-lg border border-border/70 bg-background px-3 text-xs outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-primary/15"
+                  placeholder={t("shopLinkPlaceholder")}
+                  value={shopUrlDraft}
+                  onChange={(event) => {
+                    setShopUrlDraft(event.target.value);
+                    if (shopUrlFeedback) setShopUrlFeedback(null);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && shopUrlDraft.trim() && !shopUrlSaving) void saveShopUrl();
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-9 shrink-0 px-4"
+                  disabled={shopUrlSaving || !shopUrlDraft.trim() || shopUrlDraft.trim() === (productMeta?.shopUrl ?? "")}
+                  onClick={saveShopUrl}
+                >
+                  {shopUrlSaving ? <LuLoaderCircle className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+                  {t(shopUrlSaving ? "shopLinkSaving" : hasShopUrl ? "shopLinkUpdate" : "shopLinkSave")}
+                </Button>
+              </div>
+              {shopUrlFeedback ? (
+                <p className={`mt-2 text-[11px] ${shopUrlFeedback.type === "success" ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`} role="status">
+                  {shopUrlFeedback.text}
+                </p>
+              ) : null}
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {/* cover */}
               <div className="rounded-lg border border-border/50 bg-muted/10 p-3">

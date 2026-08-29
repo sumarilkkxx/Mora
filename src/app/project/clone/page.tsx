@@ -235,6 +235,7 @@ export default function ClonePage() {
           apiKey: videoModelTarget.apiKey,
           baseUrl: videoModelTarget.baseUrl,
           mode: "video-to-video",
+          workflow: "reference-replication",
           prompt: buildReplicatePrompt({ productName, sellingPoints: productFeatures, imageCount: paths.length }),
           referenceVideoUrls: [refAnalysis.path],
           referenceImageUrls: paths,

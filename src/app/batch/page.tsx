@@ -135,7 +135,7 @@ export default function BatchPage() {
         name: ex.name,
         category: ex.category,
         description: ex.sellingPoints,
-        images: [ex.image],
+        images: ex.images.slice(0, 5),
         price: ex.price,
         targetAudience: "",
         videoCount: 0,
@@ -352,6 +352,8 @@ export default function BatchPage() {
             apiKey: llm.apiKey,
             model: llm.model,
             visionModel: llm.visionModel,
+            fallbackModel: llm.fallbackModel,
+            fallbackVisionModel: llm.fallbackVisionModel,
           },
         }),
       });

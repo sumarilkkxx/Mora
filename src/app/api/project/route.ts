@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { projects } from "@/lib/db/schema";
 import { desc, isNotNull, isNull } from "drizzle-orm";
+import { productionModeForCreation } from "@/lib/production-mode";
+import { normalizeTargetVideoDuration } from "@/lib/target-video-duration";
 
 // fetch project list, most recently edited first (the /start "continue" cards rely on this order)
 export async function GET(req: NextRequest) {
@@ -32,12 +34,15 @@ export async function POST(req: NextRequest) {
     const videoMode = VIDEO_MODES.includes(body.videoMode) ? body.videoMode : undefined;
     const sourceType = body.sourceType === "clone" ? "clone" : undefined;
     const workflowType = body.workflowType === "edit" ? "edit" : "generate";
+    const productionMode = productionModeForCreation(body.productionMode);
 
     const newProject = await db
       .insert(projects)
       .values({
         name: body.name || "未命名项目",
         workflowType,
+        productionMode,
+        targetDuration: normalizeTargetVideoDuration(body.targetDuration),
         productName: body.productName,
         productCategory: body.productCategory,
         productDescription: body.productDescription,

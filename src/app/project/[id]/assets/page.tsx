@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { LuZap, LuCheck, LuCircleX, LuImage, LuArrowRight, LuLoaderCircle, LuTriangleAlert, LuUpload, LuScissors } from "react-icons/lu";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -41,6 +41,7 @@ import {
   type CreativeIntent,
   type VisualBible,
 } from "@/lib/production-system";
+import { normalizeProductionMode, type ProductionMode } from "@/lib/production-mode";
 
 // shot type labels (label changed to i18n key in the assets namespace, resolved per locale)
 const shotTypeLabels: Record<Shot["type"], { key: string; color: string }> = {
@@ -72,6 +73,12 @@ interface PendingAiTask {
   error?: string | null;
 }
 
+interface BillingNotice {
+  message: string;
+  providerLabel: string;
+  rechargeUrl?: string;
+}
+
 // shot types that "feature the product": when product fidelity is enabled, these AI shots use image-to-image (redraw with product photo to lock in the subject)
 const PRODUCT_SHOT_TYPES = new Set(["product_reveal", "demo", "cta"]);
 
@@ -80,6 +87,9 @@ export default function AssetsPage() {
   const tc = useT("common");
   const locale = useLocale();
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { providers, defaultImageModel, defaultImageProvider, defaultVideoModel, defaultVideoProvider, customModels, imageParams, videoParams, llm, motionIntensity, setMotionIntensity, motionRealism, setMotionRealism, chainMode, setChainMode, visualLook, setVisualLook } = useSettingsStore();
   // beginner/director split: simple mode hides the director panel, the storyboard-grid button
   // and per-shot camera tooling — beginners see shots + generate, nothing else
@@ -92,6 +102,15 @@ export default function AssetsPage() {
   // after image generation, automatically run image-to-video to produce real motion shots (i2v quality path, replacing fake Ken-Burns camera moves). Only active when a video model is configured.
   const [autoMotion, setAutoMotion] = useState(true);
   const [projectName, setProjectName] = useState("");
+  const [productionMode, setProductionMode] = useState<ProductionMode>("local");
+  const [projectTargetDuration, setProjectTargetDuration] = useState(15);
+  // Long films must never fall back to independent clips: tail continuation reuses the
+  // previous clip's real final frame as the next first frame, preserving product/scene identity.
+  const effectiveChainMode = projectTargetDuration > 15 && chainMode === "off" ? "tail" : chainMode;
+  const auxiliaryAiWorkspace = productionMode === "local" && searchParams.get("workspace") === "ai";
+  const aiWorkspace = productionMode === "ai" || auxiliaryAiWorkspace;
+  const aiVideoStage = productionMode === "ai" && pathname.endsWith("/ai-video");
+  const motionWorkspace = auxiliaryAiWorkspace || aiVideoStage;
   // project type: topic (one-sentence-to-video without a product) uses the free stock library for automatic visuals
   const [contentType, setContentType] = useState<string>("");
   // project product category — unlocks the category physical-realism layers in the i2v motion prompt
@@ -116,6 +135,7 @@ export default function AssetsPage() {
   const [pendingTasks, setPendingTasks] = useState<PendingAiTask[]>([]);
   const [resumingTasks, setResumingTasks] = useState<Set<string>>(new Set());
   const [taskMsg, setTaskMsg] = useState<string | null>(null);
+  const [billingNotice, setBillingNotice] = useState<BillingNotice | null>(null);
   // per-shot camera editing (preset picker + inline free text): edits persist into the
   // selected script's shots via the scripts PATCH, so the next (re)generation uses them
   const [scriptId, setScriptId] = useState<string>("");
@@ -136,12 +156,16 @@ export default function AssetsPage() {
 
   const doneCount = assets.filter((a) => a.status === "done").length;
   const allDone = assets.length > 0 && doneCount === assets.length;
+  const filmShotsOk = assets.length >= 2 && assets.length <= 9;
+  const allFilmShotsDone = filmShotsOk && allDone;
+  const filmReady = Boolean(videoModelTarget) && allFilmShotsDone;
+  const filmReason = !videoModelTarget ? t("filmNeedModel") : !allFilmShotsDone ? t("filmNeedReady") : t("filmTip");
   // real/AI mix metering (duration-weighted) — Douyin tilts traffic toward hybrid content at ≥50% real
   const mix = realMixFromRows(assets);
   // when no image model is configured (modelTarget is null), offer key-free users a free stock fill entry point
   const offerStockFill = !loading && shouldOfferStockFill(assets, contentType, modelTarget !== null);
   // only show the "configure a model" warning when there are still AI shots that need generating (no warning once everything is ready, to avoid contradicting the "all done" state)
-  const showModelWarning = !loading && needsImageModelWarning(assets, modelTarget !== null);
+  const showModelWarning = aiWorkspace && !loading && needsImageModelWarning(assets, modelTarget !== null);
 
   // load real data: project info + selected script shots + resolve the provider for the default image model
   useEffect(() => {
@@ -162,8 +186,11 @@ export default function AssetsPage() {
         if (cancelled) return;
 
         const imgs: string[] = project && Array.isArray(project.productImages) ? project.productImages : [];
+        const projectMode = normalizeProductionMode(project?.productionMode);
         if (project) {
           setProjectName(project.name ?? project.productName ?? "");
+          setProductionMode(projectMode);
+          setProjectTargetDuration(typeof project.targetDuration === "number" ? project.targetDuration : 15);
           setProductImages(imgs);
           setContentType(typeof project.contentType === "string" ? project.contentType : "");
           setProjectCategory(typeof project.productCategory === "string" ? project.productCategory : "");
@@ -189,7 +216,7 @@ export default function AssetsPage() {
         setScriptId(typeof selected.id === "string" ? selected.id : "");
 
         // selected script shots + persisted assets → view rows (shared pure function used by "refresh after filling visuals")
-        setAssets(buildAssetRows(selected.shots as Shot[], Array.isArray(savedAssets) ? savedAssets : [], imgs));
+        setAssets(buildAssetRows(selected.shots as Shot[], Array.isArray(savedAssets) ? savedAssets : [], imgs, projectMode));
       } catch (e) {
         if (!cancelled) setLoadError(e instanceof Error ? e.message : t("errorLoadFailed"));
       } finally {
@@ -199,6 +226,8 @@ export default function AssetsPage() {
     return () => {
       cancelled = true;
     };
+    // Project data is loaded once on entry; locale changes do not require a refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // re-fetch project / scripts / assets and rebuild view rows (refresh thumbnails after filling visuals, reuses the same pure function)
@@ -212,12 +241,13 @@ export default function AssetsPage() {
     const scripts = scriptsRes.ok ? await scriptsRes.json() : [];
     const savedAssets = assetsRes.ok ? await assetsRes.json() : [];
     const imgs: string[] = project && Array.isArray(project.productImages) ? project.productImages : [];
+    const projectMode = normalizeProductionMode(project?.productionMode);
     const selected = Array.isArray(scripts)
       ? scripts.find((s: { selected?: boolean }) => s.selected) ?? scripts[0]
       : null;
     if (selected && Array.isArray(selected.shots)) {
       setScriptId(typeof selected.id === "string" ? selected.id : "");
-      setAssets(buildAssetRows(selected.shots as Shot[], Array.isArray(savedAssets) ? savedAssets : [], imgs));
+      setAssets(buildAssetRows(selected.shots as Shot[], Array.isArray(savedAssets) ? savedAssets : [], imgs, projectMode));
     }
   }, [id]);
 
@@ -552,7 +582,7 @@ export default function AssetsPage() {
       }
       // chain target: explicit override wins (null = explicitly no chain); otherwise the next shot's static keyframe
       const chainFrame =
-        chainMode !== "pin" || lastFrameOverride === null || !modelSupportsLastFrame(videoModelTarget.model)
+        effectiveChainMode !== "pin" || lastFrameOverride === null || !modelSupportsLastFrame(videoModelTarget.model)
           ? undefined
           : lastFrameOverride ??
             // demo-type shots skip auto-chaining (their ending IS the content); explicit override still chains
@@ -560,7 +590,7 @@ export default function AssetsPage() {
       // tail mode: the previous shot's REAL last frame (extracted server-side after its save)
       // becomes this shot's first frame — pixel-continuous seam; falls back to own keyframe
       let tailFirstFrame: string | undefined;
-      if (chainMode === "tail" && !firstFrameOverride) {
+      if (effectiveChainMode === "tail" && !firstFrameOverride) {
         const idx = assets.findIndex((a) => a.shotId === shotId);
         const prev = idx > 0 ? assets[idx - 1] : undefined;
         if (prev) tailFirstFrame = lastFrameByShot.current.get(prev.shotId);
@@ -621,6 +651,7 @@ export default function AssetsPage() {
         videoOptions.duration = Math.min(15, Math.max(4, Math.round(Math.min(asset.duration, profileLimit))));
       }
       try {
+        setBillingNotice(null);
         const res = await fetch("/api/ai/video", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -630,6 +661,7 @@ export default function AssetsPage() {
             apiKey: videoModelTarget.apiKey,
             baseUrl: videoModelTarget.baseUrl,
             mode: "image-to-video",
+            workflow: "shot-motion",
             prompt: finalPrompt,
             imageUrl: effectiveFirstFrame,
             ...(chainFrame && { lastImageUrl: chainFrame }),
@@ -644,6 +676,13 @@ export default function AssetsPage() {
         });
         const data = await res.json();
         if (!res.ok) {
+          if (data.code === "INSUFFICIENT_BALANCE") {
+            setBillingNotice({
+              message: data.error || t("balanceInsufficientDesc"),
+              providerLabel: data.providerLabel || videoModelTarget.provider,
+              rechargeUrl: data.rechargeUrl,
+            });
+          }
           // the paid task may already exist in the cloud — surface its ID and the recovery
           // path instead of a bare failure that invites a duplicate (billed) resubmit
           if (data.taskId) {
@@ -677,7 +716,7 @@ export default function AssetsPage() {
         });
       }
     },
-    [assets, videoModelTarget, id, videoParams, motionIntensity, motionRealism, chainMode, projectCategory, projectCreativeIntent, projectVisualBible, visualLook, saveVideoAsset, reloadPendingTasks, t, locale]
+    [assets, videoModelTarget, id, videoParams, motionIntensity, motionRealism, effectiveChainMode, projectCategory, projectCreativeIntent, projectVisualBible, visualLook, saveVideoAsset, reloadPendingTasks, t, locale]
   );
 
   // actually generate a single asset. Returns the saved static keyframe URL (undefined on failure) so
@@ -701,7 +740,7 @@ export default function AssetsPage() {
             body: JSON.stringify({ shotId, type: "product_image", sourceUrl: productImages[0] }),
           }).catch(() => {});
           // auto motion: use the product image as the first frame and run image-to-video (bring the real product to life); falls back to a static image on failure
-          if (!opts?.skipMotion && autoMotion && videoModelTarget) await generateMotion(shotId, productImages[0]);
+        if (!opts?.skipMotion && motionWorkspace && autoMotion && videoModelTarget) await generateMotion(shotId, productImages[0]);
         }
         return productImages[0];
       }
@@ -798,7 +837,7 @@ export default function AssetsPage() {
           prev.map((a) => (a.shotId === shotId ? { ...a, status: "done", thumbnailUrl: savedUrl } : a))
         );
         // auto motion: use the freshly generated image as the first frame and run image-to-video (real camera moves replace fake Ken-Burns); falls back to static image on failure
-        if (!opts?.skipMotion && autoMotion && videoModelTarget) await generateMotion(shotId, savedUrl);
+        if (!opts?.skipMotion && motionWorkspace && autoMotion && videoModelTarget) await generateMotion(shotId, savedUrl);
         return savedUrl;
       } catch (e) {
         setAssets((prev) =>
@@ -809,7 +848,7 @@ export default function AssetsPage() {
         return undefined;
       }
     },
-    [assets, modelTarget, productImages, productSafe, imageParams, autoMotion, videoModelTarget, projectCreativeIntent, projectVisualBible, visualLook, generateMotion, t]
+    [assets, modelTarget, productImages, productSafe, imageParams, motionWorkspace, autoMotion, videoModelTarget, projectCreativeIntent, projectVisualBible, visualLook, generateMotion, id, t]
   );
 
   // storyboard grid: ONE image generation renders every shot as a 3x3 grid cell (person /
@@ -857,6 +896,7 @@ export default function AssetsPage() {
     if (!videoModelTarget || !scriptId || isFilmGenerating) return;
     setIsFilmGenerating(true);
     setFilmNotice(null);
+    setBillingNotice(null);
     try {
       const res = await fetch(`/api/project/${id}/storyboard-film`, {
         method: "POST",
@@ -874,17 +914,31 @@ export default function AssetsPage() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || t("filmFailed"));
+      if (!res.ok) {
+        if (data.code === "INSUFFICIENT_BALANCE") {
+          setBillingNotice({
+            message: data.error || t("balanceInsufficientDesc"),
+            providerLabel: data.providerLabel || videoModelTarget.provider,
+            rechargeUrl: data.rechargeUrl,
+          });
+        }
+        throw new Error(data.error || t("filmFailed"));
+      }
       setFilmNotice(data.queued
         ? { text: t("filmQueuedBackground", { taskId: data.taskId }) }
         : { text: t("filmDone"), url: data.url });
-      if (data.queued) await reloadPendingTasks();
+      if (data.queued) {
+        await reloadPendingTasks();
+        router.push(`/project/${id}/export?taskId=${encodeURIComponent(data.taskId)}`);
+      } else {
+        router.push(`/project/${id}/export`);
+      }
     } catch (e) {
       setFilmNotice({ text: e instanceof Error ? e.message : t("filmFailed") });
     } finally {
       setIsFilmGenerating(false);
     }
-  }, [id, scriptId, videoModelTarget, videoParams, isFilmGenerating, presenterSheet, reloadPendingTasks, t]);
+  }, [id, scriptId, videoModelTarget, videoParams, isFilmGenerating, presenterSheet, reloadPendingTasks, router, t]);
 
   // generate all in one click (sequential, to avoid hitting platform rate limits with concurrent requests).
   // With auto-motion on, this runs TWO passes: (1) every static keyframe, (2) keyframe-chained i2v per shot —
@@ -910,23 +964,30 @@ export default function AssetsPage() {
         if (row.isVideo) continue; // already a motion/stock video — don't re-bill
         // tail mode: sequential continuation — the previous shot's real tail frame (captured at
         // save time in this very loop) beats the shot's own keyframe as the first frame
-        const tailFrame = chainMode === "tail" && i > 0 ? lastFrameByShot.current.get(assets[i - 1].shotId) : undefined;
+        const tailFrame = effectiveChainMode === "tail" && i > 0 ? lastFrameByShot.current.get(assets[i - 1].shotId) : undefined;
         const firstFrame = tailFrame ?? staticFrameOf(row);
         if (!firstFrame) continue;
         const next = assets[i + 1];
         // pin mode pins the next keyframe as the last frame; tail/off modes never pin
-        const lastFrame = chainMode === "pin" && next && chainByDefault(row.type) ? staticFrameOf(next) : undefined;
+        const lastFrame = effectiveChainMode === "pin" && next && chainByDefault(row.type) ? staticFrameOf(next) : undefined;
         // null = explicitly no chain (last shot / next frame unavailable)
         await generateMotion(row.shotId, firstFrame, lastFrame ?? null);
       }
     }
     setIsBatchGenerating(false);
-  }, [assets, generateOne, generateMotion, autoMotion, videoModelTarget, chainMode]);
+  }, [assets, generateOne, generateMotion, autoMotion, videoModelTarget, effectiveChainMode]);
 
   return (
     <div className="min-h-screen grid-bg legacy-studio-page">
       {/* project context strip: name + step navigation (global chrome lives in AppShell) */}
-      <ProjectHeader projectName={projectName || t("untitledProject")} />
+      <ProjectHeader
+        projectName={projectName || t("untitledProject")}
+        productionMode={productionMode}
+        showStepper={!auxiliaryAiWorkspace}
+        centerLabel={auxiliaryAiWorkspace ? t("aiHelperTitle") : undefined}
+        backHref={auxiliaryAiWorkspace ? `/project/${id}/assets` : undefined}
+        backLabel={auxiliaryAiWorkspace ? t("backToLocalFlow") : undefined}
+      />
 
       {/* single hidden input reused for every per-shot upload; target shot tracked in pendingUploadShot */}
       <input
@@ -942,13 +1003,21 @@ export default function AssetsPage() {
             director panel below so this row stays a stable, scannable set of verbs. */}
         <div className="flex flex-wrap items-center justify-between gap-y-3 mb-4">
           <div>
-            <h2 className="text-lg font-semibold">{t("title")}</h2>
+            <h2 className="text-lg font-semibold">{t(aiVideoStage ? "aiVideoTitle" : "title")}</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
               {loading ? tc("loading") : t("assetsReady", { done: doneCount, total: assets.length })}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Link href={`/project/${id}/transcript`} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-primary/35 bg-primary/8 px-2.5 text-xs font-medium text-primary transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            {productionMode === "local" && !auxiliaryAiWorkspace && (
+              <Link href={`/project/${id}/assets?workspace=ai`}>
+                <Button variant="outline" size="sm" className="text-xs border-primary/50 text-primary hover:bg-primary/10">
+                  <LuZap className="w-3.5 h-3.5 mr-1" />
+                  {t("openAiHelper")}
+                </Button>
+              </Link>
+            )}
+            <Link href={`/project/${id}/transcript`} title={t("textEditorTip")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-primary/35 bg-primary/8 px-2.5 text-xs font-medium text-primary transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
               <LuScissors className="h-3.5 w-3.5" />{t("textEditor")}
             </Link>
             {offerStockFill && (
@@ -975,16 +1044,13 @@ export default function AssetsPage() {
             )}
             {/* Grid & film stay VISIBLE when their prerequisites are unmet (disabled with the
                 reason in the tooltip) — hiding them made the features undiscoverable. */}
-            {(() => {
+            {aiWorkspace && (() => {
               const shotsOk = assets.length >= 2 && assets.length <= 9;
               const gridReady = Boolean(modelTarget) && shotsOk;
               const gridReason = !modelTarget ? t("gridNeedModel") : !shotsOk ? t("gridNeedShots") : t("gridTip");
-              const allShotsDone = shotsOk && assets.every((a) => a.status === "done");
-              const filmReady = Boolean(videoModelTarget) && allShotsDone;
-              const filmReason = !videoModelTarget ? t("filmNeedModel") : !allShotsDone ? t("filmNeedReady") : t("filmTip");
               return (
                 <>
-                  {uiMode === "pro" && (
+                  {!aiVideoStage && uiMode === "pro" && (
                   <Button
                     onClick={runStoryboardGrid}
                     disabled={!gridReady || isGridGenerating || isBatchGenerating}
@@ -1002,26 +1068,10 @@ export default function AssetsPage() {
                     )}
                   </Button>
                   )}
-                  <Button
-                    onClick={runStoryboardFilm}
-                    disabled={!filmReady || isFilmGenerating || isGridGenerating || isBatchGenerating}
-                    variant="outline"
-                    className="text-xs border-primary/50 text-primary hover:bg-primary/10 disabled:border-border/60 disabled:text-muted-foreground"
-                    title={filmReason}
-                  >
-                    {isFilmGenerating ? (
-                      <>
-                        <LuLoaderCircle className="animate-spin mr-1.5 h-3.5 w-3.5" />
-                        {t("filmRunning")}
-                      </>
-                    ) : (
-                      <>{t("filmButton")}</>
-                    )}
-                  </Button>
                 </>
               );
             })()}
-            <Button
+            {aiWorkspace && !aiVideoStage && <Button
               onClick={generateAll}
               disabled={isBatchGenerating || allDone || assets.length === 0}
               className="brand-gradient text-white text-xs"
@@ -1039,14 +1089,21 @@ export default function AssetsPage() {
                   {t("generateAll")}
                 </>
               )}
-            </Button>
+            </Button>}
           </div>
         </div>
+
+        {auxiliaryAiWorkspace && (
+          <div className="mb-5 rounded-xl border border-primary/25 bg-primary/[.06] px-4 py-3">
+            <p className="text-sm font-semibold text-foreground">{t("aiHelperTitle")}</p>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{t("aiHelperDesc")}</p>
+          </div>
+        )}
 
         {/* Director panel: global creative settings applied to every generation pass.
             One labeled container instead of loose pills scattered through the action bar.
             Pro mode only — beginners get working defaults without the vocabulary. */}
-        {uiMode === "pro" && (
+        {aiWorkspace && uiMode === "pro" && (
         <div className="mb-6 flex flex-wrap items-center gap-2 rounded-xl border border-border/50 bg-muted/10 px-3 py-2.5">
           <span className="mr-1 text-xs font-semibold tracking-wide text-muted-foreground">{t("directorPanel")}</span>
           <Link href={`/project/${id}/production`} className="inline-flex h-8 items-center rounded-full border border-primary/30 bg-primary/10 px-3 text-xs font-medium text-primary transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
@@ -1149,10 +1206,10 @@ export default function AssetsPage() {
               ))}
             </div>
           )}
-          {videoModelTarget && modelSupportsLastFrame(videoModelTarget.model) && (
+          {videoModelTarget && (modelSupportsLastFrame(videoModelTarget.model) || projectTargetDuration > 15) && (
             <div
               className="flex items-center gap-0.5 rounded-full border border-border/60 bg-muted/20 pl-2.5 pr-1 h-8"
-              title={t("chainModeTip")}
+              title={`${t("chainModeTip")}${projectTargetDuration > 15 ? ` ${t("longVideoContinuity")}` : ""}`}
             >
               <span className="text-xs font-medium text-muted-foreground mr-1">{t("chainMode")}</span>
               {(["pin", "tail", "off"] as const).map((v) => (
@@ -1160,10 +1217,11 @@ export default function AssetsPage() {
                   key={v}
                   type="button"
                   onClick={() => setChainMode(v)}
+                  disabled={(v === "pin" && !modelSupportsLastFrame(videoModelTarget.model)) || (v === "off" && projectTargetDuration > 15)}
                   className={`rounded-full px-2 h-6 text-xs font-medium transition-[transform,background-color,border-color,color,box-shadow,opacity] ${
-                    chainMode === v
+                    effectiveChainMode === v
                       ? "bg-primary/15 text-primary"
-                      : "text-muted-foreground hover:text-foreground"
+                      : "text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
                   }`}
                 >
                   {t(`chainMode_${v}`)}
@@ -1204,7 +1262,7 @@ export default function AssetsPage() {
         </div>
         )}
 
-        {videoModelTarget && (
+        {motionWorkspace && videoModelTarget && (
           <ModelCapabilityPreflight
             modelId={videoModelTarget.model}
             supportsAudio={videoModelTarget.supportsAudio}
@@ -1232,6 +1290,37 @@ export default function AssetsPage() {
           </div>
         )}
 
+        {billingNotice && (
+          <div className="mb-4 rounded-xl border border-amber-500/35 bg-amber-500/10 p-4">
+            <div className="flex items-start gap-3">
+              <LuTriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-amber-200">
+                  {t("balanceInsufficientTitle", { provider: billingNotice.providerLabel })}
+                </p>
+                <p className="mt-1 text-xs text-amber-300/85">{billingNotice.message}</p>
+                {billingNotice.rechargeUrl ? (
+                  <a
+                    href={billingNotice.rechargeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 inline-flex text-xs font-medium text-amber-200 underline underline-offset-2"
+                  >
+                    {t("goRecharge", { provider: billingNotice.providerLabel })}
+                  </a>
+                ) : (
+                  <Link
+                    href="/settings"
+                    className="mt-2 inline-flex text-xs font-medium text-amber-200 underline underline-offset-2"
+                  >
+                    {t("goToSettings")}
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* auto-fill visuals hint/result (free stock, no key required, preferred path for topic
             videos). Also renders when stockMsg is set alone — per-shot upload errors land there
             and must stay visible even when the stock-fill offer itself is hidden. */}
@@ -1245,17 +1334,19 @@ export default function AssetsPage() {
         {/* cloud paid-task recovery (issue #16): submitted tasks whose results were never
             retrieved — offer resume instead of a duplicate (billed) resubmit */}
         {pendingTasks.length > 0 && (
-          <div className="mb-6 p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
+          <div className="mb-6 rounded-2xl border border-amber-500/35 bg-amber-500/[.09] p-4 shadow-[0_10px_30px_rgba(180,112,20,.08)]">
             <div className="flex items-start gap-3">
-              <LuLoaderCircle className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+              <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                <LuLoaderCircle className="h-4 w-4 animate-spin motion-reduce:animate-none" />
+              </span>
               <div className="flex-1">
-                <p className="text-sm font-medium text-blue-200">
+                <p className="text-sm font-semibold text-amber-950 dark:text-amber-100">
                   {t("pendingTasksTitle", { n: pendingTasks.length })}
                 </p>
-                <p className="text-xs text-blue-300/80 mt-0.5">{t("pendingTasksDesc")}</p>
+                <p className="mt-1 text-xs leading-5 text-amber-900/75 dark:text-amber-200/75">{t("pendingTasksDesc")}</p>
                 <div className="mt-2 space-y-1.5">
                   {pendingTasks.map((task) => (
-                    <div key={task.id} className="space-y-1 text-xs text-blue-200/90">
+                    <div key={task.id} className="space-y-1 text-xs text-amber-950/80 dark:text-amber-100/80">
                       <div className="flex items-center gap-2">
                         <span className="truncate">
                           {t("taskLabel", { shot: task.shotId ?? "-", model: task.model, taskId: task.taskId })}
@@ -1265,7 +1356,7 @@ export default function AssetsPage() {
                           disabled={resumingTasks.has(task.id)}
                           variant="outline"
                           size="sm"
-                          className="h-6 px-2 text-[11px] border-blue-500/40 text-blue-300 hover:bg-blue-500/15 shrink-0"
+                          className="h-7 shrink-0 border-amber-500/35 bg-amber-500/5 px-2 text-[11px] text-amber-800 hover:bg-amber-500/15 dark:text-amber-200"
                         >
                           {resumingTasks.has(task.id) ? (
                             <>
@@ -1290,7 +1381,7 @@ export default function AssetsPage() {
                     </div>
                   ))}
                 </div>
-                {taskMsg && <p className="text-xs text-blue-300/80 mt-2">{taskMsg}</p>}
+                {taskMsg && <p className="mt-2 text-xs text-amber-900/75 dark:text-amber-200/75">{taskMsg}</p>}
               </div>
             </div>
           </div>
@@ -1528,7 +1619,7 @@ export default function AssetsPage() {
                           </div>
 
                           {/* action buttons (AI-generated shots can be manually generated or retried) */}
-                          {asset.visualSource === "ai_generate" && (
+                          {aiWorkspace && !aiVideoStage && asset.visualSource === "ai_generate" && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -1562,7 +1653,7 @@ export default function AssetsPage() {
                             </Button>
                           )}
                           {/* convert to motion shot: existing image asset → image-to-video (real camera moves). Product close-up shots are best kept static to avoid distortion */}
-                          {asset.status === "done" && asset.thumbnailUrl && !asset.isVideo && (
+                          {motionWorkspace && asset.status === "done" && asset.thumbnailUrl && !asset.isVideo && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1586,7 +1677,7 @@ export default function AssetsPage() {
                           {/* per-shot fallback (commercial "regenerate one shot" mechanism): re-run ONLY
                               the i2v from the preserved keyframe — never throws away the whole batch.
                               Full keyframe+motion redo stays available via the regenerate button above */}
-                          {asset.isVideo && asset.keyframeUrl && videoModelTarget && (
+                          {motionWorkspace && asset.isVideo && asset.keyframeUrl && videoModelTarget && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1600,7 +1691,7 @@ export default function AssetsPage() {
                           )}
                           {/* diagnosis retake: pick ONE symptom → resubmit with exactly ONE prompt patch
                               (user-initiated paid call; the notice states what the retake changed) */}
-                          {asset.isVideo && asset.keyframeUrl && videoModelTarget && (
+                          {motionWorkspace && asset.isVideo && asset.keyframeUrl && videoModelTarget && (
                             <select
                               className="h-7 w-24 rounded-md border border-border/60 bg-background px-1 text-[11px] text-muted-foreground"
                               disabled={motionShots.has(asset.shotId)}
@@ -1629,13 +1720,49 @@ export default function AssetsPage() {
             </div>
 
             {/* bottom action */}
-            <div className="mt-8 flex justify-end">
-              <Link href={allDone ? `/project/${id}/video` : "#"}>
-                <Button className="brand-gradient text-white text-sm" disabled={!allDone}>
-                  {t("nextCompose")}
-                  <LuArrowRight className="w-4 h-4 ml-1" />
-                </Button>
-              </Link>
+            <div className="mt-8 flex flex-wrap justify-end gap-2">
+              {productionMode === "ai" && !aiVideoStage ? (
+                <Link href={allDone ? `/project/${id}/ai-video` : "#"}>
+                  <Button className="brand-gradient text-white text-sm" disabled={!allDone}>
+                    {t("nextAiVideo")}
+                    <LuArrowRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </Link>
+              ) : productionMode === "ai" ? (
+                <>
+                  <Link href={`/project/${id}/compose?entry=ai`}>
+                    <Button variant="outline" className="text-sm" disabled={!allDone}>
+                      {t("useLocalCompose")}
+                    </Button>
+                  </Link>
+                  <Button
+                    onClick={runStoryboardFilm}
+                    disabled={!filmReady || isFilmGenerating || isGridGenerating || isBatchGenerating}
+                    className="brand-gradient min-w-48 text-sm font-semibold text-white shadow-[0_8px_24px_color-mix(in_srgb,var(--primary)_22%,transparent)]"
+                    title={filmReason}
+                  >
+                    {isFilmGenerating ? (
+                      <><LuLoaderCircle className="mr-1.5 h-4 w-4 animate-spin motion-reduce:animate-none" />{t("filmRunning")}</>
+                    ) : (
+                      <>{t("filmButton")}<LuArrowRight className="ml-1 h-4 w-4" /></>
+                    )}
+                  </Button>
+                </>
+              ) : auxiliaryAiWorkspace ? (
+                <Link href={`/project/${id}/assets`}>
+                  <Button className="brand-gradient text-white text-sm">
+                    {t("backWithAiResults")}
+                    <LuArrowRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </Link>
+              ) : (
+                <Link href={allDone ? `/project/${id}/compose` : "#"}>
+                  <Button className="brand-gradient text-white text-sm" disabled={!allDone}>
+                    {t("nextCompose")}
+                    <LuArrowRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </Link>
+              )}
             </div>
           </>
         )}

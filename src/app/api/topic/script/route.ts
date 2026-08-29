@@ -6,6 +6,8 @@ import { scripts as scriptsTable, projects } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { apiError, errText } from "@/lib/api-error";
 import { llmErrorPair } from "@/lib/llm-error";
+import { productionModeForCreation } from "@/lib/production-mode";
+import { normalizeTargetVideoDuration } from "@/lib/target-video-duration";
 
 const VALID_NARRATION = new Set<TopicNarrationStyle>([
   "knowledge",
@@ -49,8 +51,7 @@ export async function POST(req: NextRequest) {
   const narrationStyle = VALID_NARRATION.has(body.narrationStyle as TopicNarrationStyle)
     ? (body.narrationStyle as TopicNarrationStyle)
     : "knowledge";
-  const targetDuration =
-    typeof body.targetDuration === "number" && body.targetDuration > 0 ? body.targetDuration : 25;
+  const targetDuration = normalizeTargetVideoDuration(body.targetDuration);
   const count = typeof body.count === "number" && body.count >= 1 && body.count <= 5 ? body.count : 3;
   const platforms = typeof body.platforms === "string" ? body.platforms : undefined;
 
@@ -76,9 +77,20 @@ export async function POST(req: NextRequest) {
   } else {
     const [created] = await db
       .insert(projects)
-      .values({ name: topicToName(topic), contentType: "topic", topic, status: "draft" })
+      .values({
+        name: topicToName(topic),
+        contentType: "topic",
+        topic,
+        status: "draft",
+        productionMode: productionModeForCreation(body.productionMode),
+        targetDuration,
+      })
       .returning();
     projectId = created.id;
+  }
+
+  if (projectId) {
+    await db.update(projects).set({ targetDuration, updatedAt: new Date() }).where(eq(projects.id, projectId));
   }
 
   // generate scripts

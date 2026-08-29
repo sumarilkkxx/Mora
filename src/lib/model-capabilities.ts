@@ -29,6 +29,30 @@ export interface VideoGenerationPreflight {
   warnings: Array<"capabilities-unknown" | "native-audio-unavailable" | "reference-images-trimmed">;
 }
 
+function resolutionRank(value: string): number {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "2k") return 1440;
+  if (normalized === "4k") return 2160;
+  const numeric = Number.parseInt(normalized, 10);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+/** Map Mora's stable quality preference to the closest real provider/model resolution. */
+export function resolveModelResolution(
+  preferred: GenResolution,
+  supported: readonly string[] | undefined,
+): { preferred: GenResolution; effective: string; adjusted: boolean } {
+  if (!supported?.length) return { preferred, effective: preferred, adjusted: false };
+  const exact = supported.find((value) => value.toLowerCase() === preferred.toLowerCase());
+  if (exact) return { preferred, effective: exact, adjusted: false };
+  const target = resolutionRank(preferred);
+  const ranked = [...supported].sort((a, b) => resolutionRank(a) - resolutionRank(b));
+  // A quality preference is a floor: avoid silently charging for a lower tier
+  // when the model offers a higher tier that can satisfy it.
+  const effective = ranked.find((value) => resolutionRank(value) >= target) ?? ranked[ranked.length - 1];
+  return { preferred, effective, adjusted: true };
+}
+
 function inferredModes(modelId: string): Pick<VideoModelCapabilities, "textToVideo" | "imageToVideo" | "referenceVideo"> {
   const id = modelId.toLowerCase();
   const explicit = /(?:text-to-video|\/t2v(?:-|$))/.test(id)
@@ -56,31 +80,42 @@ const KNOWN_VIDEO_CAPABILITIES: Record<string, Omit<VideoModelCapabilities, "con
     textToVideo: false, imageToVideo: true, referenceVideo: false,
     lastFrame: false, nativeAudio: false, durationValues: [6, 10],
   },
-  "minimax/h3/image-to-video": {
-    textToVideo: false, imageToVideo: true, referenceVideo: false,
-    lastFrame: true, nativeAudio: false, durationValues: [5],
-    resolutionValues: ["2K"], aspectRatioValues: ["adaptive"],
-  },
 };
 
 /** Normalize provider-specific video metadata into one UI-facing capability contract. */
 export function getVideoModelCapabilities(modelId: string, supportsAudio?: boolean): VideoModelCapabilities {
-  const atlasSeedance = /^bytedance\/seedance-(2\.5|2\.0(?:-fast|-mini)?)\/(text-to-video|image-to-video|reference-to-video)$/i.exec(modelId);
+  const atlasH3 = /^minimax\/h3(?:-developer)?(?:\/(text-to-video|image-to-video|reference-to-video))?$/i.exec(modelId);
+  if (atlasH3) {
+    const mode = atlasH3[1]?.toLowerCase();
+    return {
+      confidence: "known",
+      textToVideo: mode ? mode === "text-to-video" : true,
+      imageToVideo: mode ? mode === "image-to-video" : true,
+      referenceVideo: mode ? mode === "reference-to-video" : true,
+      lastFrame: mode ? mode === "image-to-video" : true,
+      nativeAudio: supportsAudio ?? true,
+      durationValues: Array.from({ length: 12 }, (_, index) => index + 4),
+      resolutionValues: ["2K"],
+      aspectRatioValues: mode === "image-to-video" ? ["adaptive"] : ["9:16", "16:9", "1:1"],
+      maxReferenceImages: !mode || mode === "reference-to-video" ? 9 : undefined,
+    };
+  }
+  const atlasSeedance = /^bytedance\/seedance-(2\.5|2\.0(?:-fast|-mini)?)(?:\/(text-to-video|image-to-video|reference-to-video))?$/i.exec(modelId);
   if (atlasSeedance) {
     const version = atlasSeedance[1].toLowerCase();
-    const mode = atlasSeedance[2].toLowerCase();
+    const mode = atlasSeedance[2]?.toLowerCase();
     const full20 = version === "2.0";
     return {
       confidence: "known",
-      textToVideo: mode === "text-to-video",
-      imageToVideo: mode === "image-to-video",
-      referenceVideo: mode === "reference-to-video",
-      lastFrame: mode === "image-to-video",
+      textToVideo: mode ? mode === "text-to-video" : true,
+      imageToVideo: mode ? mode === "image-to-video" : true,
+      referenceVideo: mode ? mode === "reference-to-video" : true,
+      lastFrame: mode ? mode === "image-to-video" : true,
       nativeAudio: supportsAudio ?? true,
       durationValues: Array.from({ length: version === "2.5" ? 27 : 12 }, (_, index) => index + 4),
       resolutionValues: full20 ? ["720p", "1080p"] : ["720p"],
       aspectRatioValues: ["9:16", "16:9", "1:1"],
-      maxReferenceImages: mode === "reference-to-video" ? (version === "2.5" ? 30 : 9) : undefined,
+      maxReferenceImages: !mode || mode === "reference-to-video" ? (version === "2.5" ? 30 : 9) : undefined,
     };
   }
   const known = KNOWN_VIDEO_CAPABILITIES[modelId.toLowerCase()];
@@ -126,7 +161,8 @@ export function preflightVideoGeneration(input: {
     adjustments.push({ field: "duration", requested: input.duration, effective, code: "nearest-duration" });
   }
   if (capabilities.resolutionValues?.length && !capabilities.resolutionValues.includes(input.resolution)) {
-    adjustments.push({ field: "resolution", requested: input.resolution, effective: capabilities.resolutionValues[0], code: "mapped-resolution" });
+    const resolution = resolveModelResolution(input.resolution, capabilities.resolutionValues);
+    adjustments.push({ field: "resolution", requested: input.resolution, effective: resolution.effective, code: "mapped-resolution" });
   }
   if (capabilities.aspectRatioValues?.length && !capabilities.aspectRatioValues.includes(input.aspectRatio)) {
     adjustments.push({ field: "aspectRatio", requested: input.aspectRatio, effective: capabilities.aspectRatioValues[0], code: "adaptive-ratio" });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { LuArrowLeft, LuPlay, LuChevronDown, LuArrowRight, LuLoaderCircle } from "react-icons/lu";
 import { useSettingsStore } from "@/lib/stores/settings-store";
 import { resolveTTSConfig, isPaidTTSReady, getTTSProviderMeta } from "@/lib/tts-presets";
@@ -20,6 +20,8 @@ import { buildHookVariants } from "@/lib/script-engine/hook-variants";
 import type { ProductCategory } from "@/lib/script-engine/templates";
 import { CAPTION_PRESET_IDS } from "@/lib/caption-presets";
 import { ProjectHeader } from "@/components/project-header";
+import { normalizeProductionMode, type ProductionMode } from "@/lib/production-mode";
+import { buildAssetRows, type SavedAssetRow } from "@/lib/assets-view";
 import {
   Select,
   SelectContent,
@@ -109,13 +111,6 @@ interface DbShot {
   transition: VideoClipItem["transition"];
 }
 
-// 分镜素材（仅取缩略图所需字段）
-interface DbAsset {
-  shotId: number;
-  filePath: string | null;
-  status: string;
-}
-
 // 判断素材是图还是视频（视频用 <video> 当封面，图用 <img>）
 const isVideoPath = (p: string) => /\.(mp4|webm|mov|m4v)(\?|$)/i.test(p);
 
@@ -123,11 +118,14 @@ export default function VideoPage() {
   const t = useT("video");
   const locale = useLocale();
   const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const { defaultResolution, defaultAspectRatio, tts, providers } = useSettingsStore();
   const [clips, setClips] = useState<VideoClipItem[]>([]);
   // 分镜缩略图：shotId → 素材文件路径（在时间线里直接预览每段画面）
   const [thumbs, setThumbs] = useState<Record<number, string>>({});
   const [projectName, setProjectName] = useState("");
+  const [productionMode, setProductionMode] = useState<ProductionMode>("local");
+  const auxiliaryCompose = productionMode === "ai" || searchParams.get("entry") === "ai";
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [config, setConfig] = useState<ComposeConfig>({
@@ -216,22 +214,16 @@ export default function VideoPage() {
         const scripts = scriptsRes.ok ? await scriptsRes.json() : [];
         const assets = assetsRes.ok ? await assetsRes.json() : [];
         if (cancelled) return;
+        const projectMode = normalizeProductionMode(project?.productionMode);
         if (project) {
           setProjectName(project.name ?? project.productName ?? "");
+          setProductionMode(projectMode);
           setProjectCategory(typeof project.productCategory === "string" ? project.productCategory : "");
           if (Array.isArray(project.productionWorkflow)) {
             const voiceStage = project.productionWorkflow.find((stage: { id?: unknown }) => stage.id === "voice");
             if (voiceStage) setConfig((current) => ({ ...current, ttsEnabled: voiceStage.enabled !== false }));
           }
         }
-        // 收集每个分镜已生成的画面，作时间线缩略图（已完成且有文件的才算）
-        const thumbMap: Record<number, string> = {};
-        for (const a of (Array.isArray(assets) ? assets : []) as DbAsset[]) {
-          if (a && typeof a.shotId === "number" && a.filePath && a.status === "done" && thumbMap[a.shotId] == null) {
-            thumbMap[a.shotId] = a.filePath;
-          }
-        }
-        setThumbs(thumbMap);
         const selected = Array.isArray(scripts)
           ? scripts.find((s: { selected?: boolean }) => s.selected) ?? scripts[0]
           : null;
@@ -239,6 +231,15 @@ export default function VideoPage() {
           setLoadError(t("errorNoScript"));
           setClips([]);
         } else {
+          // Use the exact same resolver as the preceding assets page. In local mode this
+          // excludes stale AI/stock rows and falls back to the project's own product photos.
+          const rows = buildAssetRows(
+            selected.shots as Shot[],
+            (Array.isArray(assets) ? assets : []) as SavedAssetRow[],
+            Array.isArray(project?.productImages) ? project.productImages : [],
+            projectMode,
+          );
+          setThumbs(Object.fromEntries(rows.flatMap((row) => row.thumbnailUrl ? [[row.shotId, row.thumbnailUrl]] : [])));
           // raw shots feed the variant matrix (hook rewrites need full Shot objects)
           setScriptShots(selected.shots as Shot[]);
           setClips(
@@ -260,6 +261,8 @@ export default function VideoPage() {
     return () => {
       cancelled = true;
     };
+    // Project data is loaded once on entry; locale changes do not require a refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // 用设置里的默认分辨率/比例初始化一次
@@ -575,9 +578,31 @@ export default function VideoPage() {
     <div className="min-h-screen grid-bg legacy-studio-page">
       {/* project context strip: name + CLICKABLE step navigation — replaces the legacy
           inline non-clickable stepper this page carried while owned by a parallel session */}
-      <ProjectHeader projectName={projectName || t("defaultProjectName")} />
+      <ProjectHeader
+        projectName={projectName || t("defaultProjectName")}
+        productionMode={productionMode}
+        showStepper={!auxiliaryCompose}
+        centerLabel={auxiliaryCompose ? t("workspaceTitle") : undefined}
+        backHref={auxiliaryCompose ? `/project/${id}/assets` : undefined}
+        backLabel={auxiliaryCompose ? t("backToAiFlow") : undefined}
+      />
 
       <main className="mx-auto max-w-7xl px-6 py-8">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/15 px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold">{t("workspaceTitle")}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {auxiliaryCompose ? t("workspaceAiHelperDesc") : t("workspaceLocalDesc")}
+            </p>
+          </div>
+          {!auxiliaryCompose && (
+            <Link href={`/project/${id}/assets?workspace=ai`}>
+              <Button variant="outline" size="sm" className="text-xs border-primary/50 text-primary hover:bg-primary/10">
+                {t("openAiHelper")}
+              </Button>
+            </Link>
+          )}
+        </div>
         {/* page-level load feedback: these states existed but were never rendered,
             leaving an empty timeline with no explanation */}
         {loading && (
@@ -589,7 +614,7 @@ export default function VideoPage() {
         {!loading && loadError && (
           <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
             <p className="text-sm text-muted-foreground">{loadError}</p>
-            <Link href={`/project/${id}/assets`}>
+            <Link href={`/project/${id}/assets${auxiliaryCompose && productionMode === "local" ? "?workspace=ai" : ""}`}>
               <Button variant="outline" size="sm">{t("backToAssets")}</Button>
             </Link>
           </div>
@@ -602,7 +627,7 @@ export default function VideoPage() {
                 <h2 className="text-base font-semibold">{t("timelineTitle")}</h2>
                 <p className="text-xs text-muted-foreground mt-0.5">{t("timelineMeta", { count: clips.length, duration: totalDuration })}</p>
               </div>
-              <Link href={`/project/${id}/assets`}>
+              <Link href={`/project/${id}/assets${auxiliaryCompose && productionMode === "local" ? "?workspace=ai" : ""}`}>
                 <Button variant="outline" size="sm" className="text-xs">
                   <LuArrowLeft className="w-3.5 h-3.5 mr-1" />
                   {t("backToAssets")}
@@ -904,7 +929,7 @@ export default function VideoPage() {
             <Card className="glass-card">
               <CardContent className="p-4 space-y-4">
                 <Label className="text-sm font-medium">{t("canvasLabel")}</Label>
-                {/* 渲染质量预设：快速/标准/高清（选中同步分辨率） */}
+                {/* 输出档位：一次选择同时决定分辨率与编码质量，避免下方重复选择分辨率 */}
                 <div className="space-y-2">
                   <span className="text-xs text-muted-foreground">{t("renderQualityLabel")}</span>
                   <div className="grid grid-cols-3 gap-2">
@@ -923,7 +948,7 @@ export default function VideoPage() {
                         }`}
                       >
                         <span className="font-medium">{t(`renderPreset_${preset}`)}</span>
-                        <span className="text-[10px] opacity-70">{RENDER_PRESETS[preset].resolution}</span>
+                        <span className="text-[10px] opacity-70">{t(`renderPresetMeta_${preset}`)}</span>
                       </button>
                     ))}
                   </div>
@@ -946,27 +971,6 @@ export default function VideoPage() {
                         }`}
                       >
                         {ratio === "9:16" ? t("aspectVertical") : ratio === "16:9" ? t("aspectHorizontal") : t("aspectSquare")}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {/* 分辨率 */}
-                <div className="space-y-2">
-                  <span className="text-xs text-muted-foreground">{t("resolutionLabel")}</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(["720p", "1080p"] as const).map((res) => (
-                      <button
-                        key={res}
-                        type="button"
-                        aria-pressed={config.resolution === res}
-                        onClick={() => setConfig((c) => ({ ...c, resolution: res }))}
-                        className={`h-9 rounded-md text-xs border transition-[transform,background-color,border-color,color,box-shadow,opacity] ${
-                          config.resolution === res
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border/50 bg-muted/20 text-muted-foreground hover:border-primary/40"
-                        }`}
-                      >
-                        {res}
                       </button>
                     ))}
                   </div>
@@ -1016,7 +1020,6 @@ export default function VideoPage() {
               {/* 成片预览 */}
               {composeDone && outputUrl && (
                 <div className="rounded-lg overflow-hidden border border-border/50 bg-black">
-                  {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                   <video src={outputUrl} controls className="w-full max-h-[360px]" />
                 </div>
               )}

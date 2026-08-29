@@ -26,9 +26,11 @@ import {
 import { toRemoteUsableImage } from "@/lib/remote-image";
 import { probeMedia } from "@/lib/media-probe";
 import { recordAiTask } from "@/lib/ai-tasks";
+import { insufficientBalanceDetails } from "@/lib/provider-billing-error";
 import { apiError, errText } from "@/lib/api-error";
 import { contentPolicyError, isContentPolicyRejection } from "@/lib/content-policy-error";
 import type { GenAspectRatio, GenResolution } from "@/lib/gen-params";
+import { resolveAtlasVideoModelId } from "@/lib/atlas-video-models";
 
 const IMAGE_EXT_RE = /\.(png|jpe?g|webp|bmp|gif)$/i;
 
@@ -52,6 +54,8 @@ function shotKeyframe(asset: { filePath?: string | null; thumbnailPath?: string 
  * body: { scriptId, provider, apiKey, model?, baseUrl?, options? }
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let billingProviderName = "";
+  let billingModel = "";
   try {
     const { id } = await params;
     if (!/^[a-zA-Z0-9-]+$/.test(id)) {
@@ -70,6 +74,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       /** Preview only: return the full film prompt + counts + warnings, submit nothing, spend nothing */
       dryRun?: boolean;
     };
+    billingProviderName = providerName ?? "";
+    billingModel = model ?? "";
     if (!scriptId) {
       return apiError(req, "缺少 scriptId", "Missing scriptId", 400);
     }
@@ -106,6 +112,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!resolvedModel) {
       return apiError(req, "缺少视频模型 ID，请在设置中选择视频模型", "Missing video model id — select a video model in Settings", 400);
     }
+    const submittedModel = providerName?.toLowerCase() === "atlas-cloud"
+      ? resolveAtlasVideoModelId(resolvedModel, "reference-to-video")
+      : resolvedModel;
     const requestedDuration = filmRequestSeconds(shots);
     const opts = (options ?? {}) as {
       width?: number;
@@ -117,7 +126,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     };
     const requestedResolution = videoRequestResolution(opts.width, opts.height);
     const requestedAspectRatio = videoRequestAspectRatio(opts.width, opts.height);
-    let supportedDurations = fallbackFilmDurations(providerName, resolvedModel);
+    let supportedDurations = fallbackFilmDurations(providerName, submittedModel);
     let supportedResolutions: string[] | undefined;
     let supportedAspectRatios: string[] | undefined;
     let provider = providerName && (dryRun || apiKey)
@@ -132,14 +141,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             req,
             `${providerName} 当前已校验的视频模型目录中不存在 ${resolvedModel}，请回到设置重新选择模型`,
             `${resolvedModel} is not present in ${providerName}'s verified video model directory — select the model again in Settings`,
-            400
-          );
-        }
-        if (providerName?.toLowerCase() === "atlas-cloud" && liveModel && !/\/reference-to-video$/i.test(liveModel.id)) {
-          return apiError(
-            req,
-            `一键整片需要 Atlas Cloud 的 reference-to-video 端点，当前选择的是 ${liveModel.id}`,
-            `The film pass requires an Atlas Cloud reference-to-video endpoint; ${liveModel.id} is selected`,
             400
           );
         }
@@ -163,6 +164,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }
     }
     const duration = closestSupportedFilmDuration(requestedDuration, supportedDurations);
+    const supportsRequestedDuration = !supportedDurations?.length
+      || supportedDurations.some((value) => Math.abs(value - requestedDuration) < 0.01);
+    if (!supportsRequestedDuration) {
+      const supportedLabel = (supportedDurations ?? []).join(" / ");
+      return NextResponse.json({
+        error: errText(
+          req,
+          `当前模型不支持 ${requestedDuration} 秒整片（支持：${supportedLabel} 秒）。为避免静默缩短和破坏分镜节奏，本次未提交付费任务；请选择支持该时长的模型，或改用逐镜生成并通过关键帧/尾帧接续后合成。`,
+          `This model cannot generate a ${requestedDuration}s film (supported: ${supportedLabel}s). No paid task was submitted because silently shortening would break storyboard timing. Choose a model that supports the target or use chained per-shot generation and compose.`,
+        ),
+        code: "TARGET_DURATION_UNSUPPORTED",
+        requestedDuration,
+        supportedDurations,
+        taskSubmitted: false,
+      }, { status: 409 });
+    }
     const resolution = supportedVideoSetting(requestedResolution, supportedResolutions, "720p");
     const aspectRatio = supportedVideoSetting(requestedAspectRatio, supportedAspectRatios, "9:16");
     if (!(resolution === "720p" || resolution === "1080p")) {
@@ -185,7 +202,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const plannedRefs = shots.length + (characterSheetUrl ? 1 : 0);
       return NextResponse.json({
         dryRun: true,
-        modelId: resolvedModel,
+        modelId: submittedModel,
         prompt,
         shotCount: shots.length,
         seconds: duration,
@@ -193,7 +210,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         durationAdjusted: duration !== requestedDuration,
         supportedDurations,
         requestSettings: {
-          modelId: resolvedModel,
+          modelId: submittedModel,
           resolution,
           requestedResolution,
           aspectRatio,
@@ -205,7 +222,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         },
         ignoredSettings,
         referenceImages: plannedRefs,
-        referenceQuota: referenceQuotaCheck(plannedRefs, resolvedModel),
+        referenceQuota: referenceQuotaCheck(plannedRefs, submittedModel, providerName),
         dialogueWarnings,
       });
     }
@@ -241,7 +258,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const refInputs = [...(characterSheetUrl ? [characterSheetUrl] : []), ...keyframes];
     // pre-spend quota gate: a reference count over the model's schema limit is a guaranteed
     // upstream rejection — block BEFORE the paid submit instead of paying to find out
-    const quota = referenceQuotaCheck(refInputs.length, resolvedModel);
+    const quota = referenceQuotaCheck(refInputs.length, submittedModel, providerName);
     if (!quota.ok) {
       return apiError(
         req,
@@ -260,8 +277,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const videoOptions = {
       ...(options ?? {}),
-      modelId: resolvedModel,
+      modelId: submittedModel,
       mode: "video-to-video" as const,
+      workflow: "storyboard-film" as const,
       prompt,
       referenceImageUrls,
       duration,
@@ -275,7 +293,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // legacy single-phase path for providers without two-phase task support
     if (!provider.submitVideoTask || !provider.waitForTask) {
       const result = await provider.generateVideo(videoOptions);
-      const saved = await persistFilm(id, result.videoUrls?.[0], resolvedModel, resolution, aspectRatio);
+      const saved = await persistFilm(id, result.videoUrls?.[0], result.modelId || submittedModel, resolution, aspectRatio);
       return NextResponse.json({
         ...saved,
         taskId: result.taskId,
@@ -317,6 +335,33 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   } catch (error) {
     console.error("一键整片生成失败:", error);
+    const billing = insufficientBalanceDetails(error, billingProviderName);
+    if (billing) {
+      console.warn("[STORYBOARD_FILM_INSUFFICIENT_BALANCE]", {
+        provider: billing.provider,
+        model: billingModel,
+        statusCode: billing.statusCode ?? 402,
+        taskSubmitted: billing.taskSubmitted,
+      });
+      const locale = req.headers.get("accept-language")?.toLowerCase().startsWith("en") ? "en" : "zh";
+      const taskStateZh = billing.taskSubmitted
+        ? "云端可能已经受理该任务，请先查询已有任务，不要重复提交。"
+        : "本次任务未提交到云端，充值后可重新生成。";
+      const taskStateEn = billing.taskSubmitted
+        ? "The cloud may already have accepted this task. Check the existing task before resubmitting."
+        : "This task was not submitted to the cloud, so you can retry after topping up.";
+      const errorMessage = locale === "en"
+        ? `${billing.providerLabel} has insufficient balance or credits. Top up the provider account. ${taskStateEn}`
+        : `${billing.providerLabel} 账户余额或额度不足，请前往该平台充值。${taskStateZh}`;
+      return NextResponse.json({
+        error: errorMessage,
+        code: "INSUFFICIENT_BALANCE",
+        provider: billing.provider,
+        providerLabel: billing.providerLabel,
+        rechargeUrl: billing.rechargeUrl,
+        taskSubmitted: billing.taskSubmitted,
+      }, { status: 402 });
+    }
     if (isContentPolicyRejection(error)) {
       const locale = req.headers.get("accept-language")?.toLowerCase().startsWith("en") ? "en" : "zh";
       return NextResponse.json({ error: contentPolicyError(locale, "video"), code: "CONTENT_POLICY" }, { status: 422 });

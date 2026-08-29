@@ -2,77 +2,76 @@
 
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
+import { Check, HardDrive, Sparkles } from "lucide-react";
 import { useT } from "@/lib/i18n";
+import { normalizeProductionMode, type ProductionMode } from "@/lib/production-mode";
 
-// Pipeline steps in order; `path` is the route suffix under /project/[id]/
-const STEPS = [
-  { key: "stepScript", path: "script" },
-  { key: "stepAssets", path: "assets" },
-  { key: "stepVideo", path: "video" },
-  { key: "stepExport", path: "export" },
+const AI_STEPS = [
+  { key: "stepScript", path: "script", matches: ["script"] },
+  { key: "stepAiAssets", path: "assets", matches: ["assets"] },
+  { key: "stepAiVideo", path: "ai-video", matches: ["ai-video"] },
+  { key: "stepExport", path: "export", matches: ["export"] },
+] as const;
+
+const LOCAL_STEPS = [
+  { key: "stepScript", path: "script", matches: ["script"] },
+  { key: "stepLocalAssets", path: "assets", matches: ["assets"] },
+  { key: "stepCompose", path: "compose", matches: ["compose", "video"] },
+  { key: "stepExport", path: "export", matches: ["export"] },
 ] as const;
 
 /**
- * Clickable four-step progress pills shared by the project pipeline pages
- * (script / assets / export). Visually identical to the legacy inline
- * stepper, but every pill is a real link so users can jump between steps:
- * the current step is highlighted, completed steps show a check mark, and
- * future steps are muted — all remain navigable.
+ * Mode-aware progress pills shared by the project pipeline pages. AI and
+ * local production deliberately use different step definitions so helper
+ * workspaces never leak into or replace the project's primary navigation.
  *
  * The current step is derived from the pathname suffix (no props needed);
  * the project id comes from useParams.
  *
- * NOTE: video/page.tsx still renders its own legacy inline (non-clickable)
- * stepper because that file is owned by a parallel session (avoidance).
- * Once the avoidance is lifted, replace its inline stepper with this
- * component as well.
  */
-export function ProjectStepper() {
+export function ProjectStepper({ productionMode }: { productionMode?: ProductionMode | null }) {
   const t = useT("common");
   const { id } = useParams<{ id: string }>();
   const pathname = usePathname();
+  const mode = normalizeProductionMode(productionMode);
+  const steps = mode === "ai" ? AI_STEPS : LOCAL_STEPS;
+  const routeSuffix = pathname?.split("/").filter(Boolean).at(-1) ?? "script";
   // Current step index from the route suffix; clamp to 0 if no suffix matches
   const current = Math.max(
     0,
-    STEPS.findIndex((s) => pathname?.endsWith(`/${s.path}`))
+    steps.findIndex((step) => (step.matches as readonly string[]).includes(routeSuffix))
   );
+  const ModeIcon = mode === "ai" ? Sparkles : HardDrive;
 
   return (
-    <>
-      {/* mobile: full step pills don't fit, show a compact "current step / total" badge instead */}
-      <div className="sm:hidden flex h-8 items-center gap-1.5 rounded-[10px] bg-muted px-3 text-xs font-medium text-foreground">
-        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-          {current + 1}
+    <nav className={`project-flow project-flow-${mode}`} aria-label={t(mode === "ai" ? "modeAi" : "modeLocal")}>
+      <div className="project-flow-context">
+        <span className="project-flow-context-icon" aria-hidden="true"><ModeIcon /></span>
+        <span className="project-flow-context-copy">
+          <strong>{t(mode === "ai" ? "modeAiShort" : "modeLocalShort")}</strong>
         </span>
-        {t(STEPS[current].key)}
-        <span className="text-muted-foreground">{current + 1}/{STEPS.length}</span>
       </div>
-      {/* desktop: full pills; every step links to its page for free navigation */}
-      <div className="studio-segmented hidden sm:flex">
-        {STEPS.map((step, i) => (
-          <div key={step.key} className="flex items-center">
-            <Link
-              href={`/project/${id}/${step.path}`}
-              className={`flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-medium transition-[background-color,color,transform,box-shadow] active:scale-[.98] ${
-                i === current
-                  ? "bg-card text-foreground shadow-sm"
-                  : i < current
-                  ? "text-primary hover:bg-primary/10"
-                  : "text-muted-foreground hover:bg-muted/50"
-              }`}
-            >
-              <span
-                className={`flex h-4 w-4 items-center justify-center rounded-full text-[10px] ${
-                  i === current ? "bg-primary text-primary-foreground" : i < current ? "bg-primary/15" : "bg-muted"
-                }`}
+      <span className="project-flow-divider" aria-hidden="true" />
+      <div className="project-flow-steps">
+        {steps.map((step, i) => {
+          const state = i === current ? "current" : i < current ? "complete" : "upcoming";
+          return (
+            <div key={step.key} className="project-flow-step-wrap">
+              {i > 0 ? <span className={`project-flow-line ${i <= current ? "is-complete" : ""}`} aria-hidden="true" /> : null}
+              <Link
+                href={`/project/${id}/${step.path}`}
+                className={`project-flow-step is-${state}`}
+                aria-current={state === "current" ? "step" : undefined}
               >
-                {i < current ? "✓" : i + 1}
-              </span>
-              <span className="project-step-label">{t(step.key)}</span>
-            </Link>
-          </div>
-        ))}
+                <span className="project-flow-index" aria-hidden="true">
+                  {state === "complete" ? <Check /> : i + 1}
+                </span>
+                <span className="project-step-label">{t(step.key)}</span>
+              </Link>
+            </div>
+          );
+        })}
       </div>
-    </>
+    </nav>
   );
 }

@@ -31,6 +31,10 @@ export interface LLMConfig {
   model: string;
   /** Vision model name (used for product image analysis; falls back to model if not specified) */
   visionModel?: string;
+  /** Request-scoped text fallback used only when OpenRouter rejects the primary provider route. */
+  fallbackModel?: string;
+  /** Request-scoped vision fallback; falls back to fallbackModel when omitted. */
+  fallbackVisionModel?: string;
 }
 
 /** Script generation input parameters */
@@ -284,6 +288,48 @@ function validateScript(raw: Record<string, unknown>, fallbackStyleType: string)
   };
 }
 
+/**
+ * Last-line timing guard for models that return a valid script but ignore the requested total.
+ * Durations are allocated in whole seconds, preserving the model's relative pacing while making
+ * the shot sum and totalDuration exactly match the creator-selected final runtime.
+ */
+export function fitGeneratedScriptToTargetDuration(
+  script: GeneratedScript,
+  requestedDuration: number,
+): GeneratedScript {
+  const targetUnits = Math.max(1, Math.round(requestedDuration));
+  if (script.shots.length === 0) return { ...script, totalDuration: targetUnits };
+
+  const weights = script.shots.map((shot) =>
+    Number.isFinite(shot.duration) && shot.duration > 0 ? shot.duration : 1
+  );
+  const weightTotal = weights.reduce((sum, value) => sum + value, 0);
+  const minimumUnits = 1;
+  const distributable = targetUnits - minimumUnits * script.shots.length;
+  const rawExtras = weights.map((weight) => (distributable * weight) / weightTotal);
+  const allocated = rawExtras.map((value) => Math.floor(value));
+  const remaining = distributable - allocated.reduce((sum, value) => sum + value, 0);
+  const remainderOrder = rawExtras
+    .map((value, index) => ({ index, remainder: value - allocated[index] }))
+    .sort((a, b) => b.remainder - a.remainder || a.index - b.index);
+  for (let i = 0; i < remaining; i += 1) {
+    allocated[remainderOrder[i % remainderOrder.length].index] += 1;
+  }
+
+  return {
+    ...script,
+    totalDuration: targetUnits,
+    shots: script.shots.map((shot, index) => ({
+      ...shot,
+      duration: minimumUnits + allocated[index],
+    })),
+  };
+}
+
+function fitScriptsToTargetDuration(scripts: GeneratedScript[], requestedDuration: number): GeneratedScript[] {
+  return scripts.map((script) => fitGeneratedScriptToTargetDuration(script, requestedDuration));
+}
+
 // ==================== Core functionality ====================
 
 /**
@@ -356,7 +402,7 @@ export async function generateScript(input: ScriptInput): Promise<GeneratedScrip
       ...jsonModeParams(input.llmConfig.baseUrl),
     },
     input.llmConfig,
-    (content) => parseScriptResponse(content, input.styleType),
+    (content) => fitScriptsToTargetDuration(parseScriptResponse(content, input.styleType), input.targetDuration ?? 25),
   );
 }
 
@@ -391,7 +437,7 @@ export async function generateTopicScript(input: TopicScriptGenInput): Promise<G
       ...jsonModeParams(input.llmConfig.baseUrl),
     },
     input.llmConfig,
-    (content) => parseScriptResponse(content, "custom"),
+    (content) => fitScriptsToTargetDuration(parseScriptResponse(content, "custom"), input.targetDuration ?? 25),
   );
 }
 
@@ -476,7 +522,10 @@ export function generateScriptStream(
       }
 
       // Parse the complete result after streaming finishes
-      const scripts = parseScriptResponse(fullContent, input.styleType);
+      const scripts = fitScriptsToTargetDuration(
+        parseScriptResponse(fullContent, input.styleType),
+        input.targetDuration ?? 25,
+      );
       callbacks.onComplete?.(scripts);
     } catch (error) {
       // User-initiated cancellation is not an error

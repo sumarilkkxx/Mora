@@ -45,6 +45,25 @@ export interface SavedAssetRow {
   thumbnailPath?: string | null;
 }
 
+/** Index ready persisted assets using the same production-mode policy in every stage. */
+export function readyAssetsByShot(
+  savedAssets: SavedAssetRow[],
+  productionMode: "ai" | "local" = "ai",
+): Map<number, SavedAssetRow> {
+  const savedByShot = new Map<number, SavedAssetRow>();
+  for (const asset of savedAssets) {
+    const allowedInLocal = asset.type === "product_image" || asset.type === "user_upload";
+    if (
+      asset?.filePath &&
+      asset.status === "done" &&
+      (productionMode !== "local" || allowedInLocal)
+    ) {
+      savedByShot.set(asset.shotId, asset);
+    }
+  }
+  return savedByShot;
+}
+
 /**
  * Combines "shots of the selected script + persisted assets" into asset-page view rows.
  * - Persisted and ready assets (filePath is an accessible /api/files path) → status "done" with thumbnail;
@@ -56,12 +75,10 @@ export function buildAssetRows(
   shots: Shot[],
   savedAssets: SavedAssetRow[],
   productImages: string[],
+  productionMode: "ai" | "local" = "ai",
 ): AssetItem[] {
-  // Index persisted ready assets by shotId
-  const savedByShot = new Map<number, SavedAssetRow>();
-  for (const a of savedAssets) {
-    if (a && a.filePath && a.status === "done") savedByShot.set(a.shotId, a);
-  }
+  // Local projects must never inherit AI/stock rows from an auxiliary workspace.
+  const savedByShot = readyAssetsByShot(savedAssets, productionMode);
   const firstProduct = productImages[0];
 
   return shots.map((s) => {
@@ -86,18 +103,26 @@ export function buildAssetRows(
         keyframeUrl: isVideo && saved.thumbnailPath ? saved.thumbnailPath : undefined,
       };
     }
+    // A local product video is a deterministic image-editing workflow. Legacy
+    // scripts may still contain AI-only shots; when the original product photo
+    // exists, display and process those shots as product-image shots instead of
+    // showing a misleading broken upload slot. AI projects keep their source.
+    const viewShot =
+      productionMode === "local" && firstProduct && s.visualSource === "ai_generate"
+        ? { ...s, visualSource: "product_image" as const }
+        : s;
     return {
-      shotId: s.shotId,
-      type: s.type,
-      duration: s.duration,
-      description: s.description,
-      prompt: s.prompt ?? "",
-      camera: s.camera || undefined,
-      characterId: s.characterId || undefined,
-      voiceover: s.voiceover || undefined,
-      visualSource: s.visualSource,
-      status: s.visualSource === "product_image" ? ("done" as const) : ("pending" as const),
-      thumbnailUrl: s.visualSource === "product_image" ? firstProduct : undefined,
+      shotId: viewShot.shotId,
+      type: viewShot.type,
+      duration: viewShot.duration,
+      description: viewShot.description,
+      prompt: viewShot.prompt ?? "",
+      camera: viewShot.camera || undefined,
+      characterId: viewShot.characterId || undefined,
+      voiceover: viewShot.voiceover || undefined,
+      visualSource: viewShot.visualSource,
+      status: viewShot.visualSource === "product_image" ? ("done" as const) : ("pending" as const),
+      thumbnailUrl: viewShot.visualSource === "product_image" ? firstProduct : undefined,
     };
   });
 }

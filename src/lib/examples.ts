@@ -12,61 +12,61 @@ export interface ExampleProduct {
   /** Selling-point description (also used as product library description / new-project form sellingPoints) */
   sellingPoints: string;
   price: string;
-  /** Real product image bundled under public/examples */
-  image: string;
+  /** One locally bundled product photo used for one-click example filling. */
+  images: string[];
 }
 
 const exampleProductsByLocale: Record<Locale, ExampleProduct[]> = {
   zh: [
     {
-      id: "ex-desk-light",
-      name: "磁吸桌面补光灯",
-      category: "tech",
-      sellingPoints: "磁吸灯头可快速调整角度，柔光面板减少面部阴影；折叠支架收纳轻巧，适合桌面拍摄、直播补光和视频会议；亮度与色温可按场景调节。",
-      price: "169",
-      image: "/examples/desk-light.webp",
-    },
-    {
-      id: "ex-commuter-backpack",
-      name: "轻量通勤双肩包",
+      id: "ex-sunglasses",
+      name: "复古方框墨镜",
       category: "fashion",
-      sellingPoints: "立体分区可放电脑、文件与随身小物，隐藏式拉链让外观更利落；轻量耐磨面料适合每日通勤，肩带透气减压；简洁版型可搭配多种穿着。",
-      price: "259",
-      image: "/examples/commuter-backpack.webp",
+      sellingPoints: "黑色方框轮廓简洁百搭，深色镜片适合日常通勤、旅行与户外拍摄；宽镜框能够突出脸部线条，适合展示上脸效果、穿搭搭配和便携收纳场景。",
+      price: "59",
+      images: ["/examples/products/sunglasses.png"],
     },
     {
-      id: "ex-pet-fountain",
+      id: "ex-hair-dryer",
+      name: "高速负离子吹风机",
+      category: "beauty",
+      sellingPoints: "高速气流帮助缩短干发时间，冷热风切换适合日常造型与头发护理；简洁金属灰机身便于展示风嘴结构、按键操作和居家使用场景。",
+      price: "199",
+      images: ["/examples/products/hair-dryer.png"],
+    },
+    {
+      id: "ex-pet-water-fountain",
       name: "智能宠物饮水机",
       category: "home",
-      sellingPoints: "循环活水搭配多层过滤，帮助保持饮水清洁；低噪水泵适合卧室与客厅，透明水位窗便于及时补水；上盖可拆洗，日常维护更省事。",
-      price: "329",
-      image: "/examples/pet-fountain.webp",
+      sellingPoints: "大容量透明水箱便于观察余量，循环出水与宽接水盘适合猫狗日常饮水；可拆式结构方便补水和清洁，适合展示静音运行、过滤与使用场景。",
+      price: "129",
+      images: ["/examples/products/pet-water-fountain.png"],
     },
   ],
   en: [
     {
-      id: "ex-desk-light",
-      name: "Magnetic Desk Light",
-      category: "tech",
-      sellingPoints: "The magnetic light head adjusts quickly while the soft diffuser reduces harsh facial shadows. Its folding stand packs neatly for desk filming, livestreams, and video calls, with adjustable brightness and color temperature.",
-      price: "24.99",
-      image: "/examples/desk-light.webp",
-    },
-    {
-      id: "ex-commuter-backpack",
-      name: "Lightweight Commuter Backpack",
+      id: "ex-sunglasses",
+      name: "Retro Square Sunglasses",
       category: "fashion",
-      sellingPoints: "Structured compartments organize a laptop, documents, and daily essentials, while concealed zippers keep the silhouette clean. Lightweight technical fabric and breathable shoulder straps make it comfortable for everyday commuting.",
-      price: "39.99",
-      image: "/examples/commuter-backpack.webp",
+      sellingPoints: "A versatile black square frame with dark lenses for commuting, travel, and outdoor shoots. The wide silhouette works well for styling, try-on, and compact-carry scenes.",
+      price: "9",
+      images: ["/examples/products/sunglasses.png"],
     },
     {
-      id: "ex-pet-fountain",
+      id: "ex-hair-dryer",
+      name: "High-Speed Ionic Hair Dryer",
+      category: "beauty",
+      sellingPoints: "High-speed airflow helps shorten drying time, while hot and cool modes support everyday styling and hair care. The compact metallic body highlights the nozzle, controls, and at-home use.",
+      price: "29",
+      images: ["/examples/products/hair-dryer.png"],
+    },
+    {
+      id: "ex-pet-water-fountain",
       name: "Smart Pet Water Fountain",
       category: "home",
-      sellingPoints: "Circulating water and multi-stage filtration help keep every drink fresh. The quiet pump suits bedrooms and living rooms, a clear level window shows when to refill, and the removable top makes routine cleaning simple.",
-      price: "49.99",
-      image: "/examples/pet-fountain.webp",
+      sellingPoints: "A transparent high-capacity tank makes the water level easy to check, while circulating water and a wide tray suit daily use for cats and dogs. Removable parts simplify refilling and cleaning.",
+      price: "19",
+      images: ["/examples/products/pet-water-fountain.png"],
     },
   ],
 };

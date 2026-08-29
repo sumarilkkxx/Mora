@@ -5,6 +5,10 @@ import { toRemoteUsableImage, resolveUploadFilePath } from "@/lib/remote-image";
 import { apiError, errText } from "@/lib/api-error";
 import { recordAiTask, updateAiTask } from "@/lib/ai-tasks";
 import { normalizeVideoOptionsForModel } from "@/lib/normalize-video-options";
+import { insufficientBalanceDetails } from "@/lib/provider-billing-error";
+import type { VideoWorkflow } from "@/lib/providers/types";
+
+const VIDEO_WORKFLOWS = new Set<VideoWorkflow>(["shot-motion", "storyboard-film", "reference-replication", "prompt-video"]);
 
 // AI video generation.
 //
@@ -15,6 +19,7 @@ import { normalizeVideoOptionsForModel } from "@/lib/normalize-video-options";
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { provider: providerName, model, prompt, imageUrl, lastImageUrl, mode, apiKey, baseUrl, options, projectId, shotId, referenceVideoUrls, referenceImageUrls, background } = body;
+  const workflow = VIDEO_WORKFLOWS.has(body.workflow) ? body.workflow as VideoWorkflow : undefined;
 
   if (!providerName || !model) {
     return apiError(req, "缺少必要参数", "Missing required parameters");
@@ -65,6 +70,7 @@ export async function POST(req: NextRequest) {
     const videoOptions = {
       modelId: model,
       mode: mode || (imageUrl ? "image-to-video" : "text-to-video"),
+      workflow,
       prompt: prompt || "",
       firstFrameUrl,
       ...(lastFrameUrl && { lastFrameUrl }),
@@ -91,7 +97,7 @@ export async function POST(req: NextRequest) {
       provider: providerName,
       model: modelId,
       mediaType: "video",
-      mode: videoOptions.mode,
+          mode: workflow ?? videoOptions.mode,
       prompt: videoOptions.prompt,
       taskId,
     });
@@ -100,7 +106,7 @@ export async function POST(req: NextRequest) {
     // status checks and final persistence, so navigation or closing this page cannot
     // interrupt retrieval and users never need to stare at a spinner for minutes.
     if (background) {
-      return NextResponse.json({ taskId, modelId, status: "submitted", queued: true, recoverable: true, adjustments: normalized.adjustments }, { status: 202 });
+      return NextResponse.json({ taskId, modelId, status: "submitted", queued: true, recoverable: true, adjustments: normalized.adjustments, routing: { workflow, configuredModel: model, submittedModel: modelId } }, { status: 202 });
     }
 
     // Phase 2: wait. Transient status-query failures are tolerated inside waitForTask;
@@ -125,6 +131,7 @@ export async function POST(req: NextRequest) {
         processingTime: Date.now() - startTime,
         hasAudio: normalized.options.audioEnabled === true,
         adjustments: normalized.adjustments,
+        routing: { workflow, configuredModel: model, submittedModel: modelId },
       });
     } catch (error) {
       // definitive provider-side failure vs. lost contact (task may still be running & billed)
@@ -149,6 +156,36 @@ export async function POST(req: NextRequest) {
     }
   } catch (error) {
     console.error("生视频失败:", error);
+    const billing = insufficientBalanceDetails(error, providerName || "");
+    if (billing) {
+      console.warn("[AI_VIDEO_INSUFFICIENT_BALANCE]", {
+        provider: billing.provider,
+        model,
+        statusCode: billing.statusCode ?? 402,
+        taskSubmitted: billing.taskSubmitted,
+      });
+      const taskStateZh = billing.taskSubmitted
+        ? "云端可能已经受理该任务，请先查询已有任务，不要重复提交"
+        : "本次任务未提交到云端，充值后可重新生成";
+      const taskStateEn = billing.taskSubmitted
+        ? "The cloud may already have accepted this task. Check the existing task before resubmitting"
+        : "This task was not submitted to the cloud. You can retry after topping up";
+      return NextResponse.json(
+        {
+          error: errText(
+            req,
+            `${billing.providerLabel} 账户余额或额度不足，请前往该平台充值。${taskStateZh}。`,
+            `${billing.providerLabel} has insufficient balance or credits. Top up the provider account. ${taskStateEn}.`,
+          ),
+          code: "INSUFFICIENT_BALANCE",
+          provider: billing.provider,
+          providerLabel: billing.providerLabel,
+          rechargeUrl: billing.rechargeUrl,
+          taskSubmitted: billing.taskSubmitted,
+        },
+        { status: 402 },
+      );
+    }
     return NextResponse.json(
       { error: error instanceof Error ? error.message : errText(req, "生视频失败", "Video generation failed") },
       { status: 500 }

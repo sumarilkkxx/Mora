@@ -29,7 +29,8 @@ import {
   type TTSProvider,
 } from "@/lib/tts-presets";
 import { mergeCustomModels } from "@/lib/gen-params";
-import { getVideoModelCapabilities } from "@/lib/model-capabilities";
+import { getVideoModelCapabilities, resolveModelResolution } from "@/lib/model-capabilities";
+import { ATLAS_VIDEO_FAMILIES } from "@/lib/atlas-video-models";
 import { LLM_PRESETS } from "@/lib/llm-presets";
 import { GroupedModelSelect, ModelPicker } from "@/components/settings/model-picker";
 import { GenerationSettings } from "@/components/generation-settings";
@@ -317,9 +318,10 @@ export default function SettingsPage() {
   );
   const selectedVideoProvider = selectedVideoModel?.provider;
   const selectedVideoCapabilities = getVideoModelCapabilities(defaultVideoModel);
-  const compatibleResolutionOptions = selectedVideoCapabilities.resolutionValues?.length
-    ? resolutionOptions.filter((option) => selectedVideoCapabilities.resolutionValues!.includes(option.value))
-    : resolutionOptions;
+  const effectiveVideoResolution = resolveModelResolution(defaultResolution, selectedVideoCapabilities.resolutionValues);
+  const selectedAtlasFamily = selectedVideoProvider === "atlas-cloud"
+    ? ATLAS_VIDEO_FAMILIES.find((family) => family.id === defaultVideoModel)
+    : undefined;
 
   // auto-select a default model after enabling a provider: if nothing is selected (or the selection is gone) and options exist, fall back to the first one
   // — prevents the beginner trap of "set up a Key but generation fails because no default model was chosen"
@@ -347,13 +349,6 @@ export default function SettingsPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoIds]);
-  useEffect(() => {
-    if (compatibleResolutionOptions.length && !compatibleResolutionOptions.some((option) => option.value === defaultResolution)) {
-      setDefaultResolution(compatibleResolutionOptions[0].value as "720p" | "1080p");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultVideoModel, defaultVideoProvider, compatibleResolutionOptions.map((option) => option.value).join(",")]);
-
   // LLM connection test state
   const [llmTestStatus, setLlmTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
 
@@ -694,6 +689,42 @@ export default function SettingsPage() {
                       <p className="text-xs text-muted-foreground -mt-2">{t("ollamaModelHint")}</p>
                     )}
 
+                    {/openrouter\.ai/i.test(llm.baseUrl) && (
+                      <div className="rounded-xl border border-border/60 bg-muted/25 p-4">
+                        <div className="mb-3">
+                          <p className="text-sm font-medium">{t("llmFallbackTitle")}</p>
+                          <p className="mt-1 text-xs leading-5 text-muted-foreground">{t("llmFallbackHint")}</p>
+                        </div>
+                        <div className="mora-model-settings-grid grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <div className="mora-model-config-row">
+                            <Label className="text-xs text-muted-foreground">{t("llmFallbackTextModel")}</Label>
+                            <ModelPicker
+                              capability="text"
+                              value={llm.fallbackModel ?? ""}
+                              baseUrl={llm.baseUrl}
+                              apiKey={llm.apiKey}
+                              onChange={(fallbackModel) => setLLM({ ...llm, fallbackModel: fallbackModel || undefined })}
+                              placeholder={t("llmFallbackOptional")}
+                            />
+                          </div>
+                          <div className="mora-model-config-row">
+                            <Label className="text-xs text-muted-foreground">{t("llmFallbackVisionModel")}</Label>
+                            <ModelPicker
+                              capability="vision"
+                              value={llm.fallbackVisionModel ?? ""}
+                              baseUrl={llm.baseUrl}
+                              apiKey={llm.apiKey}
+                              onChange={(fallbackVisionModel) => setLLM({ ...llm, fallbackVisionModel: fallbackVisionModel || undefined })}
+                              placeholder={t("llmFallbackOptional")}
+                            />
+                          </div>
+                        </div>
+                        {(llm.fallbackModel === llm.model || llm.fallbackVisionModel === (llm.visionModel || llm.model)) && (
+                          <p className="mt-3 text-xs text-amber-600">{t("llmFallbackDuplicate")}</p>
+                        )}
+                      </div>
+                    )}
+
                     {/* test connection button */}
                     <div className="pt-3 mt-3 border-t border-border/50">
                       <Button
@@ -976,11 +1007,11 @@ export default function SettingsPage() {
                         <SelectTrigger className="w-full">
                           {/* Base UI Select.Value shows the raw value by default; use a function child to map it to a label */}
                           <SelectValue>
-                            {(value: string) => compatibleResolutionOptions.find((o) => o.value === value)?.label ?? value}
+                            {(value: string) => resolutionOptions.find((o) => o.value === value)?.label ?? value}
                           </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                          {compatibleResolutionOptions.map((o) => (
+                          {resolutionOptions.map((o) => (
                             <SelectItem key={o.value} value={o.value}>
                               {o.label}
                             </SelectItem>
@@ -1020,6 +1051,22 @@ export default function SettingsPage() {
                       </Select>
                     </div>
                   </div>
+                  {defaultVideoModel && (
+                    <div className="mt-4 rounded-xl border border-border/60 bg-muted/25 px-4 py-3 text-xs">
+                      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
+                        <span><span className="text-muted-foreground">{t("videoRouteModel")}：</span>{selectedVideoModel?.name || defaultVideoModel}</span>
+                        <span>
+                          <span className="text-muted-foreground">{t("videoEffectiveResolution")}：</span>
+                          <strong className="font-semibold text-foreground">{effectiveVideoResolution.effective}</strong>
+                          {effectiveVideoResolution.adjusted && <span className="ml-1 text-muted-foreground">({t("videoFromPreference", { value: defaultResolution })})</span>}
+                        </span>
+                        {selectedAtlasFamily?.pricePerSecond != null && (
+                          <span><span className="text-muted-foreground">{t("videoBillingTier")}：</span>≈ ${selectedAtlasFamily.pricePerSecond.toFixed(3)}/s</span>
+                        )}
+                      </div>
+                      <p className="mt-2 leading-5 text-muted-foreground">{t("videoResolutionBehavior")}</p>
+                    </div>
+                  )}
                   <p className="mt-3 text-xs text-muted-foreground">{t("modelsFromProvidersHint")}</p>
                 </CardContent>
               </Card>

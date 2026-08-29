@@ -3,8 +3,8 @@
  * and feeds the result into one-shot video generation.
  *
  * Solves the creator's "I don't know what to make" problem with two keyless source families:
- * - Domestic (Chinese-first default): Douyin hot search + Toutiao hot board JSON endpoints,
- *   with real-time hot values — this is what mass-market Chinese creators actually chase.
+ * - Domestic (Chinese-first default): Douyin hot search with real-time hot values — this
+ *   is what mass-market Chinese creators actually chase. No cross-platform fallback is used.
  * - Global: Google Trends "Trending now" RSS feeds across several English-speaking
  *   markets. Results are merged, deduplicated, and screened for politics and sensitive
  *   social/news topics before they reach the creator-facing picker.
@@ -196,7 +196,7 @@ export function normalizeGeo(geo: string | null | undefined): string {
 }
 
 // ---------------------------------------------------------------------------
-// Domestic boards (Douyin hot search / Toutiao hot board) — keyless JSON APIs
+// Domestic board (Douyin hot search) — keyless JSON API
 // ---------------------------------------------------------------------------
 
 /** Format a raw hot value into a compact Chinese reading: 11504605 → "1150万", 170276700 → "1.7亿". */
@@ -256,7 +256,7 @@ export function parseToutiaoHotBoard(json: unknown): TrendTopic[] {
   return out;
 }
 
-/** Fetch one JSON endpoint with a timeout; returns null on any failure (caller decides the fallback). */
+/** Fetch one JSON endpoint with a timeout; returns null on any network, status, or decoding failure. */
 async function fetchJson(url: string, headers: Record<string, string>): Promise<unknown | null> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 12000);
@@ -272,8 +272,8 @@ async function fetchJson(url: string, headers: Record<string, string>): Promise<
 }
 
 /**
- * Fetch domestic trending topics: Douyin hot search first (what short-video creators actually chase),
- * falling back to the Toutiao hot board when Douyin returns nothing usable. Returns [] only if both fail.
+ * Fetch domestic trending topics from Douyin only. Keeping the source exclusive avoids
+ * presenting another platform's editorial board as Douyin trends when the upstream is unavailable.
  */
 export async function fetchDomesticTrends(): Promise<{ source: TrendSource; topics: TrendTopic[] }> {
   const douyin = await fetchJson(
@@ -284,15 +284,7 @@ export async function fetchDomesticTrends(): Promise<{ source: TrendSource; topi
       Referer: "https://www.douyin.com/",
     }
   );
-  const douyinTopics = parseDouyinHotSearch(douyin);
-  if (douyinTopics.length >= 5) return { source: "douyin", topics: douyinTopics };
-
-  const toutiao = await fetchJson("https://www.toutiao.com/hot-event/hot-board/?origin=toutiao_pc", {
-    "User-Agent": "Mozilla/5.0",
-  });
-  const toutiaoTopics = parseToutiaoHotBoard(toutiao);
-  if (toutiaoTopics.length > 0) return { source: "toutiao", topics: toutiaoTopics };
-  return { source: "douyin", topics: douyinTopics };
+  return { source: "douyin", topics: parseDouyinHotSearch(douyin) };
 }
 
 // ---------------------------------------------------------------------------
@@ -359,7 +351,7 @@ export function classifyTrendTitle(title: string): TrendCategoryId | null {
 // The trend picker is a commerce-creation shortcut, not a general news feed.
 // Screen both title and related-news context because an innocuous search phrase can
 // otherwise inherit political, violent, disaster, health-crisis, or crime context.
-const POLITICAL_TREND_RE = /(?:\b(?:election|politics?|president|prime minister|senat(?:e|or)|congress|parliament|democrat|republican|conservative|liberal|left-wing|right-wing|white house|government|federal|supreme court|justice|tariffs?|sanctions?|war|military|nato|royal family|monarch|trump|biden|putin|netanyahu|zelensky|gaza|israel|iran|ukraine|russia)\b|总统|总理|选举|大选|议会|国会|政府|外交|制裁|关税|战争|军事|政治|王室)/i;
+const POLITICAL_TREND_RE = /(?:\b(?:election|politics?|president|prime minister|senat(?:e|or)|congress|parliament|democrat|republican|conservative|liberal|left-wing|right-wing|white house|government|federal|supreme court|justice|tariffs?|sanctions?|war|military|nato|royal family|monarch|trump|biden|putin|netanyahu|zelensky|gaza|israel|iran|ukraine|russia)\b|总统|总理|部长|任命|任免|议会|国会|政府|国务院|民政部|省委|市委|书记|人大|政协|外交|制裁|关税|战争|军事|政治|王室|选举|大选)/i;
 const SOCIAL_RISK_TREND_RE = /(?:\b(?:die[ds]?|death|dead|funeral|killed?|murder|shooting|attack|bomb(?:ing)?|explosion|crash|accident|injury|injured|missing|police|arrest(?:ed)?|indictment|lawsuit|trial|court|drugs?|abuse|assault|rape|disaster|flood|earthquake|wildfire|hurricane|tornado|protest|riot|scandal|cancer|diagnosis|outbreak|health battle|condition worsens|hospitali[sz]ed|serious illness)\b|死亡|去世|葬礼|遇难|谋杀|枪击|袭击|爆炸|事故|受伤|失联|警方|逮捕|起诉|法院|毒品|性侵|灾害|洪水|地震|山火|台风|抗议|暴乱|丑闻|癌症|疫情|病危|住院)/i;
 
 /** True when a trend is unsuitable for the commerce-focused creation shortcut. */

@@ -12,6 +12,7 @@ import { LuArrowUpRight, LuClock3, LuDownload, LuFilm, LuFolderOpen, LuImage, Lu
 import { useT, useLocale } from "@/lib/i18n";
 import { formatRelativeTime } from "@/lib/relative-time";
 import { PageFrame, PageHeader, SegmentedControl, SegmentedItem, Skeleton } from "@/components/studio/page";
+import { projectContinuePath, type ProductionMode } from "@/lib/production-mode";
 
 interface ProjectRow {
   id: string;
@@ -20,6 +21,7 @@ interface ProjectRow {
   productImages?: string[] | null;
   status: string;
   workflowType?: "generate" | "edit";
+  productionMode?: ProductionMode;
   sourceType?: "manual" | "clone";
   contentType?: "product" | "topic";
   deletedAt?: string | null;
@@ -36,15 +38,6 @@ interface WorkRow {
   createdAt: string | null;
   url: string;
   thumbnailUrl: string | null;
-}
-
-// project status → the pipeline step to resume at (done lands on export where the film lives)
-function stepFor(status: string, workflowType?: "generate" | "edit"): string {
-  if (workflowType === "edit") return "edit";
-  if (status === "done") return "export";
-  if (status === "composing" || status === "video") return "video";
-  if (status === "assets") return "assets";
-  return "script";
 }
 
 // project status → common.status* i18n key
@@ -358,7 +351,7 @@ export default function ProjectsPage() {
               return (
                 <Card key={p.id} className="group h-full overflow-hidden border-border/65 bg-card/92 shadow-[0_10px_30px_rgba(38,68,101,.08)] transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-[0_18px_42px_rgba(38,68,101,.14)]">
                   <CardContent className="p-0">
-                    <Link href={`/project/${p.id}/${stepFor(effectiveStatus, p.workflowType)}`} className="block">
+                    <Link href={projectContinuePath(p.id, effectiveStatus, p.productionMode, p.workflowType)} className="block">
                       {/* poster: latest render's first frame, falling back to the product photo */}
                       <div className="relative aspect-[16/10] overflow-hidden bg-muted/30">
                         {poster ? (

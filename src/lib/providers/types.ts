@@ -114,12 +114,17 @@ export interface ImageResult {
 
 // ==================== video-related types ====================
 
+/** Product workflow intent used by providers that expose separate operation endpoints. */
+export type VideoWorkflow = "shot-motion" | "storyboard-film" | "reference-replication" | "prompt-video"
+
 /** Video generation options */
 export interface VideoOptions {
   /** Model ID to use */
   modelId: string
   /** Generation mode */
   mode: 'text-to-video' | 'image-to-video' | 'video-to-video'
+  /** Calling product workflow; lets provider adapters select an exact operation endpoint. */
+  workflow?: VideoWorkflow
   /** Text prompt */
   prompt: string
   /** Negative prompt */

@@ -23,6 +23,7 @@ import { STAGE_LABEL_KEYS } from "@/lib/pipeline-stages";
 import { friendlyError } from "@/lib/friendly-error";
 import { ProjectHeader } from "@/components/project-header";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { normalizeProductionMode, type ProductionMode } from "@/lib/production-mode";
 
 // shot type labels (label changed to i18n key, resolved per locale at render time)
 const shotTypeLabels: Record<Shot["type"], { labelKey: string; color: string }> = {
@@ -64,6 +65,7 @@ export default function ScriptPage() {
   >([]);
   const [loading, setLoading] = useState(true);
   const [projectName, setProjectName] = useState("");
+  const [productionMode, setProductionMode] = useState<ProductionMode>("local");
   // project metadata: reused when re-generating the script from the empty state
   const [projectMeta, setProjectMeta] = useState<{
     productName: string;
@@ -73,6 +75,7 @@ export default function ScriptPage() {
     videoMode: string;
     contentType: string;
     topic: string;
+    targetDuration: number;
   } | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [genError, setGenError] = useState("");
@@ -99,6 +102,9 @@ export default function ScriptPage() {
       if (projectRes.ok) {
         const proj = await projectRes.json();
         setProjectName(proj.name ?? proj.productName ?? "");
+        const mode = normalizeProductionMode(proj.productionMode);
+        setProductionMode(mode);
+        setGenPref(mode === "ai" ? "ai" : "free");
         setProjectMeta({
           productName: proj.productName ?? "",
           category: proj.productCategory ?? "",
@@ -107,6 +113,7 @@ export default function ScriptPage() {
           videoMode: proj.videoMode ?? "product_closeup",
           contentType: proj.contentType ?? "product",
           topic: proj.topic ?? "",
+          targetDuration: proj.targetDuration ?? 15,
         });
       }
       if (Array.isArray(dbScripts) && dbScripts.length > 0) {
@@ -151,7 +158,7 @@ export default function ScriptPage() {
         ? {
             projectId: id,
             topic: projectMeta.topic || projectName,
-            targetDuration: 25,
+            targetDuration: projectMeta.targetDuration,
             llmConfig: { baseUrl: llm.baseUrl, apiKey: llm.apiKey, model: llm.model },
           }
         : {
@@ -159,7 +166,7 @@ export default function ScriptPage() {
             productName: projectMeta.productName,
             category: projectMeta.category,
             productDescription: projectMeta.description,
-            targetDuration: 30,
+            targetDuration: projectMeta.targetDuration,
             styleType: "auto",
             videoMode: projectMeta.videoMode,
             productImages: projectMeta.productImages,
@@ -201,6 +208,9 @@ export default function ScriptPage() {
           const proj = await projectRes.json();
           if (!cancelled) {
             setProjectName(proj.name ?? proj.productName ?? "");
+            const mode = normalizeProductionMode(proj.productionMode);
+            setProductionMode(mode);
+            setGenPref(mode === "ai" ? "ai" : "free");
             setProjectMeta({
               productName: proj.productName ?? "",
               category: proj.productCategory ?? "",
@@ -209,6 +219,7 @@ export default function ScriptPage() {
               videoMode: proj.videoMode ?? "product_closeup",
               contentType: proj.contentType ?? "product",
               topic: proj.topic ?? "",
+              targetDuration: proj.targetDuration ?? 15,
             });
           }
         }
@@ -241,9 +252,17 @@ export default function ScriptPage() {
     return () => {
       cancelled = true;
     };
+    // Translation lookup is intentionally read at load time; changing locale does not need to refetch project data.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const currentScript = scripts[selectedScript];
+  const isLocalProduction = productionMode === "local";
+  const hasDurationMismatch = Boolean(
+    currentScript &&
+      projectMeta?.targetDuration &&
+      currentScript.totalDuration !== projectMeta.targetDuration
+  );
   // pre-render ad compliance scan: rule-check the current script's voiceover and text overlays; warn on risky terms (non-blocking)
   const adViolations = useMemo(
     () => (currentScript ? checkScriptCompliance(currentScript.shots as { voiceover?: string; textOverlay?: { text?: string } | null }[]) : []),
@@ -332,24 +351,16 @@ export default function ScriptPage() {
   const [autoFinishing, setAutoFinishing] = useState(false);
   const [autoFinishStage, setAutoFinishStage] = useState("");
   const [autoFinishError, setAutoFinishError] = useState("");
-  // Hands-off mode (?auto=1, set by the /start hero flows): auto-run the same chain and show a
-  // takeover progress card instead of dropping beginners into the full editor. "转手动" simply
-  // reveals the editor — the running chain is untouched.
-  const [autoMode, setAutoMode] = useState(false);
-  const [autoModeTriggered, setAutoModeTriggered] = useState(false);
-  // generation-task mode chosen on the studio card (?gen=ai): the free chain stays hands-off,
-  // the AI chain stops at the script gate — money is only spent after one explicit click here
+  // Persisted project mode is the only source of truth for the primary flow.
+  // Query flags must never auto-run downstream work or override this value.
   const [genPref, setGenPref] = useState<"free" | "ai">("free");
   // presenter picked at creation time (?presenter=<id>) — resolved to their sheet for identity locking
   const [presenterParam, setPresenterParam] = useState("");
   useEffect(() => {
     const qs = new URLSearchParams(window.location.search);
-    if (qs.get("auto") === "1") setAutoMode(true);
-    if (qs.get("gen") === "ai") setGenPref("ai");
     const p = qs.get("presenter");
     if (p) setPresenterParam(p);
   }, []);
-  // (the ?auto=1 fresh-start trigger lives below, after the pipeline re-attach check)
   // Judge pass — the quality bar runs in BOTH hands-off chains, not just the pro editor.
   // Four narrow judges tear the voiceover lines apart and their rewrites are applied
   // automatically BEFORE any footage matching / generation money. Beginners never operate
@@ -466,37 +477,21 @@ export default function ScriptPage() {
   // On entry, look for a live or breakpointed run BEFORE any fresh auto start:
   // live → re-attach (the "came back after closing the tab" path);
   // failed → surface the resume/restart choice instead of silently starting over.
-  const [pipelineChecked, setPipelineChecked] = useState(false);
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      try {
-        const d = await fetch(`/api/project/${id}/pipeline`).then((x) => x.json()).catch(() => ({}));
-        if (cancelled) return;
-        const run = d?.run;
-        if (run?.status === "running") {
-          setAutoModeTriggered(true); // suppress the fresh ?auto=1 trigger — we're already attached
-          void attachPipeline();
-        } else if (run?.status === "failed") {
-          setResumableRun({ id: run.id, stage: run.stage, interrupted: run.interrupted });
-        }
-      } finally {
-        if (!cancelled) setPipelineChecked(true);
+      const d = await fetch(`/api/project/${id}/pipeline`).then((x) => x.json()).catch(() => ({}));
+      if (cancelled) return;
+      const run = d?.run;
+      if (run?.status === "running") {
+        void attachPipeline();
+      } else if (run?.status === "failed") {
+        setResumableRun({ id: run.id, stage: run.stage, interrupted: run.interrupted });
       }
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot on mount; attachPipeline is a stable page-level handler
   }, [id]);
-
-  // ?auto=1 fresh start (from the /start hero flows) — only after the re-attach check settled,
-  // so an already-live or breakpointed run is never silently restarted from the top
-  useEffect(() => {
-    if (!autoMode || autoModeTriggered || loading || !currentScript || !pipelineChecked || resumableRun) return;
-    setAutoModeTriggered(true);
-    // the AI path lands on the "script ready" gate instead of auto-running the free chain
-    if (genPref !== "ai") autoFinish();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- autoFinish is a stable page-level handler; triggering once per auto entry
-  }, [autoMode, autoModeTriggered, loading, currentScript, genPref, pipelineChecked, resumableRun]);
 
   // ---- AI film chain (grid → one-call film): the paid path. The free script above is the
   // zero-cost "video plan" gate — money is only spent after this one explicit click, and the
@@ -792,7 +787,7 @@ export default function ScriptPage() {
   };
 
   // slim context strip (shared by loading, empty and normal states); global chrome lives in AppShell
-  const headerBar = <ProjectHeader projectName={projectName || t("defaultProjectName")} />;
+  const headerBar = <ProjectHeader projectName={projectName || t("defaultProjectName")} productionMode={productionMode} />;
 
   // loading: skeleton screen (mimics the script card layout; feels faster than a spinner and reduces perceived wait)
   if (loading) {
@@ -941,7 +936,7 @@ export default function ScriptPage() {
     );
   }
 
-  if ((autoMode && !autoFinishError && (autoFinishing || !autoModeTriggered)) || aiFilming) {
+  if (aiFilming) {
     return (
       <div className="min-h-screen grid-bg legacy-studio-page">
         {headerBar}
@@ -959,12 +954,6 @@ export default function ScriptPage() {
           <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
             {aiFilming ? t("aiFilmHint") : t("autoModeHint")}
           </p>
-          {/* the paid film call keeps running server-side — no "go manual" escape mid-flight */}
-          {!aiFilming && (
-            <Button variant="outline" size="sm" className="mt-8 text-xs" onClick={() => setAutoMode(false)}>
-              {t("autoModeManual")}
-            </Button>
-          )}
         </main>
       </div>
     );
@@ -999,6 +988,27 @@ export default function ScriptPage() {
             </div>
           </div>
         )}
+        {hasDurationMismatch && currentScript && projectMeta && (
+          <div className="mx-auto mb-5 flex max-w-3xl flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+            <div className="flex min-w-0 items-start gap-2.5">
+              <LuTriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <div>
+                <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                  {t("durationMismatchTitle")}
+                </p>
+                <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                  {t("durationMismatchDesc", {
+                    script: currentScript.totalDuration,
+                    target: projectMeta.targetDuration,
+                  })}
+                </p>
+              </div>
+            </div>
+            <Button size="sm" variant="outline" disabled={isGenerating} onClick={() => setRegenConfirmOpen(true)}>
+              {t("durationMismatchAction", { target: projectMeta.targetDuration })}
+            </Button>
+          </div>
+        )}
         {uiMode === "simple" ? (
           /* Beginner view: script text + one big button. No storyboard, no panels. */
           <div className="mx-auto max-w-2xl space-y-4">
@@ -1026,30 +1036,37 @@ export default function ScriptPage() {
               </div>
             )}
             <div className="flex flex-col items-center gap-3">
-              {/* two finishing paths, primary = what was chosen on the studio card; the AI one
-                  is the single paid click (billed to the user's own model platform) */}
-              <div className="grid w-full gap-2 sm:grid-cols-2">
+              {/* Primary navigation advances exactly one stage in the persisted project mode.
+                  One-click completion is explicitly secondary and never starts on page load. */}
+              <Link
+                href={hasDurationMismatch ? "#" : `/project/${id}/assets`}
+                aria-disabled={hasDurationMismatch}
+                onClick={(event) => {
+                  if (hasDurationMismatch) event.preventDefault();
+                }}
+                className="w-full"
+              >
                 <Button
                   size="lg"
-                  variant={genPref === "ai" ? "outline" : "default"}
-                  className={`w-full ${genPref === "ai" ? "" : "brand-gradient text-white"}`}
-                  disabled={autoFinishing || aiFilming || !currentScript}
-                  onClick={autoFinish}
+                  className="w-full brand-gradient text-white"
+                  disabled={autoFinishing || aiFilming || !currentScript || hasDurationMismatch}
                 >
+                  {t(genPref === "ai" ? "nextAiAssets" : "nextLocalAssets")}
+                  <LuArrowRight className="ml-1 h-4 w-4" />
+                </Button>
+              </Link>
+              {genPref === "ai" ? (
+                <Button size="sm" variant="outline" disabled={!currentScript || hasDurationMismatch} onClick={runAiFilm}>
+                  {t("aiFilmShortcut")}
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" disabled={!currentScript || hasDurationMismatch} onClick={autoFinish}>
                   {autoFinishing ? (autoFinishStage || t("autoFinish")) : t("autoFinish")}
                 </Button>
-                <Button
-                  size="lg"
-                  variant={genPref === "ai" ? "default" : "outline"}
-                  className={`w-full ${genPref === "ai" ? "brand-gradient text-white -order-1" : ""}`}
-                  disabled={autoFinishing || aiFilming || !currentScript}
-                  onClick={runAiFilm}
-                >
-                  {t("aiFilmCta")}
-                </Button>
-              </div>
-              <p className="text-center text-xs text-muted-foreground">{t("autoFinishHint")}</p>
-              <p className="text-center text-xs text-muted-foreground/80">{t("aiFilmCostNote")}</p>
+              )}
+              <p className="text-center text-xs text-muted-foreground">
+                {t(genPref === "ai" ? "aiFlowHint" : "localFlowHint")}
+              </p>
               {/* quality reassurance: both paths run the judge panel automatically — Easy mode
                   hides the operation, never the quality features */}
               <p className="text-center text-xs text-muted-foreground/80">{t("autoJudgeNote")}</p>
@@ -1097,9 +1114,11 @@ export default function ScriptPage() {
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="font-medium text-sm">{script.title}</h3>
-                      <Badge variant="secondary" className="text-xs shrink-0 ml-2">
-                        {styleLabelKeys[script.styleType] ? t(styleLabelKeys[script.styleType]) : script.styleType}
-                      </Badge>
+                      {!isLocalProduction && (
+                        <Badge variant="secondary" className="text-xs shrink-0 ml-2">
+                          {styleLabelKeys[script.styleType] ? t(styleLabelKeys[script.styleType]) : script.styleType}
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span>{t("shotCount", { n: script.shots.length })}</span>
@@ -1156,7 +1175,7 @@ export default function ScriptPage() {
                   <Button
                     variant="outline"
                     className="text-sm"
-                    disabled={autoFinishing}
+                    disabled={autoFinishing || hasDurationMismatch}
                     onClick={autoFinish}
                     title={t("autoFinishHint")}
                   >
@@ -1168,13 +1187,19 @@ export default function ScriptPage() {
                     ) : (
                       <>
                         <LuWand className="w-4 h-4 mr-1" />
-                        {t("autoFinish")}
+                        {t(genPref === "ai" ? "localQuickCut" : "autoFinish")}
                       </>
                     )}
                   </Button>
-                  <Link href={`/project/${id}/assets`}>
-                    <Button className="brand-gradient text-white text-sm" disabled={autoFinishing}>
-                      {t("nextStepAssets")}
+                  <Link
+                    href={hasDurationMismatch ? "#" : `/project/${id}/assets`}
+                    aria-disabled={hasDurationMismatch}
+                    onClick={(event) => {
+                      if (hasDurationMismatch) event.preventDefault();
+                    }}
+                  >
+                    <Button className="brand-gradient text-white text-sm" disabled={autoFinishing || hasDurationMismatch}>
+                      {t(isLocalProduction ? "nextLocalAssets" : "nextAiAssets")}
                       <LuArrowRight className="w-4 h-4 ml-1" />
                     </Button>
                   </Link>
@@ -1367,21 +1392,40 @@ export default function ScriptPage() {
                             {/* left-side index and type */}
                             <div className="flex flex-col items-center justify-center w-16 py-4 border-r border-border/50 shrink-0">
                               <span className="text-lg font-bold text-muted-foreground/50">{String(index + 1).padStart(2, "0")}</span>
-                              <Badge className={`${typeInfo.color} border-0 text-[10px] mt-1`}>{t(typeInfo.labelKey)}</Badge>
+                              {!isLocalProduction && (
+                                <Badge className={`${typeInfo.color} border-0 text-[10px] mt-1`}>{t(typeInfo.labelKey)}</Badge>
+                              )}
                               <span className="text-[10px] text-muted-foreground mt-1">{shot.duration}s</span>
                             </div>
                             {/* right-side content */}
                             <div className="flex-1 p-4">
                               <div className="flex items-start justify-between gap-4">
                                 <div className="flex-1">
-                                  <p className="text-sm leading-relaxed mb-2">{shot.description}</p>
+                                  {isLocalProduction ? (
+                                    <div className="mb-2">
+                                      <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{t("localEditAction")}</p>
+                                      <p className="mt-1 text-sm leading-relaxed">{shot.camera}</p>
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm leading-relaxed mb-2">{shot.description}</p>
+                                  )}
                                   <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                                    {!isLocalProduction && (
+                                      <span className="flex items-center gap-1">
+                                        <LuClock className="w-3 h-3" />
+                                        {shot.camera}
+                                      </span>
+                                    )}
                                     <span className="flex items-center gap-1">
-                                      <LuClock className="w-3 h-3" />
-                                      {shot.camera}
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                      {shot.visualSource === "product_image" ? t("visualProductImage") : shot.visualSource === "ai_generate" ? t("visualAiGenerate") : t("visualUserUpload")}
+                                      {isLocalProduction
+                                        ? projectMeta?.productImages?.[0]
+                                          ? t("localSourceProduct")
+                                          : t("localSourcePending")
+                                        : shot.visualSource === "product_image"
+                                          ? t("visualProductImage")
+                                          : shot.visualSource === "ai_generate"
+                                            ? t("visualAiGenerate")
+                                            : t("visualUserUpload")}
                                     </span>
                                     {editingShotId !== shot.shotId && (
                                       <button
@@ -1397,14 +1441,14 @@ export default function ScriptPage() {
                                 </div>
                                 {/* visual preview: product image shots show the uploaded product photo immediately so users see a visual right away; AI shots have no image yet at this stage */}
                                 <div className="w-20 h-14 bg-muted/30 rounded-md shrink-0 overflow-hidden flex items-center justify-center border border-border/30 relative">
-                                  {shot.visualSource === "product_image" && projectMeta?.productImages?.[0] ? (
+                                  {(isLocalProduction || shot.visualSource === "product_image") && projectMeta?.productImages?.[0] ? (
                                     // eslint-disable-next-line @next/next/no-img-element
                                     <img
                                       src={projectMeta.productImages[0]}
                                       alt=""
                                       className="absolute inset-0 w-full h-full object-cover"
                                     />
-                                  ) : shot.visualSource === "product_image" ? (
+                                  ) : (isLocalProduction || shot.visualSource === "product_image") ? (
                                     <span className="text-[10px] text-muted-foreground">{t("productImageShort")}</span>
                                   ) : (
                                     <LuImage className="w-4 h-4 text-muted-foreground/40" />
@@ -1422,14 +1466,16 @@ export default function ScriptPage() {
                                       onChange={(e) => setEditDraft((d) => ({ ...d, voiceover: e.target.value }))}
                                     />
                                   </div>
-                                  <div>
-                                    <label className="text-[10px] text-muted-foreground">{t("editDescriptionLabel")}</label>
-                                    <Textarea
-                                      className="mt-1 min-h-[48px] bg-background/50 text-xs leading-relaxed"
-                                      value={editDraft.description}
-                                      onChange={(e) => setEditDraft((d) => ({ ...d, description: e.target.value }))}
-                                    />
-                                  </div>
+                                  {!isLocalProduction && (
+                                    <div>
+                                      <label className="text-[10px] text-muted-foreground">{t("editDescriptionLabel")}</label>
+                                      <Textarea
+                                        className="mt-1 min-h-[48px] bg-background/50 text-xs leading-relaxed"
+                                        value={editDraft.description}
+                                        onChange={(e) => setEditDraft((d) => ({ ...d, description: e.target.value }))}
+                                      />
+                                    </div>
+                                  )}
                                   <div className="flex items-center justify-end gap-2">
                                     {editStatus === "failed" && <span className="text-[10px] text-red-400 mr-auto">{t("editSaveFailed")}</span>}
                                     <Button variant="outline" size="sm" className="h-7 text-xs" onClick={cancelEditShot}>{tc("cancel")}</Button>
@@ -1439,6 +1485,9 @@ export default function ScriptPage() {
                               ) : (
                                 shot.voiceover && (
                                   <div className="mt-3 p-2.5 bg-muted/30 rounded-md">
+                                    {isLocalProduction && (
+                                      <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{t("localVoiceover")}</p>
+                                    )}
                                     <p className="text-xs text-muted-foreground leading-relaxed">
                                       {shot.voiceover}
                                     </p>

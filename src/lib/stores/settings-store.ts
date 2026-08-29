@@ -15,6 +15,12 @@ import {
   productionProfilePatch,
   type ProductionProfileId,
 } from "@/lib/production-profiles";
+import { atlasVideoFamilyId } from "@/lib/atlas-video-models";
+import {
+  DEFAULT_TARGET_VIDEO_DURATION,
+  normalizeTargetVideoDuration,
+  type TargetVideoDuration,
+} from "@/lib/target-video-duration";
 
 // AI Provider 配置
 export interface ProviderSetting {
@@ -30,6 +36,8 @@ export interface LLMSetting {
   apiKey: string;
   model: string;
   visionModel?: string; // 视觉分析模型
+  fallbackModel?: string; // 文本模型不可用时，仅对当前请求兜底
+  fallbackVisionModel?: string; // 视觉模型不可用时，仅对当前请求兜底
 }
 
 // TTS 配音配置（OpenAI 兼容 / MiniMax 官方 API）
@@ -84,6 +92,8 @@ export interface SettingsState {
   uiMode: "simple" | "pro";
   // 面向创作目标的当前生产方案（原子更新下方 provider-agnostic 参数）
   activeProductionProfile: ProductionProfileId;
+  // Creation-desk default for the complete film. Kept separate from videoParams.duration (one shot).
+  targetVideoDuration: TargetVideoDuration;
   // 界面语言（首次按系统语言自动判定，可手动切换）
   locale: Locale;
   // 语言来源：auto=跟随系统语言自动判定，user=用户手动选过（不再自动覆盖）
@@ -110,6 +120,7 @@ export interface SettingsState {
   setVisualLook: (look: string) => void;
   setUiMode: (mode: "simple" | "pro") => void;
   applyProductionProfile: (profile: ProductionProfileId) => void;
+  setTargetVideoDuration: (duration: TargetVideoDuration) => void;
 }
 
 /** Pollinations 的新端点（旧的 text.pollinations.ai 免 Key 接口已停用） */
@@ -156,6 +167,7 @@ export function migrateSettings(state: SettingsState): SettingsState {
   if (!isProductionProfileId(state?.activeProductionProfile)) {
     state.activeProductionProfile = "balanced";
   }
+  state.targetVideoDuration = normalizeTargetVideoDuration(state?.targetVideoDuration);
   // v6: removed providers must also be removed from persisted browser state.
   const removedConfigured = Boolean(state.providers?.["fal-ai"]?.enabled);
   if (state.providers) {
@@ -178,6 +190,9 @@ export function migrateSettings(state: SettingsState): SettingsState {
   state.defaultAspectRatio ??= state.videoParams?.aspectRatio ?? DEFAULT_VIDEO_PARAMS.aspectRatio;
   state.defaultVideoProvider ??= "";
   state.defaultImageProvider ??= "";
+  if (state.defaultVideoProvider === "atlas-cloud") {
+    state.defaultVideoModel = atlasVideoFamilyId(state.defaultVideoModel) ?? state.defaultVideoModel;
+  }
   state.videoParams = {
     ...(state.videoParams ?? DEFAULT_VIDEO_PARAMS),
     resolution: state.defaultResolution,
@@ -204,6 +219,8 @@ export const useSettingsStore = create<SettingsState>()(
         apiKey: "",
         model: "",
         visionModel: "",
+        fallbackModel: "",
+        fallbackVisionModel: "",
       },
       tts: {
         enabled: false,
@@ -229,6 +246,7 @@ export const useSettingsStore = create<SettingsState>()(
       visualLook: "none",
       uiMode: "simple",
       activeProductionProfile: "balanced",
+      targetVideoDuration: DEFAULT_TARGET_VIDEO_DURATION,
       locale: DEFAULT_LOCALE,
       localeSource: "auto",
 
@@ -272,6 +290,7 @@ export const useSettingsStore = create<SettingsState>()(
       setUiMode: (mode) => set({ uiMode: mode }),
       applyProductionProfile: (profile) =>
         set((state) => productionProfilePatch(profile, state)),
+      setTargetVideoDuration: (duration) => set({ targetVideoDuration: normalizeTargetVideoDuration(duration) }),
     }),
     {
       name: "daihuo-jianshou-settings",
@@ -285,7 +304,10 @@ export const useSettingsStore = create<SettingsState>()(
       // v6：移除当时不可用的 Atlas Cloud / fal.ai 配置。
       // v8：Atlas Cloud 以真实视频适配器恢复，补回空配置并继续清理 fal.ai。
       // v9：持久化视频模型所属平台，防止同名模型在 OpenRouter / Atlas 间被静默改道。
-      version: 9,
+      // v10：Atlas Cloud 默认模型从具体端点迁移为模型系列，端点由任务模式自动选择。
+      // v11：增加请求级文本/视觉备选模型；旧配置保留主模型且备选默认为空。
+      // v12：增加独立的成片目标时长；不再把单镜模型时长当作整片时长。
+      version: 12,
       migrate: (persisted) => migrateSettings(persisted as SettingsState),
     }
   )

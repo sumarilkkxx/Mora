@@ -15,6 +15,11 @@ export const projects = sqliteTable("projects", {
   name: text("name").notNull(),
   status: text("status", { enum: ["draft", "scripting", "assets", "video", "composing", "done"] }).notNull().default("draft"),
   workflowType: text("workflow_type", { enum: ["generate", "edit"] }).notNull().default("generate"),
+  // Primary production path chosen on the creation desk. Cross-mode helper actions must not
+  // silently mutate this field: it owns the project stepper and resume destination.
+  productionMode: text("production_mode", { enum: ["ai", "local"] }).notNull().default("local"),
+  // Creator-selected final runtime. This is not the per-shot generation duration.
+  targetDuration: integer("target_duration").notNull().default(15),
   // Content type: product=commerce (product-centred), topic=topic-based video (no product; one-sentence topic → narration script → auto-matched free footage)
   contentType: text("content_type", { enum: ["product", "topic"] }).default("product"),
   // One-sentence topic entered by the user in topic mode (e.g. "在家如何泡一杯手冲咖啡")
