@@ -5,6 +5,7 @@ import { detectImageMime, imageExtension } from "@/lib/image-format";
 import { validateOrDelete } from "@/lib/media-validate";
 import { MAX_DOWNLOAD_BYTES } from "@/lib/providers/stock-types";
 import { resolveUploadFilePath } from "@/lib/remote-image";
+import { readResponseBuffer, safeFetch } from "@/lib/ssrf-guard";
 
 /**
  * Materialise an AI image result for FFmpeg. Providers may return a data URI,
@@ -26,15 +27,15 @@ export async function persistDerivedImage(projectId: string, source: string, pre
       ? Buffer.from(source.slice(comma + 1), "base64")
       : Buffer.from(decodeURIComponent(source.slice(comma + 1)), "utf8");
   } else if (/^https?:\/\//i.test(source)) {
-    const response = await fetch(source);
+    const response = await safeFetch(source);
     if (!response.ok) throw new Error(`下载 AI 图片失败: ${response.status}`);
-    bytes = Buffer.from(await response.arrayBuffer());
+    bytes = await readResponseBuffer(response, MAX_DOWNLOAD_BYTES, "AI 图片");
     declaredMime = response.headers.get("content-type")?.split(";")[0] || declaredMime;
   } else {
     throw new Error("不支持的 AI 图片来源");
   }
 
-  if (bytes.byteLength > MAX_DOWNLOAD_BYTES) throw new Error("AI 图片体积超过安全上限");
+  if (bytes.byteLength === 0 || bytes.byteLength > MAX_DOWNLOAD_BYTES) throw new Error("AI 图片为空或体积超过安全上限");
   const mime = detectImageMime(bytes) ?? declaredMime;
   const ext = imageExtension(mime);
   const dir = join(getDataDir(), "uploads", projectId, "derived");

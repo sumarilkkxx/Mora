@@ -167,6 +167,15 @@ export default function AssetsPage() {
   // only show the "configure a model" warning when there are still AI shots that need generating (no warning once everything is ready, to avoid contradicting the "all done" state)
   const showModelWarning = aiWorkspace && !loading && needsImageModelWarning(assets, modelTarget !== null);
 
+  // A stale bookmark/task link may still point at the AI-video workspace after
+  // a newer local render became the project's final-video path. Canonicalize the
+  // URL so the local stepper and its current step can never disagree.
+  useEffect(() => {
+    if (!loading && productionMode === "local" && pathname.endsWith("/ai-video")) {
+      router.replace(`/project/${id}/assets`);
+    }
+  }, [id, loading, pathname, productionMode, router]);
+
   // load real data: project info + selected script shots + resolve the provider for the default image model
   useEffect(() => {
     let cancelled = false;

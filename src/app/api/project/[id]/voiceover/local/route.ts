@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { apiError, errText } from "@/lib/api-error";
 import { getDb } from "@/lib/db";
 import { projects } from "@/lib/db/schema";
-import { sanitizeGuidedScriptBeats } from "@/lib/guided-edit";
+import { sanitizeGuidedScriptBeats, sanitizeGuidedSpeechRate } from "@/lib/guided-edit";
 import { DEFAULT_FREE_VOICE, generateSpeechFree } from "@/lib/edge-tts";
 import { getUploadsDir } from "@/lib/paths";
 import { probeMedia } from "@/lib/media-probe";
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const fileName = `${Date.now()}-${crypto.randomUUID()}.mp3`;
     const outputPath = join(directory, fileName);
     const voice = typeof body.voice === "string" && /^[A-Za-z0-9-]{1,80}$/.test(body.voice) ? body.voice : DEFAULT_FREE_VOICE;
-    const multiplier = Math.min(1.5, Math.max(0.75, Number(body.speechRate) || 1));
+    const multiplier = sanitizeGuidedSpeechRate(body.speechRate);
     const ratePercent = Math.round((multiplier - 1) * 100);
     const rate = `${ratePercent >= 0 ? "+" : ""}${ratePercent}%`;
     try {

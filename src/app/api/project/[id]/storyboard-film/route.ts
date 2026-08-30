@@ -31,8 +31,11 @@ import { apiError, errText } from "@/lib/api-error";
 import { contentPolicyError, isContentPolicyRejection } from "@/lib/content-policy-error";
 import type { GenAspectRatio, GenResolution } from "@/lib/gen-params";
 import { resolveAtlasVideoModelId } from "@/lib/atlas-video-models";
+import { validateOrDelete } from "@/lib/media-validate";
+import { readResponseBuffer, safeFetch } from "@/lib/ssrf-guard";
 
 const IMAGE_EXT_RE = /\.(png|jpe?g|webp|bmp|gif)$/i;
+const MAX_FILM_BYTES = 200 * 1024 * 1024;
 
 /** A shot's usable keyframe IMAGE: an image asset's filePath, or a video asset's preserved keyframe */
 function shotKeyframe(asset: { filePath?: string | null; thumbnailPath?: string | null } | undefined): string | undefined {
@@ -382,14 +385,16 @@ async function persistFilm(
   aspectRatio: GenAspectRatio
 ) {
   if (!videoUrl) throw new Error("生成完成但未返回视频地址");
-  const resp = await fetch(videoUrl);
+  const resp = await safeFetch(videoUrl);
   if (!resp.ok) throw new Error(`下载成片失败: ${resp.status}`);
-  const buf = Buffer.from(await resp.arrayBuffer());
+  const buf = await readResponseBuffer(resp, MAX_FILM_BYTES, "成片");
+  if (buf.byteLength === 0) throw new Error("生成成片为空");
   const outputDir = join(getDataDir(), "output", projectId);
   await mkdir(outputDir, { recursive: true });
   const fileName = `film_${Date.now()}.mp4`;
   const outputPath = join(outputDir, fileName);
   await writeFile(outputPath, buf);
+  if (!(await validateOrDelete(outputPath, "video"))) throw new Error("生成成片文件损坏或格式不受支持");
 
   const probe = await probeMedia(outputPath).catch(() => undefined);
   const db = getDb();
@@ -398,6 +403,7 @@ async function persistFilm(
     .values({
       projectId,
       outputPath,
+      videoOrigin: "cloud_ai",
       resolution,
       aspectRatio,
       ...(probe?.duration ? { duration: Math.round(probe.duration * 1000) } : {}),
@@ -407,6 +413,6 @@ async function persistFilm(
       status: "done",
     })
     .returning();
-  await db.update(projects).set({ status: "done", updatedAt: new Date() }).where(eq(projects.id, projectId));
+  await db.update(projects).set({ status: "done", productionMode: "ai", updatedAt: new Date() }).where(eq(projects.id, projectId));
   return { url: `/api/output/${projectId}/${fileName}`, compositionId: comp.id, fileName };
 }

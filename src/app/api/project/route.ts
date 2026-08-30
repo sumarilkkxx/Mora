@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { projects } from "@/lib/db/schema";
-import { desc, isNotNull, isNull } from "drizzle-orm";
-import { productionModeForCreation } from "@/lib/production-mode";
+import { compositions, projects } from "@/lib/db/schema";
+import { and, desc, inArray, isNotNull, isNull, ne } from "drizzle-orm";
+import { productionModeForCreation, productionModeForVideoOrigin } from "@/lib/production-mode";
 import { normalizeTargetVideoDuration } from "@/lib/target-video-duration";
 
 // fetch project list, most recently edited first (the /start "continue" cards rely on this order)
@@ -13,7 +13,26 @@ export async function GET(req: NextRequest) {
     const result = await db.select().from(projects)
       .where(includeTrash ? isNotNull(projects.deletedAt) : isNull(projects.deletedAt))
       .orderBy(desc(includeTrash ? projects.deletedAt : projects.updatedAt));
-    return NextResponse.json(result);
+    if (result.length === 0) return NextResponse.json(result);
+
+    // One batched query (not N+1): the newest non-failed final-video job owns the
+    // current workflow. Image/audio provenance is intentionally absent here.
+    const compositionRows = await db
+      .select({ projectId: compositions.projectId, videoOrigin: compositions.videoOrigin })
+      .from(compositions)
+      .where(and(
+        inArray(compositions.projectId, result.map((project) => project.id)),
+        ne(compositions.status, "failed"),
+      ))
+      .orderBy(desc(compositions.createdAt));
+    const latestOrigin = new Map<string, string>();
+    for (const row of compositionRows) {
+      if (!latestOrigin.has(row.projectId)) latestOrigin.set(row.projectId, row.videoOrigin);
+    }
+    return NextResponse.json(result.map((project) => ({
+      ...project,
+      productionMode: productionModeForVideoOrigin(latestOrigin.get(project.id), project.productionMode),
+    })));
   } catch (error) {
     console.error("获取项目列表失败:", error);
     return NextResponse.json(

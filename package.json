@@ -1,6 +1,6 @@
 {
   "name": "mora",
-  "version": "0.8.95",
+  "version": "0.1.0",
   "description": "MORA — Multimodal Orchestration for Retail Automation",
   "private": true,
   "license": "AGPL-3.0-only",
@@ -20,10 +20,13 @@
     "cli": "node bin/mora.mjs",
     "render:element": "node scripts/render-element.mjs",
     "bundle:standalone": "node scripts/bundle-standalone.mjs",
+    "bundle:desktop": "next build && pnpm bundle:standalone",
     "electron": "electron .",
     "electron:rebuild": "electron-rebuild -f -w better-sqlite3",
-    "pack:dir": "next build && pnpm bundle:standalone && electron-builder --dir",
-    "dist": "next build && pnpm bundle:standalone && electron-builder --publish never"
+    "pack:dir": "pnpm bundle:desktop && electron-builder --dir",
+    "dist": "pnpm bundle:desktop && electron-builder --publish never",
+    "dist:win": "pnpm bundle:desktop && electron-builder --win nsis --x64 --publish never",
+    "dist:mac": "pnpm bundle:desktop && electron-builder --mac dmg --publish never"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
@@ -72,6 +75,7 @@
   "build": {
     "appId": "com.mora.app",
     "productName": "Mora",
+    "buildVersion": "0.1.0.0",
     "npmRebuild": false,
     "compression": "maximum",
     "directories": {
@@ -93,7 +97,9 @@
     "mac": {
       "target": "dmg",
       "category": "public.app-category.video",
-      "identity": null,
+      "bundleShortVersion": "0.1.0",
+      "bundleVersion": "0.1.0",
+      "artifactName": "${productName}-v${version}.0-mac-${arch}.${ext}",
       "icon": "electron/icon.png"
     },
     "dmg": {
@@ -101,6 +107,7 @@
     },
     "win": {
       "target": "nsis",
+      "artifactName": "${productName}-Setup-v${version}.0-win-${arch}.${ext}",
       "icon": "electron/icon.png"
     },
     "linux": {

@@ -2,7 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { apiError, errText } from "@/lib/api-error";
 import { getDb } from "@/lib/db";
-import { compositions, mediaEdits, mediaSources } from "@/lib/db/schema";
+import { compositions, mediaEdits, mediaSources, projects } from "@/lib/db/schema";
 import { startTranscriptRender } from "@/lib/transcript-render-runner";
 import {
   keepRangesForPlan,
@@ -15,6 +15,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const SAFE_ID = /^[a-zA-Z0-9-]+$/;
+
+class TranscriptRenderStartError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
 
 function aspectRatio(width: number, height: number): "9:16" | "16:9" | "1:1" {
   const ratio = width / Math.max(1, height);
@@ -38,32 +44,43 @@ export async function POST(
     const editedDuration = outputDuration(keepRanges);
     if (editedDuration < 0.5) return apiError(req, "保留内容不足 0.5 秒", "Less than 0.5 seconds of content remains", 422);
 
-    const [latest] = await db.select({ revision: mediaEdits.revision }).from(mediaEdits)
-      .where(eq(mediaEdits.sourceId, source.id)).orderBy(desc(mediaEdits.revision)).limit(1);
-    const revision = (latest?.revision ?? 0) + 1;
-    const [composition] = await db.insert(compositions).values({
-      projectId: id,
-      resolution: Math.min(source.width, source.height) >= 1000 ? "1080p" : "720p",
-      aspectRatio: aspectRatio(source.width, source.height),
-      duration: Math.round(editedDuration * 1000),
-      ttsEnabled: false,
-      aigcBadge: false,
-      label: `Text edit · R${revision}`,
-      status: "composing",
-    }).returning();
-    const [edit] = await db.insert(mediaEdits).values({
-      projectId: id,
-      sourceId: source.id,
-      revision,
-      plan,
-      keepRanges,
-      compositionId: composition.id,
-      status: "rendering",
-    }).returning();
+    const { revision, composition, edit } = db.transaction((tx) => {
+      const active = tx.select({ id: mediaEdits.id }).from(mediaEdits)
+        .where(and(eq(mediaEdits.sourceId, source.id), eq(mediaEdits.status, "rendering"))).limit(1).get();
+      if (active) throw new TranscriptRenderStartError("当前素材正在渲染", 409);
+      const latest = tx.select({ revision: mediaEdits.revision }).from(mediaEdits)
+        .where(eq(mediaEdits.sourceId, source.id)).orderBy(desc(mediaEdits.revision)).limit(1).get();
+      const revision = (latest?.revision ?? 0) + 1;
+      const composition = tx.insert(compositions).values({
+        projectId: id,
+        videoOrigin: "local_render",
+        resolution: Math.min(source.width, source.height) >= 1000 ? "1080p" : "720p",
+        aspectRatio: aspectRatio(source.width, source.height),
+        duration: Math.round(editedDuration * 1000),
+        ttsEnabled: false,
+        aigcBadge: false,
+        label: `Text edit · R${revision}`,
+        status: "composing",
+      }).returning().get();
+      const edit = tx.insert(mediaEdits).values({
+        projectId: id,
+        sourceId: source.id,
+        revision,
+        plan,
+        keepRanges,
+        compositionId: composition.id,
+        status: "rendering",
+      }).returning().get();
+      tx.update(projects).set({ status: "composing", productionMode: "local", updatedAt: new Date() }).where(eq(projects.id, id)).run();
+      return { revision, composition, edit };
+    });
 
     startTranscriptRender({ editId: edit.id, compositionId: composition.id, revision, source, transcript, plan, keepRanges });
     return NextResponse.json({ edit, compositionId: composition.id, status: "rendering" }, { status: 202 });
   } catch (error) {
+    if (error instanceof TranscriptRenderStartError) {
+      return apiError(req, error.message, error.message, error.status);
+    }
     console.error("Transcript edit start failed:", error);
     return NextResponse.json({ error: error instanceof Error ? error.message : errText(req, "启动文字剪辑失败", "Failed to start text edit") }, { status: 500 });
   }

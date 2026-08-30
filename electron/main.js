@@ -3,7 +3,7 @@
 //  - Data is written to app.getPath('userData')/data (writable), injected into the server via APP_DATA_DIR (standalone cwd is read-only)
 //  - ffmpeg/ffprobe use bundled binaries, injected via FFMPEG_PATH/FFPROBE_PATH (no ffmpeg install required on the user's machine)
 //  - Acquire a free port (not hardcoded to 3000), poll HTTP until ready before loadURL, kill child process on exit
-const { app, BrowserWindow, dialog } = require("electron");
+const { app, BrowserWindow, dialog, shell } = require("electron");
 const { fork } = require("child_process");
 const http = require("http");
 const net = require("net");
@@ -15,6 +15,17 @@ let mainWindow = null;
 let childExited = false; // set once the server child errors/exits, so waitReady can fail fast instead of polling a dead port
 let childExitInfo = "";
 let logFilePath = "";
+let serverUrl = "";
+
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) app.quit();
+
+app.on("second-instance", () => {
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+});
 
 /** Prepare the diagnostics log file (truncated once per launch). Startup failures on a packaged GUI app are otherwise invisible — there is no console — so everything funnels here. */
 function initLog() {
@@ -176,11 +187,61 @@ function killServer() {
   }
 }
 
+function openExternalHttp(target) {
+  try {
+    const parsed = new URL(target);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") void shell.openExternal(parsed.href);
+  } catch {
+    log(`拒绝打开非法外部链接: ${target}`);
+  }
+}
+
+function createMainWindow(url) {
+  mainWindow = new BrowserWindow({
+    width: 1280,
+    height: 860,
+    title: "Mora",
+    backgroundColor: "#0a0a0a",
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  // Keep arbitrary web pages outside the privileged application window. Product/provider links
+  // open in the user's default browser, while same-origin Next navigations stay inside Mora.
+  mainWindow.webContents.setWindowOpenHandler(({ url: target }) => {
+    if (new URL(target).origin === new URL(url).origin) void mainWindow?.loadURL(target);
+    else openExternalHttp(target);
+    return { action: "deny" };
+  });
+  mainWindow.webContents.on("will-navigate", (event, target) => {
+    if (new URL(target).origin === new URL(url).origin) return;
+    event.preventDefault();
+    openExternalHttp(target);
+  });
+  // Surface a failed page load (e.g. the server died right after readiness) rather than leaving a blank window.
+  mainWindow.webContents.on("did-fail-load", (_e, errorCode, errorDescription, validatedURL) => {
+    if (errorCode === -3) return; // ERR_ABORTED: benign (e.g. redirect/navigation), ignore
+    log(`页面加载失败 code=${errorCode} desc=${errorDescription} url=${validatedURL}`);
+    dialog.showErrorBox(
+      "Mora 页面加载失败 / Page load failed",
+      `${errorDescription} (${errorCode})\n${validatedURL}\n\n日志 / Log: ${logFilePath || "(不可用)"}`
+    );
+  });
+  mainWindow.loadURL(url);
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+  });
+}
+
 app.whenReady().then(async () => {
+  if (!hasSingleInstanceLock) return;
   initLog();
   let url;
   try {
     url = await startServer();
+    serverUrl = url;
   } catch (e) {
     const msg = (e && (e.stack || e.message)) || String(e);
     log("启动本地服务失败: " + msg);
@@ -217,31 +278,20 @@ app.whenReady().then(async () => {
     return;
   }
 
-  mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 860,
-    title: "Mora",
-    backgroundColor: "#0a0a0a",
-    webPreferences: { contextIsolation: true },
-  });
-  // Surface a failed page load (e.g. the server died right after readiness) rather than leaving a blank window.
-  mainWindow.webContents.on("did-fail-load", (_e, errorCode, errorDescription, validatedURL) => {
-    if (errorCode === -3) return; // ERR_ABORTED: benign (e.g. redirect/navigation), ignore
-    log(`页面加载失败 code=${errorCode} desc=${errorDescription} url=${validatedURL}`);
-    dialog.showErrorBox(
-      "Mora 页面加载失败 / Page load failed",
-      `${errorDescription} (${errorCode})\n${validatedURL}\n\n日志 / Log: ${logFilePath || "(不可用)"}`
-    );
-  });
-  mainWindow.loadURL(url);
-  mainWindow.on("closed", () => {
-    mainWindow = null;
-  });
+  createMainWindow(url);
+});
+
+app.on("activate", () => {
+  // macOS convention: closing the last window keeps the application alive; clicking the Dock
+  // icon must recreate the window. The local server remains alive until the app actually quits.
+  if (BrowserWindow.getAllWindows().length === 0 && serverUrl) createMainWindow(serverUrl);
 });
 
 app.on("window-all-closed", () => {
-  killServer();
-  if (process.platform !== "darwin") app.quit();
+  if (process.platform !== "darwin") {
+    killServer();
+    app.quit();
+  }
 });
 
 app.on("before-quit", killServer);

@@ -22,20 +22,11 @@
 *.tsbuildinfo
 next-env.d.ts
 
-# Documentation and documentation assets
-/docs/
-/docs/**
+# Documentation website and README assets are source-controlled.
 /TUTORIAL.md
 /TUTORIAL.en.md
 
-# Unit, integration and end-to-end tests
-/e2e/
-**/__tests__/
-**/__mocks__/
-**/*.test.*
-**/*.spec.*
-/vitest.config.*
-/playwright.config.*
+# Generated test output
 /coverage/
 /.nyc_output/
 /test-results/

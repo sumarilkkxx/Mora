@@ -12,6 +12,7 @@ import { probeMedia } from "@/lib/media-probe";
 import { validateOrDelete } from "@/lib/media-validate";
 import { fileNameOf, getUploadsDir } from "@/lib/paths";
 import { extractFirstFrame, THUMB_SUFFIX } from "@/lib/video-composer/frame-extract";
+import { isTranscriptRenderActive } from "@/lib/transcript-render-runner";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,6 +56,33 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       await Promise.all(staleIds.map((sourceId) => db.update(mediaSources).set({ status: "failed", error: errText(req, "转写已中断，可直接重新开始", "Transcription was interrupted; you can restart it"), updatedAt: new Date() }).where(eq(mediaSources.id, sourceId))));
     }
     const sources = sourceRows.map((source) => staleIds.includes(source.id) ? { ...source, status: "failed" as const, error: errText(req, "转写已中断，可直接重新开始", "Transcription was interrupted; you can restart it") } : source);
+    const interruptedAt = Date.now() - 10_000;
+    const abandonedEdits = edits.filter((edit) =>
+      edit.status === "rendering"
+      && !isTranscriptRenderActive(edit.id)
+      && Boolean(edit.updatedAt && edit.updatedAt.getTime() < interruptedAt)
+    );
+    const abandonedEditIds = new Set(abandonedEdits.map((edit) => edit.id));
+    const abandonedCompositionIds = new Set(abandonedEdits.flatMap((edit) => edit.compositionId ? [edit.compositionId] : []));
+    const interruptedRenderMessage = errText(req, "渲染已中断，可直接重新开始", "Rendering was interrupted; you can restart it");
+    if (abandonedEdits.length) {
+      db.transaction((tx) => {
+        for (const edit of abandonedEdits) {
+          tx.update(mediaEdits).set({ status: "failed", error: interruptedRenderMessage, updatedAt: new Date() })
+            .where(eq(mediaEdits.id, edit.id)).run();
+          if (edit.compositionId) {
+            tx.update(compositions).set({ status: "failed" }).where(eq(compositions.id, edit.compositionId)).run();
+          }
+        }
+        const hasAnotherActiveComposition = projectCompositions.some((composition) =>
+          (composition.status === "composing" || composition.status === "pending")
+          && !abandonedCompositionIds.has(composition.id)
+        );
+        if (!hasAnotherActiveComposition) {
+          tx.update(projects).set({ status: "video", updatedAt: new Date() }).where(eq(projects.id, id)).run();
+        }
+      });
+    }
     // Older uploads predate source posters. Backfill a small visible batch on
     // read so existing projects gain covers without requiring another upload.
     await Promise.all(sources.slice(0, 4).map(async (source) => {
@@ -72,10 +100,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         edits: edits
           .filter((edit) => edit.sourceId === source.id)
           .map((edit) => {
-            const composition = edit.compositionId ? compositionById.get(edit.compositionId) ?? null : null;
+            const abandoned = abandonedEditIds.has(edit.id);
+            const rawComposition = edit.compositionId ? compositionById.get(edit.compositionId) ?? null : null;
+            const composition = rawComposition && abandoned ? { ...rawComposition, status: "failed" as const } : rawComposition;
             const outputName = composition?.outputPath ? fileNameOf(composition.outputPath) : null;
             return {
               ...edit,
+              ...(abandoned && { status: "failed" as const, error: interruptedRenderMessage }),
               composition: composition ? {
                 ...composition,
                 outputUrl: outputName ? `/api/output/${id}/${outputName}` : null,

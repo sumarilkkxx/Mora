@@ -15,8 +15,9 @@ export const projects = sqliteTable("projects", {
   name: text("name").notNull(),
   status: text("status", { enum: ["draft", "scripting", "assets", "video", "composing", "done"] }).notNull().default("draft"),
   workflowType: text("workflow_type", { enum: ["generate", "edit"] }).notNull().default("generate"),
-  // Primary production path chosen on the creation desk. Cross-mode helper actions must not
-  // silently mutate this field: it owns the project stepper and resume destination.
+  // Initial choice before a render exists; once a final-video job starts, the newest
+  // non-failed composition's videoOrigin becomes the authoritative workflow mode.
+  // Asset provenance (AI image, upload, stock, TTS) must never decide this field.
   productionMode: text("production_mode", { enum: ["ai", "local"] }).notNull().default("local"),
   // Creator-selected final runtime. This is not the per-shot generation duration.
   targetDuration: integer("target_duration").notNull().default(15),
@@ -169,6 +170,9 @@ export const compositions = sqliteTable("compositions", {
   aigcBadge: integer("aigc_badge", { mode: "boolean" }),
   // Human-readable variant label (variant-matrix batch renders, e.g. "疑问钩子×卡拉OK×动感")
   label: text("label"),
+  // How the final video itself is produced. This is deliberately independent from
+  // image/audio provenance: a local FFmpeg render made from AI images is still local_render.
+  videoOrigin: text("video_origin", { enum: ["local_render", "cloud_ai"] }).notNull().default("local_render"),
   status: text("status", { enum: ["pending", "composing", "done", "failed"] }).notNull().default("pending"),
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });

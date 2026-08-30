@@ -15,6 +15,9 @@ import { probeMedia } from "@/lib/media-probe";
 import { apiError, errText } from "@/lib/api-error";
 import { detectImageMime, imageExtension } from "@/lib/image-format";
 import { contentPolicyError, isContentPolicyRejection } from "@/lib/content-policy-error";
+import { validateOrDelete } from "@/lib/media-validate";
+import { MAX_DOWNLOAD_BYTES } from "@/lib/providers/stock-types";
+import { readResponseBuffer, safeFetch } from "@/lib/ssrf-guard";
 
 const execFileAsync = promisify(execFile);
 
@@ -33,17 +36,19 @@ async function persistGridImage(projectId: string, sourceUrl: string): Promise<{
       : Buffer.from(decodeURIComponent(sourceUrl.slice(comma + 1)), "utf-8");
     declaredMime = meta.split(";")[0] || "image/png";
   } else if (/^https?:\/\//.test(sourceUrl)) {
-    const resp = await fetch(sourceUrl);
+    const resp = await safeFetch(sourceUrl);
     if (!resp.ok) throw new Error(`下载九宫格图失败: ${resp.status}`);
-    buf = Buffer.from(await resp.arrayBuffer());
+    buf = await readResponseBuffer(resp, MAX_DOWNLOAD_BYTES, "九宫格图");
     declaredMime = resp.headers.get("content-type")?.split(";")[0] || "image/png";
   } else {
     throw new Error("不支持的图片来源");
   }
+  if (buf.byteLength === 0 || buf.byteLength > MAX_DOWNLOAD_BYTES) throw new Error("九宫格图为空或超过安全上限");
   const ext = imageExtension(detectImageMime(buf) ?? declaredMime);
   const fileName = `storyboard-grid-${Date.now()}.${ext}`;
   const absPath = join(dir, fileName);
   await writeFile(absPath, buf);
+  if (!(await validateOrDelete(absPath, "image"))) throw new Error("九宫格图文件损坏或格式不受支持");
   return { absPath, publicPath: `/api/files/${projectId}/${fileName}` };
 }
 

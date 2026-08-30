@@ -1,4 +1,5 @@
 export type ProductionMode = "ai" | "local";
+export type VideoOrigin = "local_render" | "cloud_ai";
 
 export function normalizeProductionMode(value: unknown): ProductionMode {
   return value === "ai" ? "ai" : "local";
@@ -6,6 +7,20 @@ export function normalizeProductionMode(value: unknown): ProductionMode {
 
 export function productionModeForCreation(value: unknown): ProductionMode {
   return normalizeProductionMode(value);
+}
+
+/**
+ * Final-video provenance overrides the creation-time preference. AI-generated
+ * images, voiceovers and copy never call this function and therefore cannot
+ * accidentally turn a locally rendered project into an AI-video workflow.
+ */
+export function productionModeForVideoOrigin(
+  videoOrigin: unknown,
+  fallback: unknown = "local",
+): ProductionMode {
+  if (videoOrigin === "cloud_ai") return "ai";
+  if (videoOrigin === "local_render") return "local";
+  return normalizeProductionMode(fallback);
 }
 
 /** Newly generated scripts always stop at review; project mode lives in the DB. */

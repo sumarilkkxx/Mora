@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { rm } from "fs/promises";
 import { join } from "path";
 import { getDb } from "@/lib/db";
-import { projects } from "@/lib/db/schema";
+import { compositions, projects } from "@/lib/db/schema";
 import { getUploadsDir, getOutputDir } from "@/lib/paths";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import { apiError, errText } from "@/lib/api-error";
 import { normalizeTargetVideoDuration } from "@/lib/target-video-duration";
+import { productionModeForVideoOrigin } from "@/lib/production-mode";
 
 // Project ids are UUIDs; validate before using one in a filesystem path (guards the rm below against traversal)
 const SAFE_ID = /^[a-zA-Z0-9-]+$/;
@@ -60,7 +61,17 @@ export async function GET(
       return apiError(req, "项目不存在", "Project not found", 404);
     }
 
-    return NextResponse.json(result[0]);
+    const [latestComposition] = await db
+      .select({ videoOrigin: compositions.videoOrigin })
+      .from(compositions)
+      .where(and(eq(compositions.projectId, id), ne(compositions.status, "failed")))
+      .orderBy(desc(compositions.createdAt))
+      .limit(1);
+
+    return NextResponse.json({
+      ...result[0],
+      productionMode: productionModeForVideoOrigin(latestComposition?.videoOrigin, result[0].productionMode),
+    });
   } catch (error) {
     console.error("Failed to fetch project:", error);
     return NextResponse.json(

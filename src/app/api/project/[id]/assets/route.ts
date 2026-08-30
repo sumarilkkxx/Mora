@@ -9,6 +9,7 @@ import { validateOrDelete } from "@/lib/media-validate";
 import { MAX_DOWNLOAD_BYTES } from "@/lib/providers/stock-types";
 import { extractLastFrame, LAST_FRAME_SUFFIX } from "@/lib/video-composer/frame-extract";
 import { detectImageMime, imageExtension } from "@/lib/image-format";
+import { readResponseBuffer, safeFetch } from "@/lib/ssrf-guard";
 
 /** Decode-level check after writing to disk: AI providers' expiring links often answer with an
  * error page or a truncated body — those must be stopped before the DB row exists, or the
@@ -69,10 +70,9 @@ async function persistSource(projectId: string, sourceUrl: string, shotId: numbe
 
   // 远程 URL：下载到本地，避免合成时依赖外链（且 AI 素材外链常有有效期）
   if (/^https?:\/\//.test(sourceUrl)) {
-    const resp = await fetch(sourceUrl);
+    const resp = await safeFetch(sourceUrl);
     if (!resp.ok) throw new Error(`下载素材失败: ${resp.status}`);
-    const buf = Buffer.from(await resp.arrayBuffer());
-    if (buf.byteLength > MAX_DOWNLOAD_BYTES) throw new Error(`素材体积 ${buf.byteLength} 超过上限 ${MAX_DOWNLOAD_BYTES}`);
+    const buf = await readResponseBuffer(resp, MAX_DOWNLOAD_BYTES, "素材");
     const ct = resp.headers.get("content-type") || "";
     const detectedMime = detectImageMime(buf);
     const declaredExt = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : ct.includes("mp4") ? "mp4" : "jpg";
@@ -137,11 +137,10 @@ export async function POST(
         ? body.thumbnailPath
         : undefined;
 
-    // 按 (projectId, shotId) upsert：先删旧再插
-    await db.delete(assets).where(and(eq(assets.projectId, id), eq(assets.shotId, shotId)));
-    const rows = await db
-      .insert(assets)
-      .values({
+    // Keep replacement atomic: if the insert fails, the previous usable asset remains visible.
+    const rows = db.transaction((tx) => {
+      tx.delete(assets).where(and(eq(assets.projectId, id), eq(assets.shotId, shotId))).run();
+      return tx.insert(assets).values({
         projectId: id,
         shotId,
         type: assetType,
@@ -151,8 +150,8 @@ export async function POST(
         model: body.model,
         prompt: body.prompt,
         status: "done",
-      })
-      .returning();
+      }).returning().all();
+    });
 
     return NextResponse.json({ ...rows[0], ...(lastFrameUrl && { lastFrameUrl }) });
   } catch (error) {

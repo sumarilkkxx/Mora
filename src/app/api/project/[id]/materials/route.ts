@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDataDir } from "@/lib/paths";
-import { writeFile, mkdir, readdir } from "fs/promises";
+import { writeFile, mkdir, readdir, unlink } from "fs/promises";
 import { join } from "path";
 import { classifyMaterial } from "@/lib/providers/local-stock";
 import { apiError } from "@/lib/api-error";
+import { validateOrDelete } from "@/lib/media-validate";
 
 const SAFE_ID = /^[a-zA-Z0-9\-]+$/;
 /** Single-file size limit: 80 MB (videos can be large; matches the asset-download limit) */
@@ -62,20 +63,33 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   await mkdir(dir, { recursive: true });
 
   const saved: { name: string; mediaType: string; url: string }[] = [];
+  const savedPaths: string[] = [];
+  const cleanRequestFiles = () => Promise.all(savedPaths.map((path) => unlink(path).catch(() => {})));
   for (const file of files) {
     if (file.size > MAX_FILE_SIZE) {
+      await cleanRequestFiles();
       return apiError(req, `文件 ${file.name} 超过 80MB 大小限制`, `File ${file.name} exceeds the 80MB size limit`, 400);
     }
     if (!ALLOWED_MIME.has(file.type)) {
+      await cleanRequestFiles();
       return apiError(req, `文件 ${file.name} 类型不支持，仅允许 mp4/webm/mov 视频或 jpg/png/webp 图片`, `File ${file.name} has an unsupported type; only mp4/webm/mov videos or jpg/png/webp images are allowed`, 400);
     }
     const rawName = file.name.replace(/[/\\]/g, ""); // strip path separators
     const mediaType = classifyMaterial(rawName);
-    if (!mediaType) return apiError(req, `文件 ${file.name} 扩展名不支持`, `File ${file.name} has an unsupported extension`, 400);
+    if (!mediaType) {
+      await cleanRequestFiles();
+      return apiError(req, `文件 ${file.name} 扩展名不支持`, `File ${file.name} has an unsupported extension`, 400);
+    }
 
     const ext = rawName.split(".").pop()!.toLowerCase();
     const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    await writeFile(join(dir, fileName), Buffer.from(await file.arrayBuffer()));
+    const filePath = join(dir, fileName);
+    await writeFile(filePath, Buffer.from(await file.arrayBuffer()));
+    if (!(await validateOrDelete(filePath, mediaType))) {
+      await cleanRequestFiles();
+      return apiError(req, `文件 ${file.name} 无法解码或内容已损坏`, `File ${file.name} cannot be decoded or is corrupt`, 422);
+    }
+    savedPaths.push(filePath);
     saved.push({ name: fileName, mediaType, url: `/api/files/${id}/materials/${fileName}` });
   }
   return NextResponse.json({ materials: saved });

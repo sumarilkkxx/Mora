@@ -3,6 +3,7 @@ import { getDataDir } from "@/lib/paths";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { apiError, errText } from "@/lib/api-error";
+import { validateOrDelete } from "@/lib/media-validate";
 
 const ALLOWED = ["audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav", "audio/aac", "audio/mp4", "audio/x-m4a"];
 
@@ -31,8 +32,12 @@ export async function POST(
 
     const dir = join(getDataDir(), "uploads", id);
     await mkdir(dir, { recursive: true });
-    const fileName = `bgm.${ext}`;
-    await writeFile(join(dir, fileName), Buffer.from(await file.arrayBuffer()));
+    const fileName = `bgm-${Date.now()}.${ext}`;
+    const filePath = join(dir, fileName);
+    await writeFile(filePath, Buffer.from(await file.arrayBuffer()));
+    if (!(await validateOrDelete(filePath, "audio"))) {
+      return apiError(req, "音频无法解码或文件已损坏", "The audio cannot be decoded or is corrupt", 422);
+    }
 
     return NextResponse.json({ success: true, path: `/api/files/${id}/${fileName}`, name: file.name });
   } catch (error) {

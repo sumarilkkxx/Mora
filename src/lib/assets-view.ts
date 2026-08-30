@@ -45,19 +45,17 @@ export interface SavedAssetRow {
   thumbnailPath?: string | null;
 }
 
-/** Index ready persisted assets using the same production-mode policy in every stage. */
+/**
+ * Index every ready persisted asset, regardless of how it was created. Asset
+ * provenance and final-video rendering are separate concerns: AI-generated
+ * images and stock footage are valid inputs to a local FFmpeg composition.
+ */
 export function readyAssetsByShot(
   savedAssets: SavedAssetRow[],
-  productionMode: "ai" | "local" = "ai",
 ): Map<number, SavedAssetRow> {
   const savedByShot = new Map<number, SavedAssetRow>();
   for (const asset of savedAssets) {
-    const allowedInLocal = asset.type === "product_image" || asset.type === "user_upload";
-    if (
-      asset?.filePath &&
-      asset.status === "done" &&
-      (productionMode !== "local" || allowedInLocal)
-    ) {
+    if (asset?.filePath && asset.status === "done") {
       savedByShot.set(asset.shotId, asset);
     }
   }
@@ -77,8 +75,9 @@ export function buildAssetRows(
   productImages: string[],
   productionMode: "ai" | "local" = "ai",
 ): AssetItem[] {
-  // Local projects must never inherit AI/stock rows from an auxiliary workspace.
-  const savedByShot = readyAssetsByShot(savedAssets, productionMode);
+  // Saved assets win regardless of origin; productionMode only controls the
+  // fallback for legacy AI-only shots that do not have a saved asset yet.
+  const savedByShot = readyAssetsByShot(savedAssets);
   const firstProduct = productImages[0];
 
   return shots.map((s) => {

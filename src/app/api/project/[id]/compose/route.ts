@@ -23,7 +23,6 @@ import { fetchFreeBgm, moodQueryForCategory, moodQueryForMood } from "@/lib/free
 import type { Shot, ScriptCharacter } from "@/lib/db/schema";
 import { assignCharacterVoices } from "@/lib/character-voices";
 import { readyAssetsByShot } from "@/lib/assets-view";
-import { normalizeProductionMode } from "@/lib/production-mode";
 import { desc, and } from "drizzle-orm";
 
 // 获取该项目最新一条合成记录（导出页读取真实成片）
@@ -148,7 +147,7 @@ export async function POST(
 
     // 已生成的素材（assets 表，按 shotId 索引）
     const assetRows = await db.select().from(assetsTable).where(eq(assetsTable.projectId, id));
-    const readyAssets = readyAssetsByShot(assetRows, normalizeProductionMode(project.productionMode));
+    const readyAssets = readyAssetsByShot(assetRows);
     const assetByShot = new Map(
       [...readyAssets].flatMap(([shotId, asset]) => asset.filePath ? [[shotId, asset.filePath] as const] : []),
     );
@@ -295,9 +294,9 @@ export async function POST(
     // 立即建合成记录(composing)并返回；重活(TTS+FFmpeg)后台异步跑，前端轮询 GET 获取结果
     const [comp] = await db
       .insert(compositions)
-      .values({ projectId: id, resolution: outputCfg.resolution, aspectRatio: outputCfg.aspectRatio, aigcBadge, ...(label && { label }), status: "composing" })
+      .values({ projectId: id, resolution: outputCfg.resolution, aspectRatio: outputCfg.aspectRatio, aigcBadge, ...(label && { label }), videoOrigin: "local_render", status: "composing" })
       .returning();
-    await db.update(projects).set({ status: "composing", updatedAt: new Date() }).where(eq(projects.id, id));
+    await db.update(projects).set({ status: "composing", productionMode: "local", updatedAt: new Date() }).where(eq(projects.id, id));
 
     // 后台异步合成（不阻塞请求，避免长视频超时）
     void (async () => {

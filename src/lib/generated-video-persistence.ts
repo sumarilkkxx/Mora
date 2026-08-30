@@ -7,6 +7,7 @@ import { getDataDir } from "@/lib/paths";
 import { probeMedia } from "@/lib/media-probe";
 import { validateOrDelete } from "@/lib/media-validate";
 import { extractLastFrame } from "@/lib/video-composer/frame-extract";
+import { readResponseBuffer, safeFetch } from "@/lib/ssrf-guard";
 
 const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
 
@@ -19,11 +20,9 @@ function downloadHeaders(provider: string, url: string, apiKey: string): Headers
 }
 
 async function downloadVideo(url: string, outputPath: string, provider: string, apiKey: string) {
-  const response = await fetch(url, { headers: downloadHeaders(provider, url, apiKey) });
+  const response = await safeFetch(url, { headers: downloadHeaders(provider, url, apiKey) });
   if (!response.ok) throw new Error(`下载云端视频失败: ${response.status} ${response.statusText}`);
-  const contentLength = Number(response.headers.get("content-length") || 0);
-  if (contentLength > MAX_VIDEO_BYTES) throw new Error("云端视频超过 200MB 下载上限");
-  const buffer = Buffer.from(await response.arrayBuffer());
+  const buffer = await readResponseBuffer(response, MAX_VIDEO_BYTES, "云端视频");
   if (buffer.length === 0 || buffer.length > MAX_VIDEO_BYTES) throw new Error("云端视频为空或超过 200MB 下载上限");
   await writeFile(outputPath, buffer);
   if (!(await validateOrDelete(outputPath, "video"))) throw new Error("云端返回的内容不是有效视频");
@@ -47,17 +46,19 @@ export async function persistRecoveredShotVideo(input: {
   await extractLastFrame(outputPath).catch(() => undefined);
 
   const db = getDb();
-  await db.delete(assets).where(and(eq(assets.projectId, input.projectId), eq(assets.shotId, input.shotId)));
-  const [row] = await db.insert(assets).values({
-    projectId: input.projectId,
-    shotId: input.shotId,
-    type: "ai_generated",
-    filePath,
-    provider: input.provider,
-    model: input.model,
-    prompt: input.prompt ?? undefined,
-    status: "done",
-  }).returning();
+  const row = db.transaction((tx) => {
+    tx.delete(assets).where(and(eq(assets.projectId, input.projectId), eq(assets.shotId, input.shotId))).run();
+    return tx.insert(assets).values({
+      projectId: input.projectId,
+      shotId: input.shotId,
+      type: "ai_generated",
+      filePath,
+      provider: input.provider,
+      model: input.model,
+      prompt: input.prompt ?? undefined,
+      status: "done",
+    }).returning().get();
+  });
   return { kind: "asset" as const, url: filePath, assetId: row.id };
 }
 
@@ -82,12 +83,13 @@ export async function persistRecoveredComposition(input: {
     projectId: input.projectId,
     outputPath,
     status: "done",
+    videoOrigin: "cloud_ai",
     resolution,
     aspectRatio: portrait ? "9:16" : "16:9",
     ...(probe?.duration ? { duration: Math.round(probe.duration * 1000) } : {}),
     aigcBadge: false,
     label: `云端生成 · ${input.model.split("/").pop() ?? input.model}`.slice(0, 60),
   }).returning();
-  await db.update(projects).set({ status: "done", updatedAt: new Date() }).where(eq(projects.id, input.projectId));
+  await db.update(projects).set({ status: "done", productionMode: "ai", updatedAt: new Date() }).where(eq(projects.id, input.projectId));
   return { kind: "composition" as const, url: `/api/output/${input.projectId}/${fileName}`, compositionId: row.id };
 }

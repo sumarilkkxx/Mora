@@ -7,6 +7,8 @@ import { eq } from "drizzle-orm";
 import { getDataDir } from "@/lib/paths";
 import { probeMedia } from "@/lib/media-probe";
 import { apiError, errText } from "@/lib/api-error";
+import { validateOrDelete } from "@/lib/media-validate";
+import { readResponseBuffer, safeFetch } from "@/lib/ssrf-guard";
 
 const SAFE_ID = /^[a-zA-Z0-9\-]+$/;
 /** Generated clips are short (≤15s); 200MB leaves headroom for 1080p high-bitrate output */
@@ -33,11 +35,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const proj = await db.select({ id: projects.id }).from(projects).where(eq(projects.id, id));
     if (proj.length === 0) return apiError(req, "项目不存在", "Project not found", 404);
 
-    const res = await fetch(videoUrl);
+    const res = await safeFetch(videoUrl);
     if (!res.ok) {
       return apiError(req, `视频下载失败（${res.status}）`, `Video download failed (${res.status})`, 502);
     }
-    const buf = Buffer.from(await res.arrayBuffer());
+    const buf = await readResponseBuffer(res, MAX_DOWNLOAD_SIZE, "视频");
     if (buf.length === 0 || buf.length > MAX_DOWNLOAD_SIZE) {
       return apiError(req, "视频内容为空或超出大小限制", "Video content is empty or exceeds the size limit", 502);
     }
@@ -47,6 +49,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const fileName = `replicate_${Date.now()}.mp4`;
     const outputPath = join(dir, fileName);
     await writeFile(outputPath, buf);
+    if (!(await validateOrDelete(outputPath, "video"))) {
+      return apiError(req, "云端返回的内容不是有效视频", "The remote response is not a valid video", 502);
+    }
 
     // best-effort metadata (a failed probe must not lose the already-downloaded clip)
     let durationMs: number | undefined;
@@ -65,13 +70,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         projectId: id,
         outputPath,
         status: "done",
+        videoOrigin: "cloud_ai",
         aspectRatio: portrait ? "9:16" : "16:9",
         ...(durationMs && { duration: durationMs }),
         // model output carries no burned-in badge — the release gate reports this honestly
         aigcBadge: false,
       })
       .returning();
-    await db.update(projects).set({ status: "done", updatedAt: new Date() }).where(eq(projects.id, id));
+    await db.update(projects).set({ status: "done", productionMode: "ai", updatedAt: new Date() }).where(eq(projects.id, id));
 
     return NextResponse.json({
       compositionId: row.id,

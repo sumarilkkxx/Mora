@@ -1,0 +1,25 @@
+{
+  "width": 1200,
+  "fps": 15,
+  "duration": 4.6,
+  "colors": 96,
+  "dither": "none",
+  "max_size_mb": 2.0,
+  "layers": [
+    {
+      "id": "script-motion",
+      "enter": { "start": 0.15, "end": 0.85, "from": [30, 0] },
+      "exit": { "start": 3.9, "end": 4.6, "to": [12, 0] }
+    },
+    {
+      "id": "media-motion",
+      "enter": { "start": 0.55, "end": 1.2, "from": [30, 0] },
+      "exit": { "start": 3.9, "end": 4.6, "to": [12, 0] }
+    },
+    {
+      "id": "finish-motion",
+      "enter": { "start": 0.9, "end": 1.55, "from": [30, 0] },
+      "exit": { "start": 3.9, "end": 4.6, "to": [12, 0] }
+    }
+  ]
+}

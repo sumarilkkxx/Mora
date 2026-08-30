@@ -1,0 +1,100 @@
+name: Build desktop apps
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Windows x64
+            runner: windows-2025
+            command: pnpm dist:win
+            artifact: Mora-Windows-x64
+            files: release/*.exe
+          - label: macOS Apple Silicon
+            runner: macos-15
+            command: pnpm dist:mac
+            artifact: Mora-macOS-arm64
+            files: release/*.dmg
+          - label: macOS Intel
+            runner: macos-15-intel
+            command: pnpm dist:mac
+            artifact: Mora-macOS-x64
+            files: release/*.dmg
+
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Verify release tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: node scripts/verify-release-tag.mjs
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build package
+        run: ${{ matrix.command }}
+        env:
+          CSC_LINK: ${{ runner.os == 'macOS' && secrets.MAC_CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ runner.os == 'macOS' && secrets.MAC_CSC_KEY_PASSWORD || '' }}
+          WIN_CSC_LINK: ${{ runner.os == 'Windows' && secrets.WIN_CSC_LINK || '' }}
+          WIN_CSC_KEY_PASSWORD: ${{ runner.os == 'Windows' && secrets.WIN_CSC_KEY_PASSWORD || '' }}
+          APPLE_ID: ${{ runner.os == 'macOS' && secrets.APPLE_ID || '' }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ runner.os == 'macOS' && secrets.APPLE_TEAM_ID || '' }}
+
+      - name: Smoke test packaged app (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $app = Get-ChildItem release -Recurse -Filter Mora.exe |
+            Where-Object FullName -Match 'win-unpacked' |
+            Select-Object -First 1
+          if (-not $app) { throw 'Packaged Mora.exe not found' }
+          $env:HEADLESS_SMOKE = '1'
+          & $app.FullName --user-data-dir="$env:RUNNER_TEMP\mora-smoke"
+          if ($LASTEXITCODE -ne 0) { throw "Smoke test failed with exit code $LASTEXITCODE" }
+
+      - name: Smoke test packaged app (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          app_path="$(find release -type d -name Mora.app -print -quit)"
+          test -n "$app_path"
+          HEADLESS_SMOKE=1 "$app_path/Contents/MacOS/Mora" --user-data-dir="$RUNNER_TEMP/mora-smoke"
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error

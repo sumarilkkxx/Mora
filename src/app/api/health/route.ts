@@ -5,6 +5,7 @@ import { getDataDir, getMigrationsDir } from "@/lib/paths";
 import { db, dbInitError, dbMigrationError } from "@/lib/db";
 import { projects } from "@/lib/db/schema";
 import { sql } from "drizzle-orm";
+import { ffmpegBin, ffprobeBin } from "@/lib/ffmpeg-path";
 
 /**
  * 一站式自诊断接口：用户报障时只需截 http://127.0.0.1:<端口>/api/health 一张图，
@@ -24,7 +25,8 @@ export async function GET() {
 
   const migrationsDir = getMigrationsDir();
   const dataDir = getDataDir();
-  const ffmpeg = process.env.FFMPEG_PATH || "system";
+  const ffmpeg = ffmpegBin();
+  const ffprobe = ffprobeBin();
 
   return NextResponse.json({
     version: process.env.npm_package_version || "unknown",
@@ -59,7 +61,11 @@ export async function GET() {
     },
     ffmpeg: {
       path: ffmpeg,
-      exists: ffmpeg === "system" ? null : fs.existsSync(ffmpeg),
+      exists: ffmpeg === "ffmpeg" ? null : fs.existsSync(ffmpeg),
+    },
+    ffprobe: {
+      path: ffprobe,
+      exists: ffprobe === "ffprobe" ? null : fs.existsSync(ffprobe),
     },
   });
 }

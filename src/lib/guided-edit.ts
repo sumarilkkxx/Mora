@@ -16,6 +16,46 @@ export const GUIDED_EDIT_STYLES = [
 ] as const;
 export type GuidedEditStyle = (typeof GUIDED_EDIT_STYLES)[number];
 
+export const GUIDED_PROMOTION_GOALS = ["store_visit", "consultation", "purchase", "promotion", "brand_intro"] as const;
+export type GuidedPromotionGoal = (typeof GUIDED_PROMOTION_GOALS)[number];
+
+export const GUIDED_TEMPLATE_IDS = ["local_store", "product_features", "promotion_offer"] as const;
+export type GuidedTemplateId = (typeof GUIDED_TEMPLATE_IDS)[number];
+
+export interface GuidedEditTemplate {
+  id: GuidedTemplateId;
+  version: 1;
+  goals: readonly GuidedPromotionGoal[];
+  requiredFields: readonly ("productName" | "sellingPoints" | "location" | "offer")[];
+  optionalFields: readonly ("hook" | "introduction" | "audience" | "usageScene" | "location" | "offer" | "cta")[];
+  beatOrder: readonly ("hook" | "introduction" | "offer" | "feature" | "audience" | "usage" | "location" | "cta")[];
+}
+
+/**
+ * Built-in, versioned templates. These are deliberately declarative so they
+ * can move to validated YAML without changing the compiler or saved plans.
+ */
+export const GUIDED_EDIT_TEMPLATES: readonly GuidedEditTemplate[] = [
+  {
+    id: "local_store", version: 1, goals: ["store_visit", "consultation"],
+    requiredFields: ["productName", "sellingPoints", "location"],
+    optionalFields: ["hook", "introduction", "audience", "usageScene", "offer", "cta"],
+    beatOrder: ["hook", "introduction", "feature", "audience", "usage", "offer", "location", "cta"],
+  },
+  {
+    id: "product_features", version: 1, goals: ["purchase", "brand_intro", "consultation"],
+    requiredFields: ["productName", "sellingPoints"],
+    optionalFields: ["hook", "introduction", "audience", "usageScene", "offer", "cta"],
+    beatOrder: ["hook", "introduction", "feature", "audience", "usage", "offer", "cta"],
+  },
+  {
+    id: "promotion_offer", version: 1, goals: ["promotion", "purchase", "store_visit"],
+    requiredFields: ["productName", "sellingPoints", "offer"],
+    optionalFields: ["hook", "introduction", "audience", "usageScene", "location", "cta"],
+    beatOrder: ["hook", "offer", "introduction", "feature", "audience", "usage", "location", "cta"],
+  },
+] as const;
+
 export const SCENE_LABELS = [
   "highlight",
   "product_full",
@@ -36,12 +76,18 @@ export interface GuidedEditBrief {
   projectName: string;
   productName: string;
   promotionGoal: string;
+  promotionGoalType: GuidedPromotionGoal;
+  templateId: GuidedTemplateId;
+  templateVersion: 1;
   fullScript: string;
   hook: string;
   introduction: string;
   sellingPoints: string[];
   proof: string;
   usageScene: string;
+  audience: string;
+  location: string;
+  offer: string;
   cta: string;
   targetDuration: number;
   /** Narration / caption pacing multiplier. Older saved plans omit it and default to 1×. */
@@ -97,12 +143,18 @@ export const DEFAULT_GUIDED_EDIT_BRIEF: GuidedEditBrief = {
   projectName: "",
   productName: "",
   promotionGoal: "",
+  promotionGoalType: "brand_intro",
+  templateId: "product_features",
+  templateVersion: 1,
   fullScript: "",
   hook: "",
   introduction: "",
   sellingPoints: [""],
   proof: "",
   usageScene: "",
+  audience: "",
+  location: "",
+  offer: "",
   cta: "",
   targetDuration: 30,
   speechRate: 1,
@@ -147,6 +199,9 @@ export function sanitizeGuidedEditBrief(value: unknown): GuidedEditBrief {
     projectName: cleanText(raw.projectName, 160),
     productName: cleanText(raw.productName, 160),
     promotionGoal: cleanText(raw.promotionGoal, 500),
+    promotionGoalType: GUIDED_PROMOTION_GOALS.includes(raw.promotionGoalType as GuidedPromotionGoal) ? raw.promotionGoalType as GuidedPromotionGoal : "brand_intro",
+    templateId: GUIDED_TEMPLATE_IDS.includes(raw.templateId as GuidedTemplateId) ? raw.templateId as GuidedTemplateId : "product_features",
+    templateVersion: 1,
     fullScript: typeof raw.fullScript === "string" ? raw.fullScript.trim().slice(0, 12_000) : "",
     hook: cleanText(raw.hook, 500),
     introduction: cleanText(raw.introduction, 500),
@@ -155,6 +210,9 @@ export function sanitizeGuidedEditBrief(value: unknown): GuidedEditBrief {
     // streamlined editor no longer exposes or narrates this legacy section.
     proof: "",
     usageScene: cleanText(raw.usageScene, 500),
+    audience: cleanText(raw.audience, 500),
+    location: cleanText(raw.location, 500),
+    offer: cleanText(raw.offer, 500),
     cta: cleanText(raw.cta, 500),
     targetDuration: Math.min(MAX_GUIDED_OUTPUT_SECONDS, Math.max(1, finite(raw.targetDuration, 30))),
     speechRate: sanitizeGuidedSpeechRate(raw.speechRate),
@@ -170,6 +228,24 @@ export function sanitizeGuidedEditBrief(value: unknown): GuidedEditBrief {
     captionSize: raw.captionSize === "small" || raw.captionSize === "large" ? raw.captionSize : "medium",
     captionLanguage: raw.captionLanguage === "zh" || raw.captionLanguage === "en" ? raw.captionLanguage : "auto",
   };
+}
+
+export function recommendedGuidedTemplate(goal: GuidedPromotionGoal): GuidedTemplateId {
+  if (goal === "store_visit" || goal === "consultation") return "local_store";
+  if (goal === "promotion") return "promotion_offer";
+  return "product_features";
+}
+
+export function guidedTemplateById(value: unknown): GuidedEditTemplate {
+  return GUIDED_EDIT_TEMPLATES.find((template) => template.id === value) ?? GUIDED_EDIT_TEMPLATES[1];
+}
+
+export function missingGuidedBriefFields(briefValue: unknown): GuidedEditTemplate["requiredFields"][number][] {
+  const brief = sanitizeGuidedEditBrief(briefValue);
+  const template = guidedTemplateById(brief.templateId);
+  return template.requiredFields.filter((field) => field === "sellingPoints"
+    ? !brief.sellingPoints.some(Boolean)
+    : !brief[field]);
 }
 
 export function estimateSpeechDuration(text: string, speechRate: unknown = 1): number {
@@ -207,11 +283,17 @@ export function buildGuidedScriptBeats(briefValue: unknown): GuidedScriptBeat[] 
     const sentences = splitPromotionScript(brief.fullScript);
     sentences.forEach((text, index) => entries.push({ role: inferredRole(index, sentences.length), text }));
   } else {
-    if (brief.hook) entries.push({ role: "hook", text: brief.hook });
-    if (brief.introduction) entries.push({ role: "introduction", text: brief.introduction });
-    for (const point of brief.sellingPoints.filter(Boolean)) entries.push({ role: "feature", text: point });
-    if (brief.usageScene) entries.push({ role: "usage", text: brief.usageScene });
-    if (brief.cta) entries.push({ role: "cta", text: brief.cta });
+    const template = guidedTemplateById(brief.templateId);
+    for (const section of template.beatOrder) {
+      if (section === "hook" && brief.hook) entries.push({ role: "hook", text: brief.hook });
+      if (section === "introduction") entries.push(...[brief.introduction || brief.productName].filter(Boolean).map((text) => ({ role: "introduction" as const, text })));
+      if (section === "offer" && brief.offer) entries.push({ role: "feature", text: brief.offer });
+      if (section === "feature") for (const point of brief.sellingPoints.filter(Boolean)) entries.push({ role: "feature", text: point });
+      if (section === "audience" && brief.audience) entries.push({ role: "usage", text: brief.audience });
+      if (section === "usage" && brief.usageScene) entries.push({ role: "usage", text: brief.usageScene });
+      if (section === "location" && brief.location) entries.push({ role: "cta", text: brief.location });
+      if (section === "cta" && brief.cta) entries.push({ role: "cta", text: brief.cta });
+    }
   }
   return entries.map((entry, index) => ({
     id: `beat-${index + 1}`,

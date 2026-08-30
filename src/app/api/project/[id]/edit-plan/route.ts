@@ -23,15 +23,45 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       db.select().from(compositions).where(eq(compositions.projectId, id)),
     ]);
     if (!projectRows[0]) return apiError(req, "项目不存在", "Project not found", 404);
+    const interruptedAt = Date.now() - 10_000;
+    const abandonedPlans = plans.filter((plan) =>
+      plan.status === "rendering"
+      && !isGuidedRenderActive(plan.id)
+      && Boolean(plan.updatedAt && plan.updatedAt.getTime() < interruptedAt)
+    );
+    const abandonedPlanIds = new Set(abandonedPlans.map((plan) => plan.id));
+    const abandonedCompositionIds = new Set(abandonedPlans.flatMap((plan) => plan.compositionId ? [plan.compositionId] : []));
+    if (abandonedPlans.length) {
+      const message = errText(req, "渲染已中断，可直接重新开始", "Rendering was interrupted; you can restart it");
+      db.transaction((tx) => {
+        for (const plan of abandonedPlans) {
+          tx.update(guidedEditPlans).set({ status: "failed", error: message, updatedAt: new Date() })
+            .where(eq(guidedEditPlans.id, plan.id)).run();
+          if (plan.compositionId) {
+            tx.update(compositions).set({ status: "failed" }).where(eq(compositions.id, plan.compositionId)).run();
+          }
+        }
+        const hasAnotherActiveComposition = projectCompositions.some((composition) =>
+          (composition.status === "composing" || composition.status === "pending")
+          && !abandonedCompositionIds.has(composition.id)
+        );
+        if (!hasAnotherActiveComposition) {
+          tx.update(projects).set({ status: "video", updatedAt: new Date() }).where(eq(projects.id, id)).run();
+        }
+      });
+    }
     const compositionById = new Map(projectCompositions.map((composition) => [composition.id, composition]));
     return NextResponse.json({
       project: projectRows[0],
       plans: plans.map((plan) => {
-        const composition = plan.compositionId ? compositionById.get(plan.compositionId) ?? null : null;
+        const abandoned = abandonedPlanIds.has(plan.id);
+        const rawComposition = plan.compositionId ? compositionById.get(plan.compositionId) ?? null : null;
+        const composition = rawComposition && abandoned ? { ...rawComposition, status: "failed" as const } : rawComposition;
         const outputName = composition?.outputPath ? fileNameOf(composition.outputPath) : null;
         return {
           ...plan,
-          active: plan.status === "rendering" && isGuidedRenderActive(plan.id),
+          ...(abandoned && { status: "failed" as const, error: errText(req, "渲染已中断，可直接重新开始", "Rendering was interrupted; you can restart it") }),
+          active: !abandoned && plan.status === "rendering" && isGuidedRenderActive(plan.id),
           composition: composition ? {
             ...composition,
             outputUrl: outputName ? `/api/output/${id}/${outputName}` : null,

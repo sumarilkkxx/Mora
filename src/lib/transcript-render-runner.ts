@@ -43,13 +43,14 @@ export function startTranscriptRender(input: {
       const thumbnailPath = await extractFirstFrame(outputPath);
       await db.update(compositions).set({ outputPath, status: "done", ...(thumbnailPath && { thumbnailPath }) }).where(eq(compositions.id, input.compositionId));
       await db.update(mediaEdits).set({ status: "done", error: null, updatedAt: new Date() }).where(eq(mediaEdits.id, input.editId));
-      await db.update(projects).set({ status: "done", updatedAt: new Date() }).where(eq(projects.id, input.source.projectId));
+      await db.update(projects).set({ status: "done", productionMode: "local", updatedAt: new Date() }).where(eq(projects.id, input.source.projectId));
     } catch (error) {
       const message = error instanceof Error ? error.message : "文字剪辑失败";
       console.error("Transcript render failed:", error);
       await Promise.all([
         db.update(compositions).set({ status: "failed" }).where(eq(compositions.id, input.compositionId)).catch(() => {}),
         db.update(mediaEdits).set({ status: "failed", error: message.slice(0, 500), updatedAt: new Date() }).where(eq(mediaEdits.id, input.editId)).catch(() => {}),
+        db.update(projects).set({ status: "video", updatedAt: new Date() }).where(eq(projects.id, input.source.projectId)).catch(() => {}),
       ]);
     } finally {
       activeRenders.delete(input.editId);

@@ -261,19 +261,12 @@ export async function downloadStockFile(
     return { filePath: destPath, bytes: st.size };
   }
 
-  const res = await fetchWithTimeout(url);
+  const { readResponseBuffer, safeFetch } = await import("@/lib/ssrf-guard");
+  const res = await safeFetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
   if (!res.ok) throw new Error(`素材下载失败 ${res.status}: ${url}`);
 
   const contentType = res.headers.get("content-type");
-  const declaredLen = Number(res.headers.get("content-length") || 0);
-  if (declaredLen && declaredLen > MAX_DOWNLOAD_BYTES) {
-    throw new Error(`素材体积 ${declaredLen} 超过上限 ${MAX_DOWNLOAD_BYTES}`);
-  }
-
-  const buffer = Buffer.from(await res.arrayBuffer());
-  if (buffer.byteLength > MAX_DOWNLOAD_BYTES) {
-    throw new Error(`素材体积 ${buffer.byteLength} 超过上限 ${MAX_DOWNLOAD_BYTES}`);
-  }
+  const buffer = await readResponseBuffer(res, MAX_DOWNLOAD_BYTES, "素材");
 
   const ext = inferExtension(url, contentType, mediaType);
   // safeBaseName is sanitized at the top of the function (path separators and special characters removed to prevent directory traversal)

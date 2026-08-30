@@ -1,6 +1,6 @@
 // After build, fill in the standalone self-contained assets (next build's standalone omits static/public by default),
 // copy migration SQL, and replace the better-sqlite3 copy inside standalone with the Electron ABI prebuilt binary.
-import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "fs";
+import { copyFileSync, cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, unlinkSync, writeFileSync } from "fs";
 import { execSync } from "child_process";
 import { createRequire } from "module";
 import { join } from "path";
@@ -106,12 +106,21 @@ async function rebuildBetterSqlite3ForElectron() {
   if (existsSync(dotNextNM)) {
     for (const name of readdirSync(dotNextNM)) {
       if (!name.startsWith("better-sqlite3")) continue;
-      const target = join(dotNextNM, name, "build", "Release", "better_sqlite3.node");
+      const packageDir = join(dotNextNM, name);
+      // Next may trace an external package as an absolute symlink/junction back to the project's
+      // node_modules. Writing through that link replaces the developer's Node-ABI binary with the
+      // Electron-ABI binary, so the next `pnpm dev`/`next build` crashes. Materialise an independent
+      // package directory inside standalone before touching any native file.
+      if (lstatSync(packageDir).isSymbolicLink()) {
+        unlinkSync(packageDir);
+        cpSync(bsDir, packageDir, { recursive: true });
+        console.log(`  ↳ 已实体化 Next 原生包链接: ${packageDir}`);
+      }
+      const target = join(packageDir, "build", "Release", "better_sqlite3.node");
       if (!existsSync(target)) continue;
       const real = realpathSync(target);
       if (real === realpathSync(node)) {
-        // mac：副本目录是指回顶层 node_modules/better-sqlite3 的符号链接，顶层刚换过 = 这份已是 Electron ABI
-        replaced.push(`${target}（链接指向顶层，已随顶层替换）`);
+        replaced.push(`${target}（独立副本已随顶层替换）`);
         continue;
       }
       rmSync(real);

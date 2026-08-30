@@ -64,17 +64,61 @@ export async function assertPublicUrl(rawUrl: string): Promise<void> {
 /** SSRF-safe fetch: disables automatic redirect following; manually follows each hop and re-validates that every target is a public address. */
 export async function safeFetch(url: string, init: RequestInit = {}, maxRedirects = 4): Promise<Response> {
   let current = url;
+  let currentInit = init;
   for (let hop = 0; hop <= maxRedirects; hop++) {
     await assertPublicUrl(current);
     // Apply a 15 s timeout per hop (unless the caller already provides a signal) to prevent slow or malicious servers from stalling the request indefinitely
-    const res = await fetch(current, { ...init, redirect: "manual", signal: init.signal ?? AbortSignal.timeout(15000) });
+    const res = await fetch(current, { ...currentInit, redirect: "manual", signal: currentInit.signal ?? AbortSignal.timeout(15000) });
     if (res.status >= 300 && res.status < 400) {
       const loc = res.headers.get("location");
       if (!loc) return res;
-      current = new URL(loc, current).href; // resolve potentially relative redirect locations
+      const next = new URL(loc, current);
+      // A signed provider endpoint may redirect to object storage. Never forward credentials to
+      // a different origin when following redirects manually.
+      if (next.origin !== new URL(current).origin && currentInit.headers) {
+        const headers = new Headers(currentInit.headers);
+        headers.delete("authorization");
+        headers.delete("cookie");
+        headers.delete("proxy-authorization");
+        currentInit = { ...currentInit, headers };
+      }
+      current = next.href; // resolve potentially relative redirect locations
       continue;
     }
     return res;
   }
   throw new Error("重定向次数过多");
+}
+
+/**
+ * Consume a response without allowing an untrusted server to make Node buffer an arbitrarily
+ * large body. The reader is cancelled as soon as the byte budget is exceeded.
+ */
+export async function readResponseBuffer(response: Response, maxBytes: number, label = "响应内容"): Promise<Buffer> {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) throw new Error("无效的下载大小限制");
+  const declaredLength = Number(response.headers.get("content-length") || 0);
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    await response.body?.cancel().catch(() => {});
+    throw new Error(`${label}体积 ${declaredLength} 超过上限 ${maxBytes}`);
+  }
+  if (!response.body) return Buffer.alloc(0);
+
+  const reader = response.body.getReader();
+  const chunks: Buffer[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => {});
+        throw new Error(`${label}体积超过上限 ${maxBytes}`);
+      }
+      chunks.push(Buffer.from(value));
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return Buffer.concat(chunks, total);
 }
