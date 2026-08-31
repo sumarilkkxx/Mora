@@ -36,7 +36,7 @@ function baseSvg({ width, height, title, eyebrow, description, chips = [], compa
   const chipMarkup = chips.map((chip, index) => {
     const x = compact ? 708 + index * 128 : 446 + index * 150;
     const chipWidth = compact ? 116 : 136;
-    return `<g transform="translate(${x} ${compact ? 459 : 155})"><rect width="${chipWidth}" height="34" rx="17" fill="#0D355A" stroke="${palette.line}"/><text x="${chipWidth / 2}" y="22" text-anchor="middle" fill="${palette.ice}" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" font-weight="700">${escapeXml(chip)}</text></g>`;
+    return `<g transform="translate(${x} ${compact ? 459 : 198})"><rect width="${chipWidth}" height="34" rx="17" fill="#0D355A" stroke="${palette.line}"/><text x="${chipWidth / 2}" y="22" text-anchor="middle" fill="${palette.ice}" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" font-weight="700">${escapeXml(chip)}</text></g>`;
   }).join("");
   return Buffer.from(`
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
@@ -45,7 +45,7 @@ function baseSvg({ width, height, title, eyebrow, description, chips = [], compa
       <rect x="1" y="1" width="${width - 2}" height="${height - 2}" rx="29" fill="none" stroke="${palette.line}"/>
       <text x="${compact ? 708 : 446}" y="${compact ? 88 : 76}" fill="${palette.ice}" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" font-weight="700" letter-spacing="2">${escapeXml(eyebrow)}</text>
       <text x="${compact ? 708 : 446}" y="${compact ? 145 : 128}" fill="${palette.text}" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="${compact ? 42 : 48}" font-weight="750">${escapeXml(title)}</text>
-      <text x="${compact ? 708 : 446}" y="${compact ? 187 : 204}" fill="${palette.muted}" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="21">${escapeXml(description)}</text>
+      <text x="${compact ? 708 : 446}" y="${compact ? 187 : 174}" fill="${palette.muted}" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="21">${escapeXml(description)}</text>
       ${chipMarkup}
     </svg>`);
 }

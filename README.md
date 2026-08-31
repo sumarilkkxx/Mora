@@ -2,7 +2,7 @@
   <img src="./assets/readme/hero.gif" width="100%" alt="Mora 本地优先 AI 视频工作台：文本模型生成脚本，组织本地或 AI 素材，并完成配音、字幕和最终成片">
 </p>
 
-<p align="right"><strong>中文</strong> · <a href="./README.en.md">English</a></p>
+<p align="center"><strong>中文</strong> · <a href="./README.en.md">English</a></p>
 
 <h1 align="center">Mora</h1>
 <p align="center"><strong>不是再生成一个孤立片段，而是把创作意图推进到可追踪、可恢复、可导出的完整成片。</strong></p>
@@ -14,6 +14,7 @@
   <a href="#quick-start">快速开始</a> ·
   <a href="#architecture">技术架构</a> ·
   <a href="#desktop">桌面版</a> ·
+  <a href="#roadmap">Roadmap</a> ·
   <a href="./README.en.md">English</a>
 </p>
 
@@ -21,43 +22,45 @@
   <img src="https://img.shields.io/badge/version-v0.1.0.0-087BDF?style=flat-square" alt="Version v0.1.0.0">
   <img src="https://img.shields.io/badge/license-AGPL--3.0--only-28526F?style=flat-square" alt="License AGPL-3.0-only">
   <img src="https://img.shields.io/badge/local--first-FFmpeg%20%2B%20SQLite-0D355A?style=flat-square" alt="Local-first with FFmpeg and SQLite">
-  <img src="https://img.shields.io/badge/models-BYOK%20%7C%20Ollama-087BDF?style=flat-square" alt="Bring your own model keys or use local Ollama">
+  <img src="https://img.shields.io/badge/status-alpha-087BDF?style=flat-square" alt="Status alpha">
   <img src="https://img.shields.io/badge/desktop-Windows%20%7C%20macOS-111111?style=flat-square&logo=electron" alt="Windows and macOS desktop targets">
 </p>
 
 <a id="showcase"></a>
 
-## 从两段真实成片开始认识 Mora
+## 项目故事：从两种真实的素材起点开始
 
-短视频生产最容易断在中间：商品资料已经整理好，却没有脚本；脚本写完了，却缺少能用的镜头；原片已经拍好，却还要在转写、节拍、配音、字幕和导出之间反复搬运。Mora 想解决的不是某一个按钮，而是这些阶段之间的断点。
+Mora 并不是从“再接入一个视频生成模型”开始的。项目最初面对的是两个很具体、也完全不同的制作问题：**手里只有一张商品图片和几句介绍时，怎样从零组织出一条商品视频；手里已经有拍摄原片时，又怎样保留真实镜头，在本地完成理解、剪辑和交付。**
 
-下面两段 MP4 均来自真实项目。它们使用不同素材起点，却共享同一套脚本、资产、任务、版本和导出结构。点击作品板即可播放完整视频。
+前者缺少可用画面，需要模型帮助建立脚本、分镜和镜头；后者不缺画面，真正缺少的是对原片的理解、节拍整理和稳定的后期链路。Mora 因此没有把所有项目塞进同一个“AI 生成”流程，而是先判断素材起点和最终成片方式，再选择对应工作流。
 
-### 案例一：没有完整镜头，从商品意图建立一条生成式叙事
+下面两段 MP4 来自这两条工作流。它们共享项目、脚本、资产、任务、版本和导出基础设施，但输入、模型职责和成片路径并不相同。点击作品板可直接播放完整视频。
 
-宠物饮水机案例从商品目标和创作方向出发。文本大模型先把卖点组织成脚本、镜头节拍与画面约束；生成式或参考素材为缺少的画面提供候选；最终结果继续回到项目中管理，而不是散落成一组无法追踪的生成文件。
+### 工作流一：一张商品图和简单介绍，生成完整商品短片
+
+宠物饮水机案例开始时只有商品图片和简短介绍。文本大模型先把有限信息扩展成结构化脚本、镜头节拍与画面约束，再由生成式或参考素材补齐缺少的镜头；候选画面、脚本关系和最终结果继续回到同一个项目中管理，而不是散落成一组无法追踪的生成文件。
 
 <p align="center">
-  <a href="./docs/videos/mora-ai-showcase.mp4"><img src="./assets/readme/showcase-generative.webp" width="100%" alt="点击播放：Mora 以文本模型组织脚本、镜头节拍与参考画面形成的 30 秒宠物饮水机商品短片"></a>
+  <a href="https://sumarilkkxx.github.io/Mora/videos/mora-ai-showcase.mp4"><img src="./assets/readme/showcase-generative.webp" width="100%" alt="点击播放：Mora 以文本模型组织脚本、镜头节拍与参考画面形成的 30 秒宠物饮水机商品短片"></a>
 </p>
 
-<p align="center"><strong>生成式商品短片 · 30.02 秒 · 1080×1920</strong><br><sub>商品意图 → 文本脚本 → 镜头约束 → 生成/参考画面 → 完整视频版本</sub></p>
+<p align="center"><strong>生成式商品短片 · 30.02 秒 · 1080×1920</strong><br><sub>商品图片 + 简单介绍 → 文本脚本与分镜 → 生成镜头 → 完整视频版本</sub></p>
 
 这条成片说明：生成模型只负责它擅长的画面环节，脚本、镜头关系、候选素材与版本仍需要一个生产系统承接。
 
-### 案例二：镜头已经存在，让原片走完后期链路
+### 工作流二：已有拍摄素材，在本地完成智能剪辑
 
-理发店案例没有重新生成主体画面。Mora 保留原始视频，拆分场景并整理推广脚本的节拍，再生成配音与时间轴字幕，最后通过本地渲染输出一个独立版本。原片、编辑计划和旧成片不会被覆盖。
+理发店案例从一段已经拍好的竖屏视频开始，不重新生成主体画面。Mora 保留原片，拆分场景、提取内容并整理推广脚本节拍，再生成配音与时间轴字幕，最后通过 FFmpeg 在本地渲染独立版本。原片、编辑计划和历史成片都不会被覆盖。
 
 <p align="center">
-  <a href="./docs/videos/mora-guided-edit-latest.mp4"><img src="./assets/readme/showcase-guided.webp" width="100%" alt="点击播放：Mora 将已有理发店原片拆分场景、整理脚本节拍、生成配音字幕并在本地重新渲染"></a>
+  <a href="https://sumarilkkxx.github.io/Mora/videos/mora-guided-edit-latest.mp4"><img src="./assets/readme/showcase-guided.webp" width="100%" alt="点击播放：Mora 将已有理发店原片拆分场景、整理脚本节拍、生成配音字幕并在本地重新渲染"></a>
 </p>
 
 <p align="center"><strong>已有素材剪辑 · 16.4 秒 · 本地渲染</strong><br><sub>上传原片 → 场景拆分 → 整理节拍 → 配音字幕 → FFmpeg 本地成片</sub></p>
 
-这条成片说明：当可用镜头已经存在时，不需要为了“AI 感”重复生成画面；真正需要的是把素材理解、文字结构和后期输出连接起来。
+这条成片说明：当可用镜头已经存在时，不需要为了“AI 感”重复生成画面；智能能力应该服务于理解素材、整理结构和辅助剪辑，最终输出仍由本地后期链路完成。
 
-两段视频共同定义了 Mora 的边界：**素材可以来自相机、图库或 AI，但流程归属由最终视频如何产生决定。** AI 图片可以只是本地素材；如果最后由 Mora 和 FFmpeg 渲染，项目仍属于本地成片路径。只有最终视频由云端视频模型直接生成时，才进入生成式视频路径。
+这不是同一条工作流的两个素材版本。第一条路径负责在画面缺失时创造镜头，第二条路径负责让已有镜头走完本地智能后期。它们共同定义了 Mora 的边界：**素材可以来自相机、图库或 AI，但流程归属由最终视频如何产生决定。** AI 图片可以只是本地素材；如果最后由 Mora 和 FFmpeg 渲染，项目仍属于本地成片路径。只有最终视频由云端视频模型直接生成时，才进入生成式视频路径。
 
 > [!IMPORTANT]
 > **本地成片不等于全程不调用模型。** 自动生成、改写或审查脚本需要一个文本大模型，可使用自带 Key 的云端 OpenAI 兼容服务，也可以连接本机 Ollama。手动编写、导入和编辑脚本可以跳过这次调用。图片/视频生成模型始终按制作路径选用；本地素材整理、字幕与 FFmpeg 合成本身不要求付费图片或视频模型。
@@ -307,7 +310,9 @@ flowchart TB
 - SQLite、上传文件、缓存素材、成片和日志默认保存在本机。
 - 调用脚本、图片、视频、素材或语音服务时，必要请求数据会发送给你配置的第三方平台。
 - 商品链接读取带 SSRF 防护；登录墙、风控页面、地区限制或依赖浏览器 Cookie 的页面可能无法由后端直接读取。
-- 发布前请自行确认素材授权、肖像权、商标、广告规范和平台 AIGC 标识要求。
+
+> [!CAUTION]
+> **Mora 是开源软件，不会代替用户完成权利或平台合规审查。** 发布或商用前，用户必须自行确认素材授权、肖像权、商标使用、广告规范及平台 AIGC 标识要求，并对最终发布内容负责。
 
 <a id="desktop"></a>
 
@@ -324,7 +329,7 @@ pnpm dist:win
 pnpm dist:mac
 ```
 
-GitHub Actions 已配置 Windows x64、macOS Apple Silicon 和 macOS Intel 构建矩阵，并在打包后执行启动冒烟测试。公开分发 macOS 安装包仍需 Apple Developer 证书、签名与公证；未签名构建只适合开发验证。
+GitHub Actions 已配置 Windows x64、macOS Apple Silicon 和 macOS Intel 构建矩阵，并对最终安装包执行校验和启动冒烟测试。当前 alpha 阶段的 macOS DMG 可以作为未签名预览版发布，但必须明确标注尚未签名与公证；用户首次打开时可能需要在“隐私与安全性”中手动允许。
 
 | 版本层 | 当前约定 |
 | --- | --- |
@@ -344,15 +349,29 @@ GitHub Actions 已配置 Windows x64、macOS Apple Silicon 和 macOS Intel 构�
 | `GET /api/health` | 检查运行时、数据库迁移与 FFmpeg/ffprobe 状态。 |
 | `pnpm cli -- --help` | 查看从创建、配音、QC 到发布检查的 CLI 命令。 |
 
-## 当前限制
+## 当前已知限制
 
-`v0.1.0.0` 是早期版本，README 中的“支持”表示仓库中已经存在对应实现，不代表所有第三方平台、模型和地区始终可用。
+`v0.1.0.0` 仍处于 alpha 阶段。以下内容描述当前服务和集成中已知的不稳定边界，而不是计划中的功能列表：
 
-- 自动脚本需要可访问的文本模型；完全离线使用请手动导入脚本或配置本机 Ollama。
-- 电商网站的登录墙、验证码、反爬策略和 Cookie 隔离会影响商品链接解析。
-- 生成模型的规格、价格和内容政策可能变化，Mora 只提交当前配置支持的参数。
-- macOS 公共安装包必须在 macOS/CI 上构建，并完成 Apple 签名与公证。
-- 最终发布者仍需负责素材授权、广告合规和 AIGC 标识。
+- 淘宝、天猫等电商平台的登录墙、动态渲染、验证码、风控和 Cookie 隔离可能导致商品链接无法解析；当前可靠回退方式是手动填写商品信息或上传商品截图。
+- 自动脚本依赖可访问的文本模型；云端端点不可用、额度不足或地区受限时会生成失败，完全离线使用需要手动导入脚本或配置本机 Ollama。
+- 图片、视频、素材和语音服务的模型名称、参数、队列、价格及内容策略可能变化，适配器可能暂时落后于服务商更新。
+- 云端生成和开放素材检索受网络质量、平台限流及任务排队影响，可能出现超时、拒绝或结果延迟；Mora 会保留可恢复状态，但无法保证第三方服务始终可用。
+
+<a id="roadmap"></a>
+
+## Roadmap
+
+Roadmap 描述正在推进的产品方向，不承诺具体发布日期；优先级会根据真实项目、Issue 和贡献反馈调整。
+
+| 方向 | 计划能力与边界 |
+| --- | --- |
+| **智能剪辑接入大模型** | 在已有素材工作流中增加场景语义理解、精彩片段建议、节拍重排和可解释的剪辑方案；模型负责提出建议，用户仍可确认、修改和回退。 |
+| **合规提升商品链接可用性** | 优先接入平台官方 API、开放接口及平台条款允许的用户授权导入方式，并继续提供手动资料、截图和商品库回退；不会以绕过验证码、风控或访问控制为目标。 |
+| **更稳定的 Provider 适配层** | 建立模型能力清单、参数预检、版本兼容测试和失败降级，减少服务商更新造成的调用中断。 |
+| **更细的本地后期控制** | 增强时间轴、字幕、配音、BGM、镜头替换和局部重渲染能力，让智能建议能够落到可编辑的制作步骤。 |
+| **可追踪的素材与发布信息** | 完善素材来源、授权记录、模型生成记录、AIGC 标识提示和导出清单，帮助用户在发布前完成自己的合规检查。 |
+| **跨平台交付与质量验证** | 持续完善 Windows 与 macOS 安装包、校验文件、升级路径和真实设备测试，降低从源码运行到桌面使用的门槛。 |
 
 ## 常见问题
 
@@ -391,7 +410,7 @@ Mora 没有要求所有项目数据进入统一云端。只有你明确调用的
 
 ## 许可证
 
-项目包元数据声明为 `AGPL-3.0-only`。如果你修改并通过网络向他人提供该软件服务，请确认理解 AGPL 的源码提供义务；商用前也请核对模型、字体与素材各自的许可条款。正式公开仓库前还应补充根目录 `LICENSE` 文件。
+Mora 以 [GNU Affero General Public License v3.0 only](./LICENSE) 发布。如果你修改 Mora 并通过网络向他人提供软件服务，请确认理解 AGPL 的源码提供义务。模型服务、字体和媒体素材仍受各自条款约束，不因项目采用 AGPL 而自动改变。
 
 ---
 

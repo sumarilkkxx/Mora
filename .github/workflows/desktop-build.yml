@@ -1,4 +1,4 @@
-name: Build desktop apps
+name: Build and release desktop apps
 
 on:
   workflow_dispatch:
@@ -9,8 +9,47 @@ permissions:
   contents: read
 
 jobs:
+  validate-source:
+    name: Validate release source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Fetch main branch
+        run: git fetch origin main:refs/remotes/origin/main --no-tags
+
+      - name: Require main as the release source
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && "${GITHUB_REF}" != "refs/heads/main" ]]; then
+            echo "Manual desktop builds must be started from the main branch."
+            exit 1
+          fi
+
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" "origin/main"; then
+            echo "The selected commit is not part of the main branch. Merge it into main before building a release."
+            exit 1
+          fi
+
+      - name: Verify release tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: node scripts/verify-release-tag.mjs
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+
   build:
     name: ${{ matrix.label }}
+    needs: validate-source
     strategy:
       fail-fast: false
       matrix:
@@ -25,11 +64,13 @@ jobs:
             command: pnpm dist:mac
             artifact: Mora-macOS-arm64
             files: release/*.dmg
+            expected_arch: arm64
           - label: macOS Intel
             runner: macos-15-intel
             command: pnpm dist:mac
             artifact: Mora-macOS-x64
             files: release/*.dmg
+            expected_arch: x86_64
 
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
@@ -48,12 +89,6 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-
-      - name: Verify release tag
-        if: startsWith(github.ref, 'refs/tags/')
-        run: node scripts/verify-release-tag.mjs
-        env:
-          GITHUB_REF_NAME: ${{ github.ref_name }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -84,17 +119,73 @@ jobs:
           & $app.FullName --user-data-dir="$env:RUNNER_TEMP\mora-smoke"
           if ($LASTEXITCODE -ne 0) { throw "Smoke test failed with exit code $LASTEXITCODE" }
 
-      - name: Smoke test packaged app (macOS)
+      - name: Verify DMG and smoke test installed app (macOS)
         if: runner.os == 'macOS'
         shell: bash
         run: |
-          app_path="$(find release -type d -name Mora.app -print -quit)"
+          dmg_path="$(find release -maxdepth 1 -type f -name '*.dmg' -print -quit)"
+          test -n "$dmg_path"
+          hdiutil verify "$dmg_path"
+
+          mount_dir="$RUNNER_TEMP/mora-dmg"
+          mkdir -p "$mount_dir"
+          hdiutil attach "$dmg_path" -nobrowse -readonly -mountpoint "$mount_dir"
+          trap 'hdiutil detach "$mount_dir"' EXIT
+
+          app_path="$(find "$mount_dir" -maxdepth 2 -type d -name Mora.app -print -quit)"
           test -n "$app_path"
-          HEADLESS_SMOKE=1 "$app_path/Contents/MacOS/Mora" --user-data-dir="$RUNNER_TEMP/mora-smoke"
+          app_binary="$app_path/Contents/MacOS/Mora"
+          file "$app_binary" | grep -q '${{ matrix.expected_arch }}'
+          HEADLESS_SMOKE=1 "$app_binary" --user-data-dir="$RUNNER_TEMP/mora-smoke"
+
+          hdiutil detach "$mount_dir"
+          trap - EXIT
 
       - name: Upload installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.files }}
           if-no-files-found: error
+
+  release:
+    name: Publish GitHub pre-release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download installers
+        uses: actions/download-artifact@v7
+        with:
+          pattern: Mora-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Verify release assets and generate checksums
+        shell: bash
+        run: |
+          mapfile -t installers < <(find release-assets -maxdepth 1 -type f \( -name '*.exe' -o -name '*.dmg' \) -print | sort)
+          if [[ "${#installers[@]}" -ne 3 ]]; then
+            echo "Expected 3 installers, found ${#installers[@]}."
+            printf '%s\n' "${installers[@]}"
+            exit 1
+          fi
+
+          cd release-assets
+          sha256sum ./*.exe ./*.dmg > SHA256SUMS.txt
+
+      - name: Create GitHub pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release create "${GITHUB_REF_NAME}" release-assets/* \
+            --repo "${GITHUB_REPOSITORY}" \
+            --verify-tag \
+            --generate-notes \
+            --prerelease \
+            --title "Mora ${GITHUB_REF_NAME}"
