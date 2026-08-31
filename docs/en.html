@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mora — Local-first open-source video studio</title>
+  <meta name="description" content="Mora brings cloud AI generation, local composition, and existing-video editing into one visible, recoverable production workspace.">
+  <meta name="theme-color" content="#070a0f">
+  <link rel="canonical" href="https://sumarilkkxx.github.io/Mora/en.html">
+  <link rel="alternate" hreflang="zh-CN" href="https://sumarilkkxx.github.io/Mora/">
+  <link rel="alternate" hreflang="en" href="https://sumarilkkxx.github.io/Mora/en.html">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="landing.css?v=compare-3d-table-3">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Mora — Local-first open-source video studio">
+  <meta property="og:description" content="Organize what you have, generate only what is missing, and finish the final render locally.">
+  <meta property="og:url" content="https://sumarilkkxx.github.io/Mora/en.html">
+  <meta property="og:image" content="https://sumarilkkxx.github.io/Mora/videos/gallery/pet-ai-final.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<div class="container">
+  <nav aria-label="Primary navigation">
+    <a class="nav-brand" href="#top" aria-label="Mora home">
+      <img src="logo.svg" alt="" width="30" height="30">
+      <span class="name"><strong>Mora Studio</strong><em>Open-source promo video studio</em></span>
+    </a>
+    <span class="spacer"></span>
+    <a class="plain" href="#how">Workflow</a>
+    <a class="plain" href="#features">Features</a>
+    <a class="plain" href="#compare">Compare</a>
+    <a class="plain" href="#faq">FAQ</a>
+    <a class="plain keep" href="index.html" lang="zh-CN">中文</a>
+    <a class="plain keep" href="https://github.com/sumarilkkxx/Mora" target="_blank" rel="noreferrer">GitHub</a>
+    <a class="btn btn-brand" href="https://github.com/sumarilkkxx/Mora" target="_blank" rel="noreferrer">View source</a>
+  </nav>
+
+  <main id="main">
+    <header class="hero" id="top">
+      <div class="hero-status" data-hero-status data-state="generating" data-status-states="Generating|Editing|Compositing|Complete">
+        <span class="hero-status-track" aria-hidden="true">
+          <span class="hero-status-dot"></span>
+          <span class="hero-status-label">Video making</span>
+          <span class="hero-status-divider"></span>
+          <span class="hero-status-value" data-hero-status-value>Generating</span>
+        </span>
+        <span class="sr-only">Video production flow: generation, editing, compositing, and delivery</span>
+      </div>
+      <h1>
+        <span class="line"><span>Turn existing footage</span></span>
+        <span class="line"><span>into a <span class="hl">finished video</span></span></span>
+      </h1>
+      <p class="sub">Bring product images, local media, audio, or footage you already shot. Choose cloud generation, local composition, or existing-video editing, then return voice, captions, music, and the final render to one project.</p>
+      <div class="cta">
+        <a class="btn btn-primary" href="https://github.com/sumarilkkxx/Mora" target="_blank" rel="noreferrer">View Mora on GitHub</a>
+        <a class="btn btn-ghost" href="#how">Explore the workflow</a>
+      </div>
+      <p class="trust">Projects and source media stay local · External models use <b>BYOK</b> · Final videos render on your machine</p>
+
+      <div class="stage hero-stage">
+        <span class="fbadge b1"><b class="local">LOCAL</b> Project data stays on device</span>
+        <span class="fbadge b2"><b class="cloud">AI</b> Generate only missing shots</span>
+        <span class="fbadge b3"><b class="ok">✓</b> Source media stays untouched</span>
+        <span class="fbadge b4"><b class="ok">✓</b> Every output is a new local version</span>
+
+        <div class="io-strip" aria-label="From input to finished video">
+          <figure><img src="videos/gallery/pet-input.webp" alt="Pet fountain product input"><figcaption>① Input: product and goal</figcaption></figure>
+          <span class="io-arrow" aria-hidden="true">→</span>
+          <figure><img src="videos/gallery/pet-storyboard.webp" alt="Pet fountain script and storyboard"><figcaption>② Plan: script and shot structure</figcaption></figure>
+          <span class="io-arrow" aria-hidden="true">→</span>
+          <figure class="io-output"><img src="videos/gallery/pet-ai-final.jpg" alt="Finished pet fountain video frame"><figcaption>③ Output: finished video</figcaption></figure>
+        </div>
+
+        <div class="phones" aria-label="Real Mora video outputs">
+          <figure class="ph side l">
+            <video src="videos/demo-coffee-film.mp4" poster="videos/poster-coffee-film.jpg" autoplay muted loop playsinline preload="metadata"></video>
+            <figcaption>Existing media · Local composition</figcaption>
+            <button class="snd" type="button" aria-label="Turn sound on" aria-pressed="false"><svg class="sound-icon sound-icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4z"/><path d="M16 9.2c1.1 1.5 1.1 4.1 0 5.6M18.8 7c2.5 2.7 2.5 7.3 0 10"/></svg><svg class="sound-icon sound-icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4z"/><path d="M17 10l4 4M21 10l-4 4"/></svg><span class="sr-only">Turn sound on</span></button>
+          </figure>
+          <figure class="ph main">
+            <video src="videos/mora-ai-showcase.mp4" poster="videos/mora-ai-showcase.jpg" autoplay muted loop playsinline preload="metadata"></video>
+            <figcaption>Cloud shots · Finished locally</figcaption>
+            <button class="snd" type="button" aria-label="Turn sound on" aria-pressed="false"><svg class="sound-icon sound-icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4z"/><path d="M16 9.2c1.1 1.5 1.1 4.1 0 5.6M18.8 7c2.5 2.7 2.5 7.3 0 10"/></svg><svg class="sound-icon sound-icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4z"/><path d="M17 10l4 4M21 10l-4 4"/></svg><span class="sr-only">Turn sound on</span></button>
+          </figure>
+          <figure class="ph side r">
+            <video src="videos/mora-guided-edit-latest.mp4" poster="videos/mora-guided-edit-latest.jpg" autoplay muted loop playsinline preload="metadata"></video>
+            <figcaption>Existing footage · Local edit</figcaption>
+            <button class="snd" type="button" aria-label="Turn sound on" aria-pressed="false"><svg class="sound-icon sound-icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4z"/><path d="M16 9.2c1.1 1.5 1.1 4.1 0 5.6M18.8 7c2.5 2.7 2.5 7.3 0 10"/></svg><svg class="sound-icon sound-icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4z"/><path d="M17 10l4 4M21 10l-4 4"/></svg><span class="sr-only">Turn sound on</span></button>
+          </figure>
+        </div>
+        <p class="phones-note">Three videos, three real starting points: <b>organize existing media</b>, <b>connect an external model when a shot is missing</b>, or <b>continue from footage you already recorded</b>. The salon example shows the current local editing and rendering chain; AI media understanding and intelligent shot selection remain future work.</p>
+      </div>
+
+      <div class="marquee" aria-hidden="true"><div class="track">
+        <span>Product input</span><span>Script &amp; storyboard</span><span>Cloud AI generation</span><span>Local composition</span><span>Existing-video edit</span><span>FFmpeg render</span><span>Multi-platform export</span>
+        <span>Product input</span><span>Script &amp; storyboard</span><span>Cloud AI generation</span><span>Local composition</span><span>Existing-video edit</span><span>FFmpeg render</span><span>Multi-platform export</span>
+      </div></div>
+    </header>
+
+    <section id="how" class="reveal">
+      <div class="sec-head"><span class="no">01</span><span class="tag">How it works</span><h2>Start with your inputs,<br>reach a deliverable in three steps</h2></div>
+      <div class="steps stagger">
+        <article class="step-card"><span class="tc">PRODUCT IMAGES / LOCAL MEDIA / EXISTING VIDEO</span><h3>Bring in what you already have</h3><p>Import product information, images, audio, or recorded video. Mora establishes the project relationship and preserves the goal without changing source files.</p></article>
+        <article class="step-card"><span class="tc">CHOOSE THE PATH BEFORE EXECUTION</span><h3>Generate, compose, or continue editing</h3><p>Use an external model only when media is missing, organize sufficient assets locally, or send existing footage into the local editor. Cloud and local work remain clearly separated.</p></article>
+        <article class="step-card"><span class="tc">VOICE / CAPTIONS / MUSIC / EXPORT</span><h3>Finish locally and keep every version</h3><p>Picture and sound share one post-production chain. FFmpeg creates an independent output while source media, task history, and previous exports remain in the project.</p></article>
+      </div>
+    </section>
+
+    <section id="features" class="reveal">
+      <div class="sec-head"><span class="no">02</span><span class="tag">Why Mora</span><h2>Every asset deserves<br><span class="hl">a better next step</span></h2></div>
+      <div class="feature-deck-layout">
+        <div class="feature-deck-info">
+          <p class="feature-deck-eyebrow">Capability deck <span data-deck-counter>01 / 13</span></p>
+          <p class="feature-deck-kicker" data-deck-kicker>Project orchestration</p>
+          <h3 data-deck-title>Three production paths, each with a clear next step</h3>
+          <p data-deck-summary>Generate missing shots, organize sufficient assets locally, or continue from footage you already recorded.</p>
+          <div class="feature-deck-tags" data-deck-tags><span>Generate</span><span>Compose</span><span>Edit</span></div>
+          <p class="sr-only" aria-live="polite" data-deck-status>Showing capability 1: Three production paths, each with a clear next step</p>
+        </div>
+        <div class="feature-deck-scene">
+          <div class="feature-deck" data-feature-deck tabindex="0" role="region" aria-roledescription="3D card carousel" aria-label="Mora capability cards; drag or use the arrow keys to browse">
+            <article class="feature-deck-card" data-kicker="Project orchestration" data-title="Three production paths, each with a clear next step" data-summary="Generate missing shots, organize sufficient assets locally, or continue from footage you already recorded." data-tags="Generate|Compose|Edit">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case332.png" alt="Tea product campaign example" loading="lazy" draggable="false"><span>01 / ORCHESTRATE</span></div>
+              <div class="feature-card-body"><p>One project relationship</p><h3>Three paths, one project</h3><p>Every path returns to one project, task history, and output system.</p><ul><li>Cloud generation</li><li>Local composition</li><li>Existing-video edit</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="Local first" data-title="Local first, with visible processing boundaries" data-summary="Projects, source media, and final rendering stay on your machine; only explicit generation tasks reach external models." data-tags="Project data|Source media|Local render">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case190.jpg" alt="Coffee machine commerce example" loading="lazy" draggable="false"><span>02 / LOCAL FIRST</span></div>
+              <div class="feature-card-body"><p>Data and execution</p><h3>Local-first boundaries stay visible</h3><p>Projects, source media, and final renders stay local; cloud calls are always identified.</p><ul><li>Local project</li><li>Visible calls</li><li>Independent output</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="On-demand generation" data-title="Generate new shots only when needed" data-summary="Choose image-to-video, text-to-video, keyframes, or references per task, then return results to the current project." data-tags="Image to video|Reference generation|Result return">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case257.jpg" alt="Live-commerce example" loading="lazy" draggable="false"><span>03 / ON DEMAND</span></div>
+              <div class="feature-card-body"><p>External models</p><h3>Call cloud models on demand</h3><p>Send only missing visuals to a model, then keep results as local project assets.</p><ul><li>Task choice</li><li>Status tracking</li><li>Asset return</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="Local composition" data-title="When the media is sufficient, go straight to the edit" data-summary="If images, licensed video, voice, and music are enough, there is no need to generate for generation's sake." data-tags="Existing assets|Captions|Local render">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case454.jpg" alt="Food packaging advertising example" loading="lazy" draggable="false"><span>04 / COMPOSE</span></div>
+              <div class="feature-card-body"><p>Local composition</p><h3>Existing media goes straight to the edit</h3><p>Organize shots, captions, transitions, aspect ratios, and local rendering.</p><ul><li>Reuse media</li><li>Captions and sound</li><li>Local output</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="Existing-video edit" data-title="Continue editing from footage you already shot" data-summary="Apply a local edit plan, render captions, produce a new version, and preserve the original footage." data-tags="Existing video|Preserve source|New version">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case485.jpg" alt="Fashion commerce catalog example" loading="lazy" draggable="false"><span>05 / CONTINUE</span></div>
+              <div class="feature-card-body"><p>Existing footage</p><h3>Continue from source footage</h3><p>The current chain supports local editing, captions, and rendering while preserving originals.</p><ul><li>Edit plan</li><li>Preserve source</li><li>Local render</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="Script &amp; storyboard" data-title="Align the script and storyboard before execution" data-summary="Product facts, creative intent, lines, shots, and candidate assets remain connected." data-tags="Script|Storyboard|Candidates">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case237.jpg" alt="Summer soda advertising example" loading="lazy" draggable="false"><span>06 / PLAN</span></div>
+              <div class="feature-card-body"><p>Content planning</p><h3>Script and storyboard first</h3><p>See the plan before execution instead of waiting for an opaque result.</p><ul><li>Creative intent</li><li>Shot relationships</li><li>Execution approval</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="Sound production" data-title="Picture and sound share one production path" data-summary="Original audio, uploaded voiceover, local system voices, captions, and music all return to one project." data-tags="Voiceover|Captions|Music">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case459.jpg" alt="Milk tea brand advertising example" loading="lazy" draggable="false"><span>07 / SOUND</span></div>
+              <div class="feature-card-body"><p>Sound system</p><h3>Voiceover, captions, and music</h3><p>Sound is organized with picture instead of patched on at the last minute.</p><ul><li>Original sound</li><li>Voiceover</li><li>Caption-and-music version</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="Output system" data-title="Create publishing derivatives from the finished video" data-summary="One project can output vertical video, platform copy, covers, and publishing assets." data-tags="Multiple ratios|Covers|Publishing copy">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case424.jpg" alt="Candy launch poster example" loading="lazy" draggable="false"><span>08 / OUTPUT</span></div>
+              <div class="feature-card-body"><p>Export system</p><h3>Formats and publishing assets</h3><p>Platform specifications and publishing materials remain in the project after the video is done.</p><ul><li>Vertical video</li><li>Platform copy</li><li>Cover derivatives</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="Recoverable tasks" data-title="Resume tasks after leaving the page" data-summary="Inputs, scripts, external task IDs, failure reasons, and output versions form a traceable chain." data-tags="Task history|Failure reasons|Versions">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case475.jpg" alt="Product structure design example" loading="lazy" draggable="false"><span>09 / RECOVER</span></div>
+              <div class="feature-card-body"><p>Tasks and versions</p><h3>Resume tasks and review versions</h3><p>Leave, return, continue checking, or start again from an existing result.</p><ul><li>Persistent state</li><li>Explainable failure</li><li>Version history</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="Quality checks" data-title="Review real publishing issues in one place" data-summary="Check resolution, duration, tracks, black frames, silence, frozen frames, loudness, and media licenses." data-tags="Media QA|License list|Publishing risk">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case373.jpg" alt="Premium fresh-product advertising example" loading="lazy" draggable="false"><span>10 / QUALITY</span></div>
+              <div class="feature-card-body"><p>Quality and publishing</p><h3>Quality checks before publishing</h3><p>Separate machine-detectable issues from risks that need human judgment.</p><ul><li>Picture checks</li><li>Audio checks</li><li>Media licensing</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="Model choice" data-title="Let each project choose its model platform" data-summary="Mora is not locked to one generation service; external calls follow your configuration." data-tags="Bring your key|Replaceable platforms|Usage based">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case313.jpg" alt="Beauty product visual example" loading="lazy" draggable="false"><span>11 / CHOOSE</span></div>
+              <div class="feature-card-body"><p>External capability</p><h3>Bring your key and switch models</h3><p>Mora does not bind your model choice, credentials, or usage fees.</p><ul><li>Bring your key</li><li>Choose per task</li><li>Replace providers</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="Multiple entry points" data-title="One capability set for manual work and local automation" data-summary="Web, desktop, containers, command line, and local APIs connect to the same project production system." data-tags="Web|Desktop|Local API">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case462.jpg" alt="Toy packaging commerce example" loading="lazy" draggable="false"><span>12 / ACCESS</span></div>
+              <div class="feature-card-body"><p>Ways to run</p><h3>Web, desktop, and local automation</h3><p>Create in the interface or connect automation inside a private environment.</p><ul><li>Desktop app</li><li>Private deployment</li><li>Local API</li></ul></div>
+            </article>
+            <article class="feature-deck-card feature-card-future" data-kicker="Future capability" data-title="Intelligent editing will grow from the current local chain" data-summary="Media understanding, shot selection, and pacing suggestions remain future work and are not presented as finished features." data-tags="Future work|Media understanding|Shot selection">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case519.jpg" alt="Fragrance product visual example" loading="lazy" draggable="false"><span>13 / NEXT</span></div>
+              <div class="feature-card-body"><p>Future development</p><h3>Intelligent editing builds on the local chain</h3><p>Future features will grow from existing footage and the local editing chain, not a separate isolated tool.</p><ul><li>Media understanding</li><li>Shot selection</li><li>Pacing guidance</li></ul></div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="facts" class="reveal facts-section" aria-label="Mora project facts">
+      <div class="stats stagger">
+        <div class="stat"><b>3 paths</b><span>Generate · compose · edit</span></div>
+        <div class="stat"><b>Local first</b><span>Project data and final rendering</span></div>
+        <div class="stat"><b>Model choice</b><span>Choose external models per task</span></div>
+        <div class="stat"><b>On-device render</b><span>Media processing and independent outputs</span></div>
+      </div>
+    </section>
+
+    <section id="interface">
+      <div class="sec-head"><span class="no">03</span><span class="tag">Mora Studio</span><h2>Not a concept image,<br>a real project at work</h2></div>
+      <div class="stage product-stage" data-product-tour>
+        <div class="window product-window" data-product-window>
+          <div class="bar"><i></i><i></i><i></i><span data-product-bar>Mora Studio — Local editing workspace</span></div>
+          <div class="product-shot" data-product-demo>
+            <figure class="product-scene is-active" id="product-panel-edit" role="tabpanel" aria-labelledby="product-tab-edit" aria-hidden="false" data-product-panel="edit" data-crop-scrollbar><img src="assets/mora-ui/local-composer.jpg" alt="Mora Studio post-production workspace with timeline, transitions, voice, and composition settings" loading="eager" decoding="sync"></figure>
+            <figure class="product-scene" id="product-panel-assets" role="tabpanel" aria-labelledby="product-tab-assets" aria-hidden="true" data-product-panel="assets" data-crop-scrollbar inert><img src="assets/mora-ui/assets-studio.jpg" alt="Mora Studio media and storyboard workspace" loading="lazy" decoding="async"></figure>
+            <figure class="product-scene" id="product-panel-director" role="tabpanel" aria-labelledby="product-tab-director" aria-hidden="true" data-product-panel="director" data-crop-scrollbar inert><img src="assets/mora-ui/ai-video-studio.jpg" alt="Mora Studio AI video director" loading="lazy" decoding="async"></figure>
+            <figure class="product-scene" id="product-panel-production" role="tabpanel" aria-labelledby="product-tab-production" aria-hidden="true" data-product-panel="production" inert><img src="assets/mora-ui/publish-studio.png" alt="Mora Studio publishing page with video download, publishing copy, and platform exports" loading="lazy" decoding="async"></figure>
+          </div>
+          <div class="product-proof-rail" role="tablist" aria-label="Explore real Mora Studio interfaces">
+            <button id="product-tab-edit" class="is-active" type="button" role="tab" aria-selected="true" aria-controls="product-panel-edit" tabindex="0" data-product-scene="edit" data-product-label="Mora Studio — Local editing workspace"><b>01</b><span>Local editing<small>Timeline and composition</small></span></button>
+            <button id="product-tab-assets" type="button" role="tab" aria-selected="false" aria-controls="product-panel-assets" tabindex="-1" data-product-scene="assets" data-product-label="Mora Studio — Assets &amp; storyboards"><b>02</b><span>Assets &amp; storyboard<small>Six-part content relationship</small></span></button>
+            <button id="product-tab-director" type="button" role="tab" aria-selected="false" aria-controls="product-panel-director" tabindex="-1" data-product-scene="director" data-product-label="Mora Studio — AI video director"><b>03</b><span>AI director<small>Model and camera preview</small></span></button>
+            <button id="product-tab-production" type="button" role="tab" aria-selected="false" aria-controls="product-panel-production" tabindex="-1" data-product-scene="production" data-product-label="Mora Studio — Video publishing"><b>04</b><span>Video publishing<small>Download and platform exports</small></span></button>
+          </div>
+        </div>
+      </div>
+      <div class="workflow-stack" data-workflow-stack>
+        <div class="workflow-stack-sticky">
+          <div class="workflow-stack-intro" data-workflow-intro><h3>From the first asset,<br>to <span>final delivery</span></h3></div>
+          <div class="workflow-stack-copy">
+            <div class="workflow-stack-meta"><span>One production path</span><b data-workflow-counter>01 / 06</b></div>
+            <p class="workflow-stack-kicker" data-workflow-kicker>Project start</p>
+            <h3 data-workflow-title>Project workspace</h3>
+            <p data-workflow-summary>Products, topics, and existing media enter here, forming one project relationship that does not scatter.</p>
+          </div>
+          <div class="workflow-stack-viewport" aria-label="Mora six-step workflow"><div class="workflow-stack-cards" data-workflow-cards>
+            <figure class="workflow-card" data-source-case="332" data-kicker="Project start" data-title="Project workspace" data-summary="Products, topics, and existing media enter here, forming one project relationship that does not scatter."><div class="workflow-card-media"><img src="assets/gpt-image2/case332.png" alt="Tea product campaign example" loading="lazy"></div><figcaption><b>01</b><span>Project workspace<small>Set goals, assets, and project boundaries</small></span></figcaption></figure>
+            <figure class="workflow-card" data-source-case="190" data-kicker="Production plan" data-title="Script &amp; storyboard" data-summary="Confirm content structure, shot relationships, and the production path before execution so generation and editing share one plan."><div class="workflow-card-media"><img src="assets/gpt-image2/case190.jpg" alt="Coffee machine commerce example" loading="lazy"></div><figcaption><b>02</b><span>Script &amp; storyboard<small>Confirm content before execution</small></span></figcaption></figure>
+            <figure class="workflow-card" data-source-case="237" data-kicker="Asset relationships" data-title="Asset workspace" data-summary="Candidate shots, reference frames, and project assets stay together so later changes retain their context."><div class="workflow-card-media"><img src="assets/gpt-image2/case237.jpg" alt="Summer citrus soda campaign example" loading="lazy"></div><figcaption><b>03</b><span>Asset workspace<small>Keep candidates, references, and relationships</small></span></figcaption></figure>
+            <figure class="workflow-card" data-source-case="257" data-kicker="Generate on demand" data-title="AI video" data-summary="Connect an external model only when a project needs new shots; task state and returned results remain in the project."><div class="workflow-card-media"><img src="assets/gpt-image2/case257.jpg" alt="Traditional-fashion live-commerce example" loading="lazy"></div><figcaption><b>04</b><span>AI video<small>Connect a model only for missing shots</small></span></figcaption></figure>
+            <figure class="workflow-card" data-source-case="485" data-kicker="Continue from footage" data-title="Local editing" data-summary="Move recorded video into the local chain for organization, captions, and rendering without replacing source files."><div class="workflow-card-media"><img src="assets/gpt-image2/case485.jpg" alt="Fashion catalog commerce collage example" loading="lazy"></div><figcaption><b>05</b><span>Local editing<small>Finish from existing footage</small></span></figcaption></figure>
+            <figure class="workflow-card" data-source-case="454" data-kicker="Independent outputs" data-title="Export &amp; delivery" data-summary="Export videos, quality checks, and publishing derivatives from one project, with an independent version for every result."><div class="workflow-card-media"><img src="assets/gpt-image2/case454.jpg" alt="Travel-food snack campaign example" loading="lazy"></div><figcaption><b>06</b><span>Export &amp; delivery<small>Keep every result reviewable</small></span></figcaption></figure>
+          </div></div>
+          <p class="sr-only">The workflow proceeds through project workspace, script and storyboard, asset workspace, AI video, local editing, and export and delivery.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="compare" class="compare-motion">
+      <div class="sec-head"><span class="no">04</span><span class="tag">Compare</span><h2>Traditional outsourcing / closed tools <span class="hl">vs Mora</span></h2></div>
+      <div class="compare-canvas">
+      <div class="tablewrap"><table><thead><tr><th>Production stage</th><th>Mora</th><th>Traditional outsourcing</th></tr></thead><tbody>
+        <tr><td>Media intake</td><td class="win">Product images, local media, and existing video enter one project</td><td class="dim">Package and transfer assets to a third party</td></tr>
+        <tr><td>Path choice</td><td class="win">Generation, composition, and editing remain distinct</td><td class="dim">Depends on communication and manual judgment</td></tr>
+        <tr><td>Production process</td><td class="win">Tasks, failure reasons, and versions remain reviewable</td><td class="dim">The process is usually hidden</td></tr>
+        <tr><td>Media control</td><td class="win">Source files stay untouched; outputs become new versions</td><td class="dim">Changes require another asset handoff</td></tr>
+        <tr><td>Final delivery</td><td class="win">Local rendering with unified formats and derivatives</td><td class="dim">Wait for manual export and delivery</td></tr>
+      </tbody></table></div>
+      <div class="tablewrap"><table><thead><tr><th>What matters</th><th>Mora</th><th>Closed AI platform</th><th>Traditional editor</th><th>Loose scripts</th></tr></thead><tbody>
+        <tr><td>Existing local media</td><td class="win">✓ Compose or continue editing directly</td><td class="dim">Depends on platform upload</td><td class="dim">✓ Strong for manual editing</td><td class="na">Usually needs custom glue</td></tr>
+        <tr><td>Cloud model choice</td><td class="win">✓ BYOK, choose per task</td><td class="dim">Usually chosen by the platform</td><td class="na">Requires another tool</td><td class="dim">Depends on configuration</td></tr>
+        <tr><td>Project and data boundary</td><td class="win">✓ Local project with visible calls</td><td class="dim">Usually a cloud workspace</td><td class="win">✓ Local project</td><td class="dim">Spread across processes</td></tr>
+        <tr><td>Complete production chain</td><td class="win">✓ Script, media, sound, rendering, and export</td><td class="dim">Limited to platform scope</td><td class="dim">Requires manual orchestration</td><td class="na">Must be assembled</td></tr>
+        <tr><td>Open source and private deployment</td><td class="win">✓ Local or private environments</td><td class="na">Usually unavailable</td><td class="na">Mostly commercial licensing</td><td class="dim">Depends on the project</td></tr>
+      </tbody></table></div>
+      <p class="tbl-note">This table compares common product categories and production approaches rather than specific products. Verify current capabilities in each tool's public documentation.</p>
+      </div>
+    </section>
+
+    <section id="faq" class="reveal">
+      <div class="sec-head"><span class="no">05</span><span class="tag">FAQ</span><h2>Common questions</h2></div>
+      <div class="faq-list">
+        <details open><summary>Does Mora require every asset to be uploaded to the cloud?</summary><p>No. Local composition and existing-video editing can remain on your machine. Mora reaches an external model only when you explicitly choose to generate new shots.</p></details>
+        <details><summary>Can existing media become a video without calling AI?</summary><p>Yes. When images, video, audio, and copy are sufficient, Mora can organize shots, voice, captions, music, and aspect ratios, then export through local FFmpeg.</p></details>
+        <details><summary>Does Mora already support intelligent AI editing?</summary><p>Mora currently supports applying a local edit plan to existing footage, including captions and rendering. AI media understanding, shot selection, and pacing guidance remain future work.</p></details>
+        <details><summary>Is generation tied to one model platform?</summary><p>No. Mora follows a BYOK approach: you configure external model platforms, and those providers charge for actual usage.</p></details>
+        <details><summary>Will a failed cloud task erase the project?</summary><p>No. Mora keeps the external task ID, current state, and failure reason so you can check again, retry, or continue through a local path.</p></details>
+        <details><summary>What does the salon video demonstrate?</summary><p>It shows existing local footage entering the editing chain, receiving captions and rendering according to the current plan, and producing an independent output. It is not a demo of future AI shot selection.</p></details>
+        <details><summary>How does the project run?</summary><p>Mora targets local or private environments and can be used through Web, Electron, Docker, CLI, and HTTP API. Full installation steps will be organized in the next bilingual README update.</p></details>
+      </div>
+    </section>
+
+    <div class="last-call reveal">
+      <h2>Turn assets into a story,<br><span class="hl">keep creative control</span></h2>
+      <p>From local media to cloud-generated shots and back to a local finish, every step stays visible.</p>
+      <div class="cta"><a class="btn btn-primary" href="https://github.com/sumarilkkxx/Mora" target="_blank" rel="noreferrer">View Mora on GitHub</a><a class="btn btn-ghost" href="#top">Back to top</a></div>
+    </div>
+  </main>
+
+  <footer>
+    <p>Explore: <a href="#how">Workflow</a> · <a href="#features">Features</a> · <a href="#interface">Product UI</a> · <a href="#compare">Comparison</a> · <a href="#faq">FAQ</a></p>
+    <p class="footer-line">Mora · Multimodal Orchestration for Retail Automation · <a href="https://github.com/sumarilkkxx/Mora" target="_blank" rel="noreferrer">GitHub</a> · <a href="index.html" lang="zh-CN">中文</a></p>
+    <p class="footer-line">Verify asset licenses, generated-content labels, and destination-platform rules before publishing.</p>
+  </footer>
+</div>
+
+<script src="landing.js?v=compare-3d-table-3"></script>
+</body>
+</html>

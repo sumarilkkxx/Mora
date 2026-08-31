@@ -1,0 +1,17 @@
+{
+  "source": "User supplied",
+  "images": [
+    {
+      "file": "/examples/products/sunglasses.png",
+      "label": "复古方框墨镜"
+    },
+    {
+      "file": "/examples/products/hair-dryer.png",
+      "label": "高速负离子吹风机"
+    },
+    {
+      "file": "/examples/products/pet-water-fountain.png",
+      "label": "智能宠物饮水机"
+    }
+  ]
+}

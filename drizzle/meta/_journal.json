@@ -1,0 +1,153 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1781261980560,
+      "tag": "0000_damp_mojo",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1781838747824,
+      "tag": "0001_complex_the_anarchist",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1781881200831,
+      "tag": "0002_add_content_type_topic",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1782214744978,
+      "tag": "0003_worthless_dagger",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1782629844203,
+      "tag": "0004_complete_dormammu",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1782730746949,
+      "tag": "0005_fluffy_captain_america",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1782919292496,
+      "tag": "0006_add_shop_affiliate",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1784873148423,
+      "tag": "0007_add_ai_tasks",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1785311997467,
+      "tag": "0008_add_aigc_badge",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1785315498065,
+      "tag": "0009_add_script_characters",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1785410845014,
+      "tag": "0010_add_composition_label",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1786078335796,
+      "tag": "0011_add_ad_template_recipes",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1787217121237,
+      "tag": "0012_pipeline_batch_thumbnail",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1787539647208,
+      "tag": "0013_production_intelligence",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1787636099093,
+      "tag": "0014_pale_darkstar",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1787847783932,
+      "tag": "0015_chubby_pepper_potts",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1787904000000,
+      "tag": "0016_project_trash",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1787986800000,
+      "tag": "0017_project_production_mode",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1788073200000,
+      "tag": "0018_backfill_ai_production_mode",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1788163200000,
+      "tag": "0019_project_target_duration",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1788249600000,
+      "tag": "0020_composition_video_origin",
+      "breakpoints": true
+    }
+  ]
+}

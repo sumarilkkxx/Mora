@@ -1,63 +1,97 @@
-__pycache__/
-*.pyc
-*.pyo
-.pytest_cache/
-*.egg-info/
-dist/
-build/
+# Dependencies and package-manager caches
+/node_modules/
+/.pnpm-store/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
-# 临时文件
-temp/
-*.tmp
+# Next.js, bundler and compiler output
+/.next/
+/.next-dev/
+/out/
+/build/
+/dist/
+/release/
+**/dist/
+/.turbo/
+/.cache/
+*.tsbuildinfo
+next-env.d.ts
 
-# 环境
-.env
-.venv/
-venv/
-uv.lock
+# Documentation website and README assets are source-controlled.
+/TUTORIAL.md
+/TUTORIAL.en.md
 
-# 前端
-node_modules/
-web/dist/
-.vite/
-web/playwright/
-web/playwright.config.ts
-web/public/playwright-logo.svg
-web/playwright-report/
-web/test-results/
-web/*.tsbuildinfo
+# Generated test output
+/coverage/
+/.nyc_output/
+/test-results/
+/playwright-report/
+/junit.xml
 
-# Agent / skill / design workflow artifacts
-.superpowers/
-.impeccable/
-.agents/
-docs/superpowers/
-skills-lock.json
+# Local runtime data and generated media
+/data/
+/uploads/
+/output/
+/cache/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
 
-# IDE
-.vscode/
-.idea/
+# Local environment and secrets
+.env*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
 
-# 系统
-Thumbs.db
+# Logs and diagnostic artifacts
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+*.pid
+*.pid.lock
+
+# Electron and platform packaging artifacts
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+*.msi
+*.exe
+*.blockmap
+
+# Editor, operating-system and temporary files
 .DS_Store
+Thumbs.db
+Desktop.ini
+/.idea/
+/.vscode/
+*.swp
+*.swo
+*.tmp
+*.temp
+*~
 
-# 大文件素材（用户添加的不纳入版本管理）
-assets/watermarks/*.png
-assets/intros/*
-reference_videos/*
-!reference_videos/.gitkeep
+# Local agent and assistant context
+/AGENTS.md
+/CLAUDE.md
+/.claude/
+/.agents/
+/.codex/
 
-# 输出
-output/
-uploads/
-
-# 变更文档
-daily_change.md
-
-# 本地定时推送脚本
-scripts/scheduled_push_master.sh
-
-# Design doc canonical name (case-insensitive FS may show both)
-DESIGN.md
-PRODUCT.md
+# Local deployment state
+/.vercel/

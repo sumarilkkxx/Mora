@@ -1,0 +1,88 @@
+import { NextRequest, NextResponse } from "next/server";
+import { writeFile, mkdir } from "fs/promises";
+import { join } from "path";
+import { getDataDir } from "@/lib/paths";
+import { createProvider } from "@/lib/providers";
+import { buildCharacterSheetPrompt } from "@/lib/character-sheet";
+import { apiError, errText } from "@/lib/api-error";
+import { detectImageMime, imageExtension } from "@/lib/image-format";
+import { validateOrDelete } from "@/lib/media-validate";
+import { MAX_DOWNLOAD_BYTES } from "@/lib/providers/stock-types";
+import { readResponseBuffer, safeFetch } from "@/lib/ssrf-guard";
+
+/**
+ * POST /api/characters/sheet — generate a presenter's 2x2 multi-view reference
+ * sheet (front / side / back / close-up in ONE generation, so it's physically
+ * the same person). The client stores the returned path on the character; the
+ * storyboard grid and film passes then attach it as a reference image to keep
+ * the presenter's identity locked across shots and videos.
+ *
+ * body: { appearance, name?, provider, model, apiKey, baseUrl?, options? }
+ */
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { appearance, name, provider: providerName, model, apiKey, baseUrl, options } = body as {
+      appearance?: string;
+      name?: string;
+      provider?: string;
+      model?: string;
+      apiKey?: string;
+      baseUrl?: string;
+      options?: Record<string, unknown>;
+    };
+    if (!appearance?.trim()) {
+      return apiError(req, "缺少外观描述——先给主播写一段外观", "Missing appearance — describe the presenter first", 400);
+    }
+    if (!providerName || !model) {
+      return apiError(req, "缺少 provider / model", "Missing provider / model", 400);
+    }
+    if (!apiKey) {
+      return apiError(req, "缺少 API Key，请先在设置中配置生图平台", "Missing API key — configure an image provider in settings first", 400);
+    }
+
+    const prompt = buildCharacterSheetPrompt(appearance.trim(), name);
+    const provider = createProvider({ name: providerName, apiKey, baseUrl: baseUrl ?? "" });
+    const result = await provider.generateImage({
+      ...(options ?? {}),
+      modelId: model,
+      mode: "text-to-image",
+      prompt,
+    });
+    const sourceUrl = result.imageUrls?.[0];
+    if (!sourceUrl) throw new Error("生图未返回图片");
+
+    // persist into uploads/characters — served via /api/files/characters/<file>
+    const dir = join(getDataDir(), "uploads", "characters");
+    await mkdir(dir, { recursive: true });
+    let buf: Buffer;
+    let declaredMime = "image/png";
+    if (sourceUrl.startsWith("data:")) {
+      const comma = sourceUrl.indexOf(",");
+      if (comma === -1) throw new Error("无法解析 data URI 图片");
+      buf = Buffer.from(sourceUrl.slice(comma + 1), "base64");
+      declaredMime = sourceUrl.slice(5, comma).split(";")[0] || "image/png";
+    } else if (/^https?:\/\//.test(sourceUrl)) {
+      const resp = await safeFetch(sourceUrl);
+      if (!resp.ok) throw new Error(`下载定妆图失败: ${resp.status}`);
+      buf = await readResponseBuffer(resp, MAX_DOWNLOAD_BYTES, "定妆图");
+      declaredMime = resp.headers.get("content-type")?.split(";")[0] || "image/png";
+    } else {
+      throw new Error("不支持的图片来源");
+    }
+    if (buf.byteLength === 0 || buf.byteLength > MAX_DOWNLOAD_BYTES) throw new Error("定妆图为空或超过安全上限");
+    const ext = imageExtension(detectImageMime(buf) ?? declaredMime);
+    const fileName = `sheet-${Date.now()}.${ext}`;
+    const filePath = join(dir, fileName);
+    await writeFile(filePath, buf);
+    if (!(await validateOrDelete(filePath, "image"))) throw new Error("定妆图文件损坏或格式不受支持");
+
+    return NextResponse.json({ url: `/api/files/characters/${fileName}`, prompt });
+  } catch (error) {
+    console.error("多视图定妆生成失败:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : errText(req, "多视图定妆生成失败", "Character sheet generation failed") },
+      { status: 500 }
+    );
+  }
+}

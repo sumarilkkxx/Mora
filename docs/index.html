@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mora — 本地优先的开源视频创作工作台</title>
+  <meta name="description" content="Mora 把云端 AI 生成、本地素材合成与已有视频剪辑组织进同一个可见、可恢复的视频创作工作台。">
+  <meta name="theme-color" content="#070a0f">
+  <link rel="canonical" href="https://sumarilkkxx.github.io/Mora/">
+  <link rel="alternate" hreflang="zh-CN" href="https://sumarilkkxx.github.io/Mora/">
+  <link rel="alternate" hreflang="en" href="https://sumarilkkxx.github.io/Mora/en.html">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="landing.css?v=compare-3d-table-3">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Mora — 本地优先的开源视频创作工作台">
+  <meta property="og:description" content="已有素材直接组织，需要的新镜头按需生成，最后回到本地完成。">
+  <meta property="og:url" content="https://sumarilkkxx.github.io/Mora/">
+  <meta property="og:image" content="https://sumarilkkxx.github.io/Mora/videos/gallery/pet-ai-final.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+<a class="skip-link" href="#main">跳到主要内容</a>
+
+<div class="container">
+  <nav aria-label="主导航">
+    <a class="nav-brand" href="#top" aria-label="Mora 首页">
+      <img src="logo.svg" alt="" width="30" height="30">
+      <span class="name"><strong>Mora Studio</strong><em>开源推广视频创作台</em></span>
+    </a>
+    <span class="spacer"></span>
+    <a class="plain" href="#how">工作流</a>
+    <a class="plain" href="#features">功能</a>
+    <a class="plain" href="#compare">对比</a>
+    <a class="plain" href="#faq">FAQ</a>
+    <a class="plain keep" href="en.html" lang="en">English</a>
+    <a class="plain keep" href="https://github.com/sumarilkkxx/Mora" target="_blank" rel="noreferrer">GitHub</a>
+    <a class="btn btn-brand" href="https://github.com/sumarilkkxx/Mora" target="_blank" rel="noreferrer">查看源码</a>
+  </nav>
+
+  <main id="main">
+    <header class="hero" id="top">
+      <div class="hero-status" data-hero-status data-state="generating" data-status-states="生成中|剪辑中|合成中|已完成">
+        <span class="hero-status-track" aria-hidden="true">
+          <span class="hero-status-dot"></span>
+          <span class="hero-status-label">视频制作</span>
+          <span class="hero-status-divider"></span>
+          <span class="hero-status-value" data-hero-status-value>生成中</span>
+        </span>
+        <span class="sr-only">视频制作流程：生成、剪辑、合成、完成</span>
+      </div>
+      <h1>
+        <span class="line"><span>让已有素材，</span></span>
+        <span class="line"><span>走到<span class="hl">完整成片</span></span></span>
+      </h1>
+      <p class="sub">导入商品图、本地图片、声音或已经拍好的视频。Mora 让你先选择云端生成、本地合成或已有视频剪辑，再把配音、字幕、BGM 与最终渲染收回到同一个项目里。</p>
+      <div class="cta">
+        <a class="btn btn-primary" href="https://github.com/sumarilkkxx/Mora" target="_blank" rel="noreferrer">在 GitHub 查看 Mora</a>
+        <a class="btn btn-ghost" href="#how">浏览工作流</a>
+      </div>
+      <p class="trust">项目与源素材留在本地 · 外部模型 <b>BYOK</b> · 最终视频由本机完成渲染</p>
+
+      <div class="stage hero-stage">
+        <span class="fbadge b1"><b class="local">LOCAL</b> 项目数据留在本机</span>
+        <span class="fbadge b2"><b class="cloud">AI</b> 新镜头按需生成</span>
+        <span class="fbadge b3"><b class="ok">✓</b> 源素材不被覆盖</span>
+        <span class="fbadge b4"><b class="ok">✓</b> 独立版本本地输出</span>
+
+        <div class="io-strip" aria-label="从输入到成片">
+          <figure><img src="videos/gallery/pet-input.webp" alt="宠物饮水机商品输入图"><figcaption>① 输入：商品与创作目标</figcaption></figure>
+          <span class="io-arrow" aria-hidden="true">→</span>
+          <figure><img src="videos/gallery/pet-storyboard.webp" alt="宠物饮水机脚本与分镜规划"><figcaption>② 规划：脚本与镜头关系</figcaption></figure>
+          <span class="io-arrow" aria-hidden="true">→</span>
+          <figure class="io-output"><img src="videos/gallery/pet-ai-final.jpg" alt="宠物饮水机最终视频画面"><figcaption>③ 输出：完整视频版本</figcaption></figure>
+        </div>
+
+        <div class="phones" aria-label="Mora 真实视频输出">
+          <figure class="ph side l">
+            <video src="videos/demo-coffee-film.mp4" poster="videos/poster-coffee-film.jpg" autoplay muted loop playsinline preload="metadata"></video>
+            <figcaption>已有素材 · 本地合成</figcaption>
+            <button class="snd" type="button" aria-label="开启声音" aria-pressed="false">
+              <svg class="sound-icon sound-icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4z"/><path d="M16 9.2c1.1 1.5 1.1 4.1 0 5.6M18.8 7c2.5 2.7 2.5 7.3 0 10"/></svg>
+              <svg class="sound-icon sound-icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4z"/><path d="M17 10l4 4M21 10l-4 4"/></svg>
+              <span class="sr-only">开启声音</span>
+            </button>
+          </figure>
+          <figure class="ph main">
+            <video src="videos/mora-ai-showcase.mp4" poster="videos/mora-ai-showcase.jpg" autoplay muted loop playsinline preload="metadata"></video>
+            <figcaption>云端镜头 · 本地完成</figcaption>
+            <button class="snd" type="button" aria-label="开启声音" aria-pressed="false">
+              <svg class="sound-icon sound-icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4z"/><path d="M16 9.2c1.1 1.5 1.1 4.1 0 5.6M18.8 7c2.5 2.7 2.5 7.3 0 10"/></svg>
+              <svg class="sound-icon sound-icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4z"/><path d="M17 10l4 4M21 10l-4 4"/></svg>
+              <span class="sr-only">开启声音</span>
+            </button>
+          </figure>
+          <figure class="ph side r">
+            <video src="videos/mora-guided-edit-latest.mp4" poster="videos/mora-guided-edit-latest.jpg" autoplay muted loop playsinline preload="metadata"></video>
+            <figcaption>已有视频 · 本地剪辑</figcaption>
+            <button class="snd" type="button" aria-label="开启声音" aria-pressed="false">
+              <svg class="sound-icon sound-icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4z"/><path d="M16 9.2c1.1 1.5 1.1 4.1 0 5.6M18.8 7c2.5 2.7 2.5 7.3 0 10"/></svg>
+              <svg class="sound-icon sound-icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4z"/><path d="M17 10l4 4M21 10l-4 4"/></svg>
+              <span class="sr-only">开启声音</span>
+            </button>
+          </figure>
+        </div>
+        <p class="phones-note">三条视频对应三种真实起点：<b>现有素材直接组织</b>、<b>缺少镜头时连接外部模型</b>、以及<b>从已经拍好的视频继续剪辑</b>。理发店案例展示当前已实现的本地剪辑与渲染链路；AI 素材理解与智能选镜仍属于后续开发。</p>
+      </div>
+
+      <div class="marquee" aria-hidden="true">
+        <div class="track">
+          <span>商品图输入</span><span>脚本与分镜</span><span>云端 AI 生成</span><span>本地素材合成</span><span>已有视频剪辑</span><span>FFmpeg 渲染</span><span>多平台导出</span>
+          <span>商品图输入</span><span>脚本与分镜</span><span>云端 AI 生成</span><span>本地素材合成</span><span>已有视频剪辑</span><span>FFmpeg 渲染</span><span>多平台导出</span>
+        </div>
+      </div>
+    </header>
+
+    <section id="how" class="reveal">
+      <div class="sec-head"><span class="no">01</span><span class="tag">怎么用</span><h2>从输入开始，<br>三步走到可交付视频</h2></div>
+      <div class="steps stagger">
+        <article class="step-card"><span class="tc">商品图 / 本地素材 / 已有视频</span><h3>把你已经拥有的内容带进来</h3><p>导入商品信息、图片、音频或实拍视频。Mora 先建立项目关系并保存目标，不会因为创建任务就改变源文件。</p></article>
+        <article class="step-card"><span class="tc">先确认路径，再执行任务</span><h3>选择生成、合成或继续剪辑</h3><p>素材不够时按需连接外部模型；素材够用时直接在本地组织；已有视频则进入本地剪辑。云端调用与本地处理始终清楚区分。</p></article>
+        <article class="step-card"><span class="tc">配音 / 字幕 / BGM / 导出</span><h3>回到本地完成并保留版本</h3><p>画面与声音进入同一条后期链路，通过 FFmpeg 生成独立输出。原始素材、任务记录和历史成片继续留在项目中。</p></article>
+      </div>
+    </section>
+
+    <section id="features" class="reveal">
+      <div class="sec-head"><span class="no">02</span><span class="tag">为什么是 Mora</span><h2>每一种素材，<br>都有一条<span class="hl">更合适的下一步</span></h2></div>
+      <div class="feature-deck-layout">
+        <div class="feature-deck-info">
+          <p class="feature-deck-eyebrow">功能一览 <span data-deck-counter>01 / 13</span></p>
+          <p class="feature-deck-kicker" data-deck-kicker>项目编排</p>
+          <h3 data-deck-title>三条制作路径，各自走对下一步</h3>
+          <p data-deck-summary>缺镜头时向外生成，素材够用时在本地组织，视频已经拍好时从原片继续。</p>
+          <div class="feature-deck-tags" data-deck-tags><span>生成</span><span>合成</span><span>剪辑</span></div>
+          <p class="sr-only" aria-live="polite" data-deck-status>当前展示第 1 项能力：三条制作路径，各自走对下一步</p>
+        </div>
+
+        <div class="feature-deck-scene">
+          <div class="feature-deck" data-feature-deck tabindex="0" role="region" aria-roledescription="3D 卡片轮播" aria-label="Mora 功能卡片，拖动或使用方向键切换">
+            <article class="feature-deck-card" data-kicker="项目编排" data-title="三条制作路径，各自走对下一步" data-summary="缺镜头时向外生成，素材够用时在本地组织，视频已经拍好时从原片继续。" data-tags="生成|合成|剪辑">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case332.png" alt="GPT-Image2 画廊中的茶饮商品广告示例" loading="lazy" draggable="false"><span>01 / 项目编排</span></div>
+              <div class="feature-card-body"><p>一套项目关系</p><h3>三条制作路径，不强迫所有素材走同一种 AI</h3><p>每一条路径都回到同一个项目、任务记录和输出体系。</p><ul><li>云端生成</li><li>本地合成</li><li>已有视频剪辑</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="本地优先" data-title="本地优先，处理边界看得见" data-summary="项目、源素材与最终渲染留在本机，只有明确的新镜头任务才连接外部模型。" data-tags="项目数据|源素材|本地渲染">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case190.jpg" alt="GPT-Image2 画廊中的咖啡机商品详情示例" loading="lazy" draggable="false"><span>02 / 本地优先</span></div>
+              <div class="feature-card-body"><p>数据与执行</p><h3>本地优先，边界看得见</h3><p>项目、源素材与最终渲染留在本机；云端调用始终单独说明。</p><ul><li>本地项目</li><li>调用透明</li><li>独立输出</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="按需生成" data-title="新镜头只在需要时生成" data-summary="图生视频、文生视频、首尾帧和参考生成按任务选择，完成后自动回填当前项目。" data-tags="图生视频|参考生成|结果回填">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case257.jpg" alt="GPT-Image2 画廊中的直播带货画面示例" loading="lazy" draggable="false"><span>03 / 按需生成</span></div>
+              <div class="feature-card-body"><p>外部模型</p><h3>云端模型按需调用</h3><p>只把缺少的画面交给模型，生成结果继续成为本地项目资产。</p><ul><li>任务选择</li><li>状态查询</li><li>素材回填</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="本地合成" data-title="素材已经够用，就直接成片" data-summary="图片、合法视频、配音和音乐足够时，不必为了生成而生成。" data-tags="已有素材|字幕|本地渲染">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case454.jpg" alt="GPT-Image2 画廊中的食品包装广告示例" loading="lazy" draggable="false"><span>04 / 本地合成</span></div>
+              <div class="feature-card-body"><p>本地合成</p><h3>已有素材直接成片</h3><p>直接完成镜头组织、字幕、转场、画幅与本地渲染。</p><ul><li>素材复用</li><li>字幕与声音</li><li>本地输出</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="已有视频剪辑" data-title="从已经拍好的视频继续剪辑" data-summary="根据本地剪辑方案完成字幕与渲染，输出新版本并保留原片。" data-tags="已有视频|保留原片|新版本">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case485.jpg" alt="GPT-Image2 画廊中的时尚电商画册示例" loading="lazy" draggable="false"><span>05 / 已有视频剪辑</span></div>
+              <div class="feature-card-body"><p>已有视频</p><h3>从原片继续，而不是重新开始</h3><p>当前链路支持本地剪辑、字幕和渲染，并保留原始素材。</p><ul><li>剪辑方案</li><li>保留原片</li><li>本地渲染</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="脚本与分镜" data-title="脚本与分镜在执行前先对齐" data-summary="商品事实、创作意图、台词、镜头和素材候选始终保持关联。" data-tags="脚本|分镜|素材候选">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case237.jpg" alt="GPT-Image2 画廊中的夏日汽水广告示例" loading="lazy" draggable="false"><span>06 / 脚本与分镜</span></div>
+              <div class="feature-card-body"><p>内容规划</p><h3>脚本与分镜先行</h3><p>执行前看清楚计划，不必直接等待一份不可解释的结果。</p><ul><li>创作意图</li><li>镜头关系</li><li>执行确认</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="声音制作" data-title="画面与声音共享一条制作路径" data-summary="原声、上传旁白、系统本地语音、字幕和音乐都可以回到同一个项目。" data-tags="配音|字幕|背景音乐">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case459.jpg" alt="GPT-Image2 画廊中的奶茶品牌广告示例" loading="lazy" draggable="false"><span>07 / 声音制作</span></div>
+              <div class="feature-card-body"><p>声音系统</p><h3>配音、字幕与 BGM</h3><p>声音不再是最后临时拼接的一层，而是和画面一起组织。</p><ul><li>原声</li><li>旁白</li><li>纯字幕音乐版</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="输出体系" data-title="从成片继续生成发布衍生物" data-summary="同一个项目可以输出竖屏视频、平台文案、封面和发布所需素材。" data-tags="多画幅|封面|发布文案">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case424.jpg" alt="GPT-Image2 画廊中的糖果发布海报示例" loading="lazy" draggable="false"><span>08 / 输出体系</span></div>
+              <div class="feature-card-body"><p>导出体系</p><h3>多画幅与发布衍生物</h3><p>视频完成后，平台规格和发布资料继续留在项目链路中。</p><ul><li>竖屏成片</li><li>平台文案</li><li>封面衍生</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="任务可恢复" data-title="任务离开页面也能继续恢复" data-summary="输入、脚本、外部任务编号、失败原因和输出版本形成可追踪链路。" data-tags="任务记录|失败原因|历史版本">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case475.jpg" alt="GPT-Image2 画廊中的商品结构设计示例" loading="lazy" draggable="false"><span>09 / 任务可恢复</span></div>
+              <div class="feature-card-body"><p>任务与版本</p><h3>任务和版本可恢复</h3><p>可以离开、回来、继续查询，也可以从已有结果重新出发。</p><ul><li>状态持久化</li><li>失败可解释</li><li>版本可回看</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="质量检查" data-title="发布前，把真实问题集中看完" data-summary="分辨率、时长、音轨、黑帧、静音、冻帧、响度与素材授权统一检查。" data-tags="媒体质检|授权清单|发布风险">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case373.jpg" alt="GPT-Image2 画廊中的高端生鲜商品广告示例" loading="lazy" draggable="false"><span>10 / 质量检查</span></div>
+              <div class="feature-card-body"><p>质量与发布</p><h3>质量检测与发布门禁</h3><p>把机器能发现的问题和需要人工判断的风险分开呈现。</p><ul><li>画面检测</li><li>声音检测</li><li>素材授权</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="模型选择" data-title="模型平台由项目自己选择" data-summary="Mora 不把生成能力锁定在单一服务，外部调用按你的配置执行。" data-tags="自带密钥|平台可替换|按量调用">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case313.jpg" alt="GPT-Image2 画廊中的美妆产品视觉示例" loading="lazy" draggable="false"><span>11 / 模型选择</span></div>
+              <div class="feature-card-body"><p>外部能力</p><h3>自带密钥，平台可替换</h3><p>模型的选择、密钥和实际调用费用都不被 Mora 绑定。</p><ul><li>自带密钥</li><li>按任务选择</li><li>供应商可替换</li></ul></div>
+            </article>
+            <article class="feature-deck-card" data-kicker="多种入口" data-title="人工工作台与本地自动化共用能力" data-summary="网页端、桌面端、容器、命令行与本地接口连接到同一套项目生产能力。" data-tags="网页端|桌面端|接口接入">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case462.jpg" alt="GPT-Image2 画廊中的玩具包装商品示例" loading="lazy" draggable="false"><span>12 / 多种入口</span></div>
+              <div class="feature-card-body"><p>运行入口</p><h3>网页、桌面与本地自动化</h3><p>既能在界面里制作，也能在私有环境中接入自动化流程。</p><ul><li>桌面应用</li><li>私有部署</li><li>本地接口</li></ul></div>
+            </article>
+            <article class="feature-deck-card feature-card-future" data-kicker="后续能力" data-title="智能剪辑会建立在现有本地链路上" data-summary="内容理解、镜头选择与节奏建议属于后续开发，目前不描述为已完成能力。" data-tags="后续开发|素材理解|智能选镜">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case519.jpg" alt="GPT-Image2 画廊中的香氛产品视觉示例" loading="lazy" draggable="false"><span>13 / 后续能力</span></div>
+              <div class="feature-card-body"><p>后续开发</p><h3>AI 素材理解与智能剪辑</h3><p>未来能力会从已有视频和现有剪辑链路继续生长，而不是另做一套孤立工具。</p><ul><li>素材理解</li><li>镜头选择</li><li>节奏建议</li></ul></div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="facts" class="reveal facts-section" aria-label="Mora 项目事实">
+      <div class="stats stagger">
+        <div class="stat"><b>3 条</b><span>生成 · 合成 · 剪辑路径</span></div>
+        <div class="stat"><b>本地优先</b><span>项目数据与最终渲染</span></div>
+        <div class="stat"><b>自选模型</b><span>外部模型按需选择</span></div>
+        <div class="stat"><b>本机渲染</b><span>媒体处理与独立输出</span></div>
+      </div>
+    </section>
+
+    <section id="interface">
+      <div class="sec-head"><span class="no">03</span><span class="tag">Mora Studio</span><h2>不是一张概念图，<br>是正在工作的真实项目</h2></div>
+      <div class="stage product-stage" data-product-tour>
+        <div class="window product-window" data-product-window>
+          <div class="bar"><i></i><i></i><i></i><span data-product-bar>Mora Studio — 本地剪辑工作台</span></div>
+          <div class="product-shot" data-product-demo>
+            <figure class="product-scene is-active" id="product-panel-edit" role="tabpanel" aria-labelledby="product-tab-edit" aria-hidden="false" data-product-panel="edit" data-crop-scrollbar>
+              <img src="assets/mora-ui/local-composer.jpg" alt="Mora Studio 后期合成工作台，展示六段视频时间线、转场、配音与合成设置" loading="eager" decoding="sync">
+            </figure>
+            <figure class="product-scene" id="product-panel-assets" role="tabpanel" aria-labelledby="product-tab-assets" aria-hidden="true" data-product-panel="assets" data-crop-scrollbar inert>
+              <img src="assets/mora-ui/assets-studio.jpg" alt="Mora Studio 画面与素材工作区，展示六个真实分镜与生成素材" loading="lazy" decoding="async">
+            </figure>
+            <figure class="product-scene" id="product-panel-director" role="tabpanel" aria-labelledby="product-tab-director" aria-hidden="true" data-product-panel="director" data-crop-scrollbar inert>
+              <img src="assets/mora-ui/ai-video-studio.jpg" alt="Mora Studio AI 视频导演台，展示模型预检、运镜与商品保真设置" loading="lazy" decoding="async">
+            </figure>
+            <figure class="product-scene" id="product-panel-production" role="tabpanel" aria-labelledby="product-tab-production" aria-hidden="true" data-product-panel="production" inert>
+              <img src="assets/mora-ui/publish-studio.png" alt="Mora Studio 视频发布页，展示成片下载、发布文案与多平台导出" loading="lazy" decoding="async">
+            </figure>
+          </div>
+          <div class="product-proof-rail" role="tablist" aria-label="探索 Mora Studio 真实界面">
+            <button id="product-tab-edit" class="is-active" type="button" role="tab" aria-selected="true" aria-controls="product-panel-edit" tabindex="0" data-product-scene="edit" data-product-label="Mora Studio — 本地剪辑工作台">
+              <b>01</b><span>本地剪辑<small>时间线与合成设置</small></span>
+            </button>
+            <button id="product-tab-assets" type="button" role="tab" aria-selected="false" aria-controls="product-panel-assets" tabindex="-1" data-product-scene="assets" data-product-label="Mora Studio — 素材与分镜">
+              <b>02</b><span>素材与分镜<small>六段内容关系</small></span>
+            </button>
+            <button id="product-tab-director" type="button" role="tab" aria-selected="false" aria-controls="product-panel-director" tabindex="-1" data-product-scene="director" data-product-label="Mora Studio — AI 视频导演台">
+              <b>03</b><span>AI 导演台<small>模型与运镜预检</small></span>
+            </button>
+            <button id="product-tab-production" type="button" role="tab" aria-selected="false" aria-controls="product-panel-production" tabindex="-1" data-product-scene="production" data-product-label="Mora Studio — 视频发布页">
+              <b>04</b><span>视频发布页<small>成片下载与多平台导出</small></span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="workflow-stack" data-workflow-stack>
+        <div class="workflow-stack-sticky">
+          <div class="workflow-stack-intro" data-workflow-intro>
+            <h3>从第一份素材，<br>走到<span>最终交付</span></h3>
+          </div>
+          <div class="workflow-stack-copy">
+            <div class="workflow-stack-meta"><span>一条成片路径</span><b data-workflow-counter>01 / 06</b></div>
+            <p class="workflow-stack-kicker" data-workflow-kicker>项目起点</p>
+            <h3 data-workflow-title>项目工作台</h3>
+            <p data-workflow-summary>商品、主题与已有素材从这里进入，先建立一套不会散落的项目关系。</p>
+          </div>
+
+          <div class="workflow-stack-viewport" aria-label="Mora 六步工作流">
+            <div class="workflow-stack-cards" data-workflow-cards>
+              <figure class="workflow-card" data-source-case="332" data-kicker="项目起点" data-title="项目工作台" data-summary="商品、主题与已有素材从这里进入，先建立一套不会散落的项目关系。">
+                <div class="workflow-card-media"><img src="assets/gpt-image2/case332.png" alt="茶饮产品宣传视觉示例" loading="lazy"></div>
+                <figcaption><b>01</b><span>项目工作台<small>整理目标、素材与项目边界</small></span></figcaption>
+              </figure>
+              <figure class="workflow-card" data-source-case="190" data-kicker="制作计划" data-title="脚本与分镜" data-summary="执行前先确认内容结构、镜头关系和制作路径，让生成与剪辑都从同一份计划出发。">
+                <div class="workflow-card-media"><img src="assets/gpt-image2/case190.jpg" alt="咖啡机电商产品展示示例" loading="lazy"></div>
+                <figcaption><b>02</b><span>脚本与分镜<small>先确认内容，再开始执行</small></span></figcaption>
+              </figure>
+              <figure class="workflow-card" data-source-case="237" data-kicker="素材关系" data-title="素材工作区" data-summary="候选镜头、参考画面与项目资产留在一起，后续修改不必重新寻找上下文。">
+                <div class="workflow-card-media"><img src="assets/gpt-image2/case237.jpg" alt="夏日柑橘苏打广告示例" loading="lazy"></div>
+                <figcaption><b>03</b><span>素材工作区<small>保留候选、参考与资产关系</small></span></figcaption>
+              </figure>
+              <figure class="workflow-card" data-source-case="257" data-kicker="按需生成" data-title="AI 视频" data-summary="只有项目缺少新镜头时才连接外部模型，任务状态与返回结果继续归档在当前项目。">
+                <div class="workflow-card-media"><img src="assets/gpt-image2/case257.jpg" alt="汉服直播带货画面示例" loading="lazy"></div>
+                <figcaption><b>04</b><span>AI 视频<small>需要新镜头时再连接模型</small></span></figcaption>
+              </figure>
+              <figure class="workflow-card" data-source-case="485" data-kicker="原片继续" data-title="本地剪辑" data-summary="已经拍好的视频直接进入本地链路，完成组织、字幕和渲染，不覆盖源文件。">
+                <div class="workflow-card-media"><img src="assets/gpt-image2/case485.jpg" alt="时尚目录电商拼贴示例" loading="lazy"></div>
+                <figcaption><b>05</b><span>本地剪辑<small>从已有视频继续完成</small></span></figcaption>
+              </figure>
+              <figure class="workflow-card" data-source-case="454" data-kicker="独立输出" data-title="导出与交付" data-summary="成片、质检结果和发布衍生物从同一个项目导出，每次结果都有独立版本。">
+                <div class="workflow-card-media"><img src="assets/gpt-image2/case454.jpg" alt="旅行美食薯片广告示例" loading="lazy"></div>
+                <figcaption><b>06</b><span>导出与交付<small>让每个结果都可回看</small></span></figcaption>
+              </figure>
+            </div>
+          </div>
+          <p class="sr-only">工作流依次为：项目工作台、脚本与分镜、素材工作区、AI 视频、本地剪辑、导出与交付。</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="compare" class="compare-motion">
+      <div class="sec-head"><span class="no">04</span><span class="tag">横向对比</span><h2>传统外包 / 封闭工具 <span class="hl">vs Mora</span></h2></div>
+      <div class="compare-canvas">
+      <div class="tablewrap"><table><thead><tr><th>制作环节</th><th>Mora</th><th>传统外包</th></tr></thead><tbody>
+        <tr><td>素材进入</td><td class="win">商品图、本地素材与已有视频进入同一项目</td><td class="dim">整理后交付给第三方</td></tr>
+        <tr><td>路径选择</td><td class="win">生成、合成、剪辑三条路径明确区分</td><td class="dim">依赖沟通和人工判断</td></tr>
+        <tr><td>制作过程</td><td class="win">任务、失败原因和版本可回看</td><td class="dim">过程通常不可见</td></tr>
+        <tr><td>素材控制</td><td class="win">源文件不覆盖，独立输出新版本</td><td class="dim">修改需要再次传递素材</td></tr>
+        <tr><td>最终交付</td><td class="win">本地渲染，多画幅与衍生物统一导出</td><td class="dim">等待人工导出和回传</td></tr>
+      </tbody></table></div>
+      <div class="tablewrap"><table><thead><tr><th>你在意的</th><th>Mora</th><th>封闭 AI 视频平台</th><th>传统剪辑软件</th><th>零散脚本工具</th></tr></thead><tbody>
+        <tr><td>本地已有素材</td><td class="win">✓ 可直接合成或继续剪辑</td><td class="dim">视平台上传与流程而定</td><td class="dim">✓ 适合人工精剪</td><td class="na">通常需要自行拼接</td></tr>
+        <tr><td>云端模型选择</td><td class="win">✓ BYOK，按任务选择</td><td class="dim">通常由平台提供</td><td class="na">需要另接工具</td><td class="dim">取决于脚本配置</td></tr>
+        <tr><td>项目和数据边界</td><td class="win">✓ 本地项目，调用边界可见</td><td class="dim">通常依赖云端工作区</td><td class="win">✓ 本地项目</td><td class="dim">分散在不同目录与进程</td></tr>
+        <tr><td>完整生产链路</td><td class="win">✓ 脚本、素材、声音、渲染与导出</td><td class="dim">集中于平台能力范围</td><td class="dim">需要人工编排</td><td class="na">需要自行搭建</td></tr>
+        <tr><td>开源与私有部署</td><td class="win">✓ 开源，本地或私有环境运行</td><td class="na">通常不提供</td><td class="na">商业许可为主</td><td class="dim">视具体项目而定</td></tr>
+      </tbody></table></div>
+      <p class="tbl-note">本表比较的是常见产品形态和制作方式，不针对某一具体产品；具体能力以各工具当前公开说明为准。</p>
+      </div>
+    </section>
+
+    <section id="faq" class="reveal">
+      <div class="sec-head"><span class="no">05</span><span class="tag">FAQ</span><h2>常见问题</h2></div>
+      <div class="faq-list">
+        <details open><summary>Mora 会要求把所有素材上传到云端吗？</summary><p>不会。本地素材合成与已有视频剪辑可以留在本机处理；只有在你选择生成新镜头时，才会按项目配置连接外部模型。</p></details>
+        <details><summary>已有素材可以不调用 AI 直接成片吗？</summary><p>可以。图片、视频、音频和文案足够时，Mora 可以直接组织镜头、配音、字幕、BGM 与画幅，并通过本地 FFmpeg 输出视频。</p></details>
+        <details><summary>现在已经支持 AI 智能剪辑了吗？</summary><p>当前支持根据本地剪辑方案对已有视频完成字幕和渲染。AI 素材理解、镜头选择与节奏建议仍是后续开发内容，网站不会把它描述成已经完成。</p></details>
+        <details><summary>生成能力绑定某一家模型平台吗？</summary><p>不绑定。Mora 采用 BYOK 思路，外部模型平台由你配置，调用费用由对应平台按实际使用收取。</p></details>
+        <details><summary>云端生成失败后会丢失项目吗？</summary><p>项目本身不会因此消失。Mora 会保存外部任务 ID、当前状态和失败原因，方便继续查询、重试或改走本地路径。</p></details>
+        <details><summary>理发店视频展示的是什么能力？</summary><p>它展示的是把本地已有视频带入剪辑链路，根据当前剪辑方案完成字幕与渲染，并输出独立版本。它不是对未来 AI 智能选镜能力的演示。</p></details>
+        <details><summary>项目如何运行？</summary><p>Mora 面向本地或私有环境，可通过 Web、Electron、Docker、CLI 与 HTTP API 使用。具体安装步骤将在下一阶段的中英文 README 中完整整理。</p></details>
+      </div>
+    </section>
+
+    <div class="last-call reveal">
+      <h2>把素材变成故事，<br><span class="hl">制作权始终在你手里</span></h2>
+      <p>从本地素材到云端镜头，再回到本机完成，每一步都清晰可见。</p>
+      <div class="cta"><a class="btn btn-primary" href="https://github.com/sumarilkkxx/Mora" target="_blank" rel="noreferrer">在 GitHub 查看 Mora</a><a class="btn btn-ghost" href="#top">回到顶部</a></div>
+    </div>
+  </main>
+
+  <footer>
+    <p>深入了解：<a href="#how">工作流</a> · <a href="#features">功能</a> · <a href="#interface">产品界面</a> · <a href="#compare">横向对比</a> · <a href="#faq">FAQ</a></p>
+    <p class="footer-line">Mora · Multimodal Orchestration for Retail Automation · <a href="https://github.com/sumarilkkxx/Mora" target="_blank" rel="noreferrer">GitHub</a> · <a href="en.html">English</a></p>
+    <p class="footer-line">请在发布前核对素材授权、生成内容标识与目标平台规则。</p>
+  </footer>
+</div>
+
+  <script src="landing.js?v=compare-3d-table-3"></script>
+</body>
+</html>

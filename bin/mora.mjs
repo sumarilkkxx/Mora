@@ -1,0 +1,666 @@
+#!/usr/bin/env node
+/**
+ * Mora CLI — generate a video from a topic in one command: auto-write script, match footage, add voiceover, and compose.
+ *
+ * Thin wrapper around the Mora HTTP API (DB / FFmpeg / free TTS / free stock),
+ * zero third-party deps, pure Node. Requires a running instance (pnpm dev / pnpm start). Stock + voiceover need no API key; only script generation needs an LLM key.
+ *
+ * Usage:
+ *   node bin/mora.mjs create --topic "在家手冲咖啡" [--duration 25] [--style knowledge]
+ *        [--footage auto|image|video] [--voice <id>] [--aspect 9:16|16:9|1:1]
+ *        [--quality fast|standard|hd] [--bgm] [--bgm-mood upbeat] [--karaoke] [--caption standard|bold|minimal|karaoke]
+ *        [--cta "👇 点击下方下单"] [--json]
+ *   node bin/mora.mjs compose --project <id> [same compose options]   compose an existing project with script + assets
+ *   node bin/mora.mjs list                     list projects
+ *   node bin/mora.mjs voices                   list free voices
+ *   node bin/mora.mjs get --project <id>       fetch the latest composed video URL
+ *   node bin/mora.mjs --help | --version
+ *
+ * Environment variables:
+ *   MORA_BASE_URL (default http://localhost:3000)
+ *   MORA_LLM_BASE_URL / MORA_LLM_API_KEY / MORA_LLM_MODEL (required for create, OpenAI-compatible)
+ *   MORA_PEXELS_KEY / MORA_PIXABAY_KEY (optional, for supplemental paid high-quality video sources)
+ */
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+const BASE_URL = (process.env.MORA_BASE_URL || "http://localhost:3000").replace(/\/+$/, "");
+const LLM = {
+  baseUrl: process.env.MORA_LLM_BASE_URL || "",
+  apiKey: process.env.MORA_LLM_API_KEY || "",
+  model: process.env.MORA_LLM_MODEL || "",
+};
+const STOCK_KEYS = {};
+if (process.env.MORA_PIXABAY_KEY) STOCK_KEYS.pixabay = process.env.MORA_PIXABAY_KEY;
+if (process.env.MORA_PEXELS_KEY) STOCK_KEYS.pexels = process.env.MORA_PEXELS_KEY;
+
+const NARRATION_STYLES = ["knowledge", "story", "lifestyle", "inspiration", "travel"];
+const FOOTAGE_KINDS = ["auto", "image", "video"];
+const ASPECT_RATIOS = ["9:16", "16:9", "1:1"];
+const QUALITY_PRESETS = ["fast", "standard", "hd"];
+const BGM_MOODS = ["upbeat", "chill", "energetic", "emotional"];
+const CAPTION_PRESETS = ["standard", "bold", "minimal", "karaoke"]; // caption style presets (mirrors src/lib/caption-presets.ts)
+
+/** Read own package version (parent of bin/ is the repo root) */
+function readVersion() {
+  try {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const pkg = JSON.parse(readFileSync(join(here, "..", "package.json"), "utf8"));
+    return pkg.version || "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
+
+/**
+ * Minimal argv parser (zero deps): first non-flag token becomes the subcommand; --key value reads a value, --flag sets true.
+ * Exported for unit testing (see __tests__).
+ */
+export function parseArgs(argv) {
+  const out = { _: [], flags: {} };
+  for (let i = 0; i < argv.length; i++) {
+    const tok = argv[i];
+    if (tok.startsWith("--")) {
+      const eqBody = tok.slice(2);
+      const eq = eqBody.indexOf("=");
+      if (eq !== -1) {
+        out.flags[eqBody.slice(0, eq)] = eqBody.slice(eq + 1); // --key=value syntax
+        continue;
+      }
+      const key = eqBody;
+      const next = argv[i + 1];
+      if (next === undefined || next.startsWith("--")) {
+        out.flags[key] = true; // boolean flag
+      } else {
+        out.flags[key] = next;
+        i++;
+      }
+    } else {
+      out._.push(tok);
+    }
+  }
+  return out;
+}
+
+/** Build a compose request body from CLI flags. */
+export function composeBodyFromFlags(flags) {
+  const body = { freeTts: { enabled: true } };
+  if (typeof flags.voice === "string") body.freeTts.voice = flags.voice;
+  if (ASPECT_RATIOS.includes(flags.aspect)) body.aspectRatio = flags.aspect;
+  if (QUALITY_PRESETS.includes(flags.quality)) body.renderPreset = flags.quality;
+  if (flags.bgm === true) body.freeBgm = true;
+  if (BGM_MOODS.includes(flags["bgm-mood"])) body.bgmMood = flags["bgm-mood"];
+  if (flags["bgm-duck"] === true) body.bgmDuck = true;
+  if (flags.karaoke === true) body.karaoke = true;
+  if (CAPTION_PRESETS.includes(flags.caption)) body.captionPreset = flags.caption;
+  if (flags["product-card"] === true) body.productCard = true;
+  // AIGC visible badge is ON by default (2026-07 platform labeling rules); --no-ai-badge opts out.
+  // --ai-disclosure is kept as an accepted no-op for backward compatibility (it used to opt in).
+  if (flags["no-ai-badge"] === true) body.aigcBadge = false;
+  if (typeof flags.cta === "string" && flags.cta.trim()) body.ctaText = flags.cta.trim();
+  return body;
+}
+
+/** Pick a default free voice based on topic language; null = use the server-side Chinese default. */
+export function defaultVoiceForTopic(topic) {
+  const t = String(topic || "");
+  if (/[぀-ヿ]/.test(t)) return "ja-JP-NanamiNeural";
+  if (/[가-힯]/.test(t)) return "ko-KR-SunHiNeural";
+  if (/[一-鿿]/.test(t)) return null;
+  return "en-US-AriaNeural";
+}
+
+/** Call the Mora HTTP API; throws with the backend error message on non-2xx responses */
+async function api(path, { method = "GET", body, timeoutMs = 600000 } = {}) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  let res, text;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      method,
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: ctrl.signal,
+    });
+    text = await res.text();
+  } catch (e) {
+    if (e?.name === "AbortError") throw new Error(`请求超时：${path}`);
+    throw new Error(`连不上 Mora（${BASE_URL}）。请先启动实例：pnpm dev 或 pnpm start。原始错误：${e?.message || e}`);
+  } finally {
+    clearTimeout(timer);
+  }
+  let data;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = { raw: text };
+  }
+  if (!res.ok) throw new Error(data?.error || data?.raw || `HTTP ${res.status}`);
+  return data;
+}
+
+/**
+ * Poll the compose result until done/failed.
+ * Pass the compositionId returned by POST to poll that exact run — polling "latest" is racy when
+ * concurrent composes (retries, A/B variants) exist. No-id fallback kept for older servers whose
+ * GET does not support ?compositionId=. Client deadline (660s) intentionally exceeds the server-side
+ * render timeout (600s, composer COMPOSE_TIMEOUT_MS) so slow-but-successful renders aren't misreported.
+ */
+async function pollCompose(projectId, { compositionId, timeoutMs = 660000, intervalMs = 2500 } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  const query = compositionId ? `?compositionId=${encodeURIComponent(compositionId)}` : "";
+  for (;;) {
+    const { composition } = await api(`/api/project/${projectId}/compose${query}`);
+    const status = composition?.status;
+    if (status === "done") return composition;
+    if (status === "failed") throw new Error("合成失败（FFmpeg/TTS 出错），请检查素材与脚本");
+    if (Date.now() > deadline) throw new Error("合成超时，可稍后用 `get --project` 再查");
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+}
+
+const absVideoUrl = (c) => (c?.url ? `${BASE_URL}${c.url}` : null);
+/** Progress goes to stderr (stdout is reserved for the final result, so scripts can pipe the videoUrl) */
+const step = (m) => process.stderr.write(`· ${m}\n`);
+
+function requireLlm() {
+  if (!LLM.baseUrl || !LLM.apiKey || !LLM.model) {
+    throw new Error(
+      "create 需要 LLM。请设置环境变量 MORA_LLM_BASE_URL、MORA_LLM_API_KEY、MORA_LLM_MODEL（OpenAI 兼容，如 OpenRouter / DeepSeek / OpenAI）。",
+    );
+  }
+}
+
+/**
+ * Judge pass — the same quality bar the web hands-off chains run: five narrow judges
+ * (pacing / spoken voice / freshness / structure / visuals) tear the lines apart and
+ * their length-preserving rewrites are applied in place BEFORE footage/voice work.
+ * Best-effort: any failure returns 0 and the chain continues with the original lines.
+ * Returns the number of rewritten lines.
+ */
+async function judgePass(projectId, scriptId) {
+  if (!scriptId) return 0;
+  try {
+    const report = await api(`/api/project/${projectId}/script-judge`, {
+      method: "POST",
+      body: { scriptId, llmConfig: LLM },
+    });
+    // tier gate (judge v2): auto-apply invariant/default only — taste tier is opinion, not defect;
+    // the visual judge's description rewrites ride the same shotTexts PATCH
+    const gated = (rows) => (Array.isArray(rows) ? rows.filter((r) => r.tier !== "taste") : []);
+    const shotTexts = new Map();
+    for (const r of gated(report?.rewrites)) shotTexts.set(r.shotId, { shotId: r.shotId, voiceover: r.voiceover });
+    for (const r of gated(report?.descriptionRewrites)) {
+      shotTexts.set(r.shotId, { ...(shotTexts.get(r.shotId) ?? { shotId: r.shotId }), description: r.description });
+    }
+    if (shotTexts.size === 0) return 0;
+    await api(`/api/project/${projectId}/scripts`, {
+      method: "PATCH",
+      body: { scriptId, shotTexts: Array.from(shotTexts.values()) },
+    });
+    return shotTexts.size;
+  } catch {
+    return 0;
+  }
+}
+
+async function cmdCreate(flags) {
+  requireLlm();
+  const topic = String(flags.topic || "").trim();
+  if (topic.length < 2) throw new Error("--topic 太短，请给一句完整主题，如 --topic \"在家手冲咖啡\"");
+  const narrationStyle = NARRATION_STYLES.includes(flags.style) ? flags.style : "knowledge";
+  const targetDuration = Number.isFinite(Number(flags.duration)) && flags.duration ? Number(flags.duration) : 25;
+  const mediaType = FOOTAGE_KINDS.includes(flags.footage) ? flags.footage : "auto";
+
+  step(`写脚本：「${topic}」（${narrationStyle} · ${targetDuration}s）`);
+  const scriptRes = await api("/api/topic/script", {
+    method: "POST",
+    body: { topic, narrationStyle, targetDuration, llmConfig: LLM },
+  });
+  const projectId = scriptRes.projectId;
+  const shots = scriptRes?.scripts?.[0]?.shots ?? [];
+  step(`脚本完成：${shots.length} 个分镜 · 项目 ${projectId}`);
+
+  // judge pass: weak lines get rewritten before any footage/voice work (best-effort, never fatal)
+  const judged = await judgePass(projectId, scriptRes?.scripts?.[0]?.id);
+  if (judged) step(`判官团过词：重写 ${judged} 句`);
+
+  step(`配画面（${mediaType}，免费素材库）…`);
+  const fill = await api(`/api/project/${projectId}/stock-fill`, {
+    method: "POST",
+    body: { source: "all", mediaType, apiKeys: STOCK_KEYS, ...(LLM.baseUrl && LLM.model ? { llmConfig: LLM } : {}) },
+  });
+  if (!fill.filled) {
+    throw new Error(
+      `免费素材库没给「${topic}」配到画面，无法合成。换个更常见/具体的主题，或设置 MORA_PEXELS_KEY 后重试。`,
+    );
+  }
+  step(`画面就绪：${fill.filled}/${fill.total}${fill.sameSourceHits ? ` · 同源连贯 ${fill.sameSourceHits} 镜` : ""}`);
+
+  const body = composeBodyFromFlags(flags);
+  if (!body.freeTts.voice) {
+    const v = defaultVoiceForTopic(topic);
+    if (v) body.freeTts.voice = v;
+  }
+  const usedVoice = body.freeTts.voice || "zh-CN-XiaoxiaoNeural";
+  step(`合成中（Edge TTS 配音 · 音色 ${usedVoice}）…`);
+  // POST returns the compositionId of this run — poll that exact one, not "latest"
+  const { compositionId } = await api(`/api/project/${projectId}/compose`, { method: "POST", body });
+  const composition = await pollCompose(projectId, { compositionId });
+
+  return {
+    ok: true,
+    projectId,
+    topic,
+    voice: usedVoice,
+    aspectRatio: ASPECT_RATIOS.includes(flags.aspect) ? flags.aspect : "9:16",
+    shots: shots.length,
+    footageFilled: `${fill.filled}/${fill.total}`,
+    videoUrl: absVideoUrl(composition),
+    status: composition.status,
+  };
+}
+
+// Product link → commerce script (→ optional full render). Chains ingest + /api/llm/script so a
+// single command turns a shop URL into a ready带货脚本; add --compose to render all the way to a video.
+async function cmdProduct(flags) {
+  requireLlm();
+  const url = String(flags.url || "").trim();
+  if (!/^https?:\/\/.+/i.test(url)) throw new Error('--url 必须是合法的 http/https 商品链接，如 --url "https://item.example.com/123"');
+
+  step(`抓取商品信息：${url}`);
+  const ingest = await api("/api/ingest/product", { method: "POST", body: { url, createProject: true } });
+  const projectId = ingest.projectId;
+  if (!projectId) throw new Error("未能从该链接建项目（可能被反爬或缺少标准商品标签），请换一个链接。");
+  const productName = ingest.product?.title?.trim();
+  if (!productName) throw new Error("未能解析出商品标题，无法生成带货脚本，请换一个带标准 OG/JSON-LD 标签的链接。");
+  step(`商品：${productName}${ingest.product?.priceText ? ` · ${ingest.product.priceText}` : ""} · 图 ${ingest.productImages?.length ?? 0} 张`);
+
+  const styleType = ["pain_point", "scene", "comparison", "story", "drama", "reversal", "interview", "unboxing", "product_pov", "talking_head", "auto"].includes(flags.style) ? flags.style : "auto";
+  const targetDuration = Number.isFinite(Number(flags.duration)) && flags.duration ? Number(flags.duration) : 30;
+  step(`写带货脚本（${styleType} · ${targetDuration}s）…`);
+  const scriptRes = await api("/api/llm/script", {
+    method: "POST",
+    body: {
+      projectId,
+      productName,
+      productDescription: ingest.product?.description ?? "",
+      productImages: ingest.productImages ?? [],
+      ...(flags.category ? { category: String(flags.category) } : {}),
+      styleType,
+      targetDuration,
+      llmConfig: LLM,
+    },
+  });
+  const scripts = Array.isArray(scriptRes?.scripts) ? scriptRes.scripts : [];
+  step(`脚本完成：${scripts.length} 套方案 · 项目 ${projectId}`);
+
+  // Without --compose, stop after script generation.
+  if (!flags.compose) {
+    step(`下一步：mora compose --project ${projectId}（配画面+配音+合成出片）`);
+    return { ok: true, projectId, product: ingest.product ?? null, scripts: scripts.length };
+  }
+
+  // --compose: go all the way to a rendered video (product-image + free stock fill)
+  // judge pass on the selected (first) variant — the compose below reads the same one
+  const judged = await judgePass(projectId, scripts[0]?.id);
+  if (judged) step(`判官团过词：重写 ${judged} 句`);
+
+  const mediaType = FOOTAGE_KINDS.includes(flags.footage) ? flags.footage : "auto";
+  step(`配画面（${mediaType}，商品图 + 免费素材库）…`);
+  const fill = await api(`/api/project/${projectId}/stock-fill`, {
+    method: "POST",
+    body: { source: "all", mediaType, apiKeys: STOCK_KEYS, ...(LLM.baseUrl && LLM.model ? { llmConfig: LLM } : {}) },
+  });
+  step(`画面就绪：${fill.filled ?? 0}/${fill.total ?? 0}${fill.sameSourceHits ? ` · 同源连贯 ${fill.sameSourceHits} 镜` : ""}`);
+
+  const body = composeBodyFromFlags(flags);
+  const usedVoice = body.freeTts.voice || "zh-CN-XiaoxiaoNeural";
+  step(`合成中（Edge TTS 配音 · 音色 ${usedVoice}）…`);
+  const { compositionId } = await api(`/api/project/${projectId}/compose`, { method: "POST", body });
+  const composition = await pollCompose(projectId, { compositionId });
+  return {
+    ok: true,
+    projectId,
+    product: ingest.product ?? null,
+    scripts: scripts.length,
+    voice: usedVoice,
+    footageFilled: `${fill.filled ?? 0}/${fill.total ?? 0}`,
+    videoUrl: absVideoUrl(composition),
+    status: composition.status,
+  };
+}
+
+async function cmdCompose(flags) {
+  const projectId = String(flags.project || "").trim();
+  if (!projectId) throw new Error("--project 不能为空");
+  if (flags["no-fill"] !== true) {
+    step("自动配缺失画面…");
+    await api(`/api/project/${projectId}/stock-fill`, {
+      method: "POST",
+      body: { source: "all", mediaType: FOOTAGE_KINDS.includes(flags.footage) ? flags.footage : "auto", apiKeys: STOCK_KEYS, ...(LLM.baseUrl && LLM.model ? { llmConfig: LLM } : {}) },
+    }).catch(() => {});
+  }
+  const body = composeBodyFromFlags(flags);
+  if (!body.freeTts.voice) {
+    const proj = await api(`/api/project/${projectId}`).catch(() => null);
+    const v = proj?.topic ? defaultVoiceForTopic(String(proj.topic)) : null;
+    if (v) body.freeTts.voice = v;
+  }
+  step("合成中…");
+  // POST returns the compositionId of this run — poll that exact one, not "latest"
+  const { compositionId } = await api(`/api/project/${projectId}/compose`, { method: "POST", body });
+  const composition = await pollCompose(projectId, { compositionId });
+  return { ok: true, projectId, voice: body.freeTts.voice || "zh-CN-XiaoxiaoNeural", videoUrl: absVideoUrl(composition), status: composition.status };
+}
+
+async function cmdList() {
+  const rows = await api("/api/project");
+  const projects = (Array.isArray(rows) ? rows : []).map((p) => ({ id: p.id, name: p.name, contentType: p.contentType, status: p.status }));
+  return { ok: true, count: projects.length, projects };
+}
+
+async function cmdVoices() {
+  const res = await api("/api/tts/free");
+  return { ok: true, default: res.default, voices: res.voices ?? [] };
+}
+
+// Cover/thumbnail: render a cover image from the latest composed video with a bold title overlay
+async function cmdCover(flags) {
+  const projectId = String(flags.project || "").trim();
+  if (!projectId) throw new Error("--project 不能为空");
+  const title = String(flags.title || "").trim();
+  if (!title) throw new Error('--title 不能为空（如 --title "手冲咖啡 三步搞定"）');
+  const body = { title };
+  if (["center", "lower", "upper"].includes(flags.position)) body.position = flags.position;
+  if (flags.frame && Number.isFinite(Number(flags.frame))) body.frameAt = Number(flags.frame);
+  const res = await api(`/api/project/${projectId}/cover`, { method: "POST", body });
+  step(`封面已生成：${res.cover}`);
+  return { ok: true, projectId, cover: res.cover };
+}
+
+// Shop QR: generate a scannable "scan to buy" QR for the project's shop link (UTM-tagged)
+async function cmdQr(flags) {
+  const projectId = String(flags.project || "").trim();
+  if (!projectId) throw new Error("--project 不能为空");
+  const body = {};
+  if (typeof flags.url === "string" && flags.url.trim()) body.url = flags.url.trim();
+  if (typeof flags.platform === "string" && flags.platform.trim()) body.platform = flags.platform.trim();
+  if (flags.size && Number.isFinite(Number(flags.size))) body.size = Number(flags.size);
+  const res = await api(`/api/project/${projectId}/shop-qr`, { method: "POST", body });
+  step(`商品二维码已生成：${res.qr}`);
+  if (res.shopLink) step(`追踪链接：${res.shopLink}`);
+  if (res.warning?.zh) step(`⚠️ ${res.warning.zh}`);
+  return { ok: true, projectId, qr: res.qr, shopLink: res.shopLink };
+}
+
+// End-card: burn a "scan to buy" QR onto the last few seconds of the composed video
+async function cmdEndcard(flags) {
+  const projectId = String(flags.project || "").trim();
+  if (!projectId) throw new Error("--project 不能为空");
+  const body = {};
+  if (typeof flags.url === "string" && flags.url.trim()) body.url = flags.url.trim();
+  if (typeof flags.platform === "string" && flags.platform.trim()) body.platform = flags.platform.trim();
+  // --force overrides the douyin off-site-diversion refusal (in-video QR risks shop-window closure there)
+  if (flags.force === true) body.force = true;
+  if (flags.seconds && Number.isFinite(Number(flags.seconds))) body.seconds = Number(flags.seconds);
+  if (typeof flags.cta === "string" && flags.cta.trim()) body.ctaText = flags.cta.trim();
+  const res = await api(`/api/project/${projectId}/end-card`, { method: "POST", body });
+  step(`片尾扫码购买成片已生成：${res.video}`);
+  if (res.warning?.zh) step(`⚠️ ${res.warning.zh}`);
+  return { ok: true, projectId, video: res.video, shopLink: res.shopLink };
+}
+
+// Native feel: hand-shot look post-process (handheld micro-jitter + grain + de-polish color)
+async function cmdNative(flags) {
+  const projectId = String(flags.project || "").trim();
+  if (!projectId) throw new Error("--project 不能为空");
+  const body = {};
+  if (flags.strength === "medium" || flags.strength === "subtle") body.strength = flags.strength;
+  if (flags.seed && Number.isFinite(Number(flags.seed))) body.seed = Number(flags.seed);
+  if (flags["no-grain"]) body.grain = false;
+  if (flags.vignette) body.vignette = true;
+  const res = await api(`/api/project/${projectId}/native-feel`, { method: "POST", body });
+  step(`原生感成片已生成（${res.strength}）：${res.video}`);
+  return { ok: true, projectId, video: res.video, strength: res.strength };
+}
+
+// Credits: export the asset license manifest (per-shot provenance + commercial-risk flags + attribution lines)
+async function cmdCredits(flags) {
+  const projectId = String(flags.project || "").trim();
+  if (!projectId) throw new Error("--project 不能为空");
+  const lang = flags.lang === "en" ? "en" : "zh";
+  if (flags.format === "md") {
+    const res = await api(`/api/project/${projectId}/credits?format=md&lang=${lang}`);
+    // markdown comes back as text (api() wraps non-JSON as { raw }) — print it verbatim for piping to a file
+    process.stdout.write(typeof res.raw === "string" ? res.raw : JSON.stringify(res, null, 2));
+    return { ok: true, projectId };
+  }
+  const m = await api(`/api/project/${projectId}/credits`);
+  step(`素材 ${m.summary.total} 项：需署名 ${m.summary.needsAttribution}，需人工复核 ${m.summary.needsReview}`);
+  step(m.summary.commercialSafe ? "✓ 未发现商用限制素材" : "⚠ 有素材需人工复核，投流前请确认或替换");
+  for (const i of [...(m.items || []), ...(m.bgm ? [m.bgm] : [])]) {
+    if (i.attributionLine) step(`署名: ${i.attributionLine}`);
+    if (i.risk === "review") step(`复核: ${i.shotId >= 0 ? `分镜${i.shotId + 1}` : "BGM"} · ${i.license || "许可未知"}`);
+  }
+  return { ok: true, projectId, summary: m.summary, items: m.items, bgm: m.bgm };
+}
+
+// Release gate: one aggregated pre-publish verdict (script readiness + video QC + asset licenses).
+// Exit code 2 when the gate blocks (fail, or warn under --strict) so shell scripts and agents can gate on it.
+async function cmdGate(flags) {
+  const projectId = String(flags.project || "").trim();
+  if (!projectId) throw new Error("--project 不能为空");
+  const body = {};
+  if (typeof flags.composition === "string" && flags.composition.trim()) body.compositionId = flags.composition.trim();
+  const res = await api(`/api/project/${projectId}/gate`, { method: "POST", body });
+  const icon = { pass: "✓", warn: "⚠", fail: "✗" };
+  for (const item of res.report?.items || []) {
+    step(`${icon[item.status] || "·"} ${item.message?.zh || item.id}`);
+    for (const p of item.problems || []) step(`    · ${p.zh || p.en || ""}`);
+  }
+  const status = res.report?.status;
+  step(res.report?.verdict?.zh || (status === "pass" ? "发布门禁通过" : "发布门禁未通过"));
+  const blocked = status === "fail" || (flags.strict === true && status !== "pass");
+  if (blocked && flags.strict === true && status === "warn") step("（--strict 模式：警告项也视为拦截）");
+  return { ok: !blocked, projectId, status, report: res.report, exitCode: blocked ? 2 : 0 };
+}
+
+// Platform export: re-encode the latest composed video to a platform's specs with the
+// anti-recompression bitrate cap, and print the measured-vs-line report
+async function cmdExport(flags) {
+  const projectId = String(flags.project || "").trim();
+  if (!projectId) throw new Error("--project 不能为空");
+  const platform = String(flags.platform || "").trim();
+  if (!platform) throw new Error("--platform 不能为空（douyin|kuaishou|xiaohongshu|shipinhao|tiktok|reels|shorts）");
+  const res = await api(`/api/project/${projectId}/export-platform`, { method: "POST", body: { platform } });
+  step(`${res.platformName} 导出完成（${res.size}）：${res.url}`);
+  if (res.report) step(`${res.report.withinCap ? "✓" : "⚠"} ${res.report.message?.zh || ""}`);
+  return { ok: true, projectId, platform, url: res.url, size: res.size, report: res.report };
+}
+
+// QC: run the automated quality check over the latest composed video (black frames / silence / loudness / streams)
+async function cmdQc(flags) {
+  const projectId = String(flags.project || "").trim();
+  if (!projectId) throw new Error("--project 不能为空");
+  const body = {};
+  if (typeof flags.composition === "string" && flags.composition.trim()) body.compositionId = flags.composition.trim();
+  const res = await api(`/api/project/${projectId}/qc`, { method: "POST", body });
+  const icon = { ok: "✓", warn: "⚠", fail: "✗" };
+  for (const c of res.checks || []) step(`${icon[c.level] || "·"} ${c.message?.zh || c.id}`);
+  step(res.status === "ok" ? "质检通过" : res.status === "warn" ? "质检有警告，建议人工复核" : "质检不通过，请勿直接发布");
+  return { ok: res.status !== "fail", projectId, status: res.status, checks: res.checks };
+}
+
+// GIF preview: turn a slice of the latest composed video into a shareable looping GIF
+async function cmdPreview(flags) {
+  const projectId = String(flags.project || "").trim();
+  if (!projectId) throw new Error("--project 不能为空");
+  const body = {};
+  if (flags.start && Number.isFinite(Number(flags.start))) body.startSec = Number(flags.start);
+  if (flags.duration && Number.isFinite(Number(flags.duration))) body.durationSec = Number(flags.duration);
+  if (flags.width && Number.isFinite(Number(flags.width))) body.width = Number(flags.width);
+  const res = await api(`/api/project/${projectId}/preview-gif`, { method: "POST", body });
+  step(`预览 GIF 已生成：${res.gif}`);
+  return { ok: true, projectId, gif: res.gif };
+}
+
+// Contact sheet: one PNG overview of the latest composed video for eyeball QC.
+// Smart mode (default) samples real scene cuts and marks splice points; --proxy adds a
+// short-side-720 review clip with burned-in timecode for frame-accurate human feedback.
+async function cmdSheet(flags) {
+  const projectId = String(flags.project || "").trim();
+  if (!projectId) throw new Error("--project 不能为空");
+  const body = {};
+  if (flags.frames && Number.isFinite(Number(flags.frames))) body.frames = Number(flags.frames);
+  if (flags["thumb-width"] && Number.isFinite(Number(flags["thumb-width"]))) body.thumbWidth = Number(flags["thumb-width"]);
+  if (flags.mode === "even" || flags.mode === "smart") body.mode = flags.mode;
+  if (flags.proxy === true) body.proxy = true;
+  const res = await api(`/api/project/${projectId}/contact-sheet`, { method: "POST", body });
+  const cutNote = res.mode === "smart" ? `，检测到 ${(res.cuts || []).length} 个拼接点` : "";
+  step(`成片速览已生成：${res.sheet}（${res.layout.frames} 帧胶片条${res.layout.waveHeight ? " + 波形" : ""}${cutNote}）`);
+  if (res.proxy) step(`审片小样（720p+时间码）：${res.proxy}`);
+  return { ok: true, projectId, ...res };
+}
+
+// Carousel: render image cards (title + key lines) from the script for image-first platforms (Xiaohongshu)
+async function cmdCarousel(flags) {
+  const projectId = String(flags.project || "").trim();
+  if (!projectId) throw new Error("--project 不能为空");
+  const body = {};
+  if (flags.width && Number.isFinite(Number(flags.width))) body.width = Number(flags.width);
+  if (flags.height && Number.isFinite(Number(flags.height))) body.height = Number(flags.height);
+  if (typeof flags.theme === "string") body.theme = flags.theme;
+  const res = await api(`/api/project/${projectId}/carousel`, { method: "POST", body });
+  step(`图文卡片已生成 ${res.count} 张：`);
+  (res.cards || []).forEach((c, i) => process.stderr.write(`  ${i}. ${c}\n`));
+  return { ok: true, projectId, count: res.count, cards: res.cards };
+}
+
+// Trending topics: suggest what topic to produce next (then use create --topic).
+// Default = domestic boards (Douyin hot search / Toutiao fallback, matching the web landing page);
+// pass --geo for Google Trends daily searches of a region instead.
+async function cmdTrends(flags) {
+  const geo = typeof flags.geo === "string" ? flags.geo : "";
+  const res = await api(geo ? `/api/trends?geo=${encodeURIComponent(geo)}` : "/api/trends?source=cn");
+  const topics = res.topics || [];
+  step(`${res.geo || res.source || "cn"} 热搜选题 ${topics.length} 条：`);
+  topics.forEach((t, i) => process.stderr.write(`  ${i + 1}. ${t.title}${t.traffic ? ` (${t.traffic})` : ""}\n`));
+  return { ok: true, source: res.source, geo: res.geo, count: topics.length, topics };
+}
+
+async function cmdGet(flags) {
+  const projectId = String(flags.project || "").trim();
+  if (!projectId) throw new Error("--project 不能为空");
+  const { composition } = await api(`/api/project/${projectId}/compose`);
+  if (!composition) return { ok: true, projectId, status: "none", videoUrl: null };
+  return { ok: true, projectId, status: composition.status, videoUrl: absVideoUrl(composition) };
+}
+
+// Import your own script: split a pre-written script into shots and save as the current script, then use compose to render (combine with local assets for a fully self-sufficient pipeline)
+async function cmdImport(flags) {
+  const projectId = String(flags.project || "").trim();
+  if (!projectId) throw new Error("--project 不能为空");
+  let script = typeof flags.text === "string" ? flags.text : "";
+  if (!script && flags.file) script = readFileSync(String(flags.file), "utf8");
+  if (!script.trim()) throw new Error('用 --file <路径> 或 --text "你的脚本文案" 提供稿子');
+  const res = await api(`/api/project/${projectId}/import-script`, {
+    method: "POST",
+    body: { script, title: typeof flags.title === "string" ? flags.title : undefined },
+  });
+  step(`已导入 ${res.shots} 个分镜（约 ${res.totalDuration}s）。下一步：mora compose --project ${projectId}`);
+  return { ok: true, projectId, ...res };
+}
+
+// Dubbing / localization: translate the current script into the target language and save as a dubbed version; compose with the recommended voice to produce a localized voiceover (for international distribution)
+async function cmdDub(flags) {
+  requireLlm();
+  const projectId = String(flags.project || "").trim();
+  if (!projectId) throw new Error("--project 不能为空");
+  const lang = String(flags.lang || "").trim();
+  if (!lang) throw new Error('--lang 不能为空（如 --lang en）');
+  const res = await api(`/api/project/${projectId}/dub`, { method: "POST", body: { targetLang: lang, llmConfig: LLM } });
+  step(`已生成 ${lang} 译制脚本（${res.shots} 镜）。下一步：mora compose --project ${projectId} --voice ${res.recommendedVoice || "<目标语种音色>"}`);
+  return { ok: true, projectId, ...res };
+}
+
+const HELP = `Mora CLI · 命令行一句话出片
+
+用法：
+  mora create --topic "在家手冲咖啡" [--duration 25] [--style knowledge]
+                   [--footage auto|image|video] [--voice <id>] [--aspect 9:16|16:9|1:1]
+                   [--quality fast|standard|hd] [--bgm] [--bgm-mood upbeat] [--karaoke] [--cta "..."] [--json]
+                   [--caption standard|bold|minimal|karaoke]   字幕样式预设(标准底板/重击大字/极简/逐字高亮)
+  mora product --url "<商品链接>" [--style pain_point|scene|comparison|story|drama|reversal|interview|unboxing|product_pov|talking_head|auto] [--duration 30]
+                   [--category beauty|food|home|fashion|tech|other] [--compose 同款成片选项]   贴链接→带货脚本(加 --compose 直接出片)
+  mora import --project <id> (--file <路径> | --text "你的脚本") [--title "..."]   自带脚本出片
+  mora dub --project <id> --lang en                                              配音译制(换语种,出海)
+  mora compose --project <id> [同款成片选项] [--no-fill]
+  mora trends [--geo US]   拉热搜选题(默认抖音/头条国内榜;--geo 走 Google Trends)
+  mora list                列出项目
+  mora voices              列出免费 Edge TTS 音色
+  mora cover --project <id> --title "手冲咖啡 三步搞定" [--position center|lower|upper]   生成封面图
+  mora qr --project <id> [--platform douyin --url <shopUrl> --size 512]   生成商品「扫码购买」二维码(UTM追踪)
+  mora endcard --project <id> [--platform douyin --seconds 3 --cta "扫码购买"]   把扫码购买二维码烧进成片片尾(需先合成)
+  mora export --project <id> --platform douyin|kuaishou|xiaohongshu|shipinhao|tiktok|reels|shorts   按平台导出(码率卡线免二压+实测报告)
+  mora qc --project <id> [--composition <id>]   成片质检(黑屏/静音/响度/流完整性,批量出片前把关)
+  mora gate --project <id> [--strict] [--composition <id>]   发布门禁:一条命令聚合 脚本就绪+成片质检+素材授权 三层检查
+                                fail(或 --strict 下 warn)退出码为 2,可直接接进脚本/CI 拦截发布
+  mora credits --project <id> [--format md --lang zh|en]   素材授权清单(商用风险+署名行,投流审核用)
+  mora native --project <id> [--strength subtle|medium --seed 3 --no-grain --vignette]   原生感处理(手持感+颗粒,反AI精致感)
+  mora preview --project <id> [--start 0 --duration 4 --width 360]   生成预览 GIF
+  mora sheet --project <id> [--frames 8 --proxy --mode smart|even]   成片速览一张图(scene感知抽帧+拼接点标注+波形;--proxy 出720p时间码审片小样)
+  mora carousel --project <id> [--theme night|warm|mint|mono|rose]   生成小红书图文卡片(标题+逐条要点)
+  mora get --project <id>  查最新成片地址
+  mora --help | --version
+
+环境变量：
+  MORA_BASE_URL（默认 http://localhost:3000，需先 pnpm dev/start）
+  MORA_LLM_BASE_URL / MORA_LLM_API_KEY / MORA_LLM_MODEL（create 必需）
+  MORA_PEXELS_KEY / MORA_PIXABAY_KEY（可选）
+
+进度打印到 stderr，最终结果（含 videoUrl）打印到 stdout，便于管道取值。`;
+
+const COMMANDS = { create: cmdCreate, product: cmdProduct, import: cmdImport, dub: cmdDub, compose: cmdCompose, cover: cmdCover, qr: cmdQr, endcard: cmdEndcard, export: cmdExport, qc: cmdQc, gate: cmdGate, credits: cmdCredits, native: cmdNative, preview: cmdPreview, sheet: cmdSheet, carousel: cmdCarousel, list: cmdList, voices: cmdVoices, get: cmdGet, trends: cmdTrends };
+
+async function main() {
+  const { _, flags } = parseArgs(process.argv.slice(2));
+  if (flags.version || flags.v) {
+    process.stdout.write(`${readVersion()}\n`);
+    return 0;
+  }
+  const cmd = _[0];
+  if (!cmd || flags.help || flags.h || cmd === "help") {
+    process.stdout.write(HELP + "\n");
+    return cmd && !COMMANDS[cmd] ? 1 : 0;
+  }
+  const handler = COMMANDS[cmd];
+  if (!handler) {
+    process.stderr.write(`未知命令：${cmd}\n\n${HELP}\n`);
+    return 1;
+  }
+  const result = await handler(flags);
+  if (flags.json) {
+    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+  } else {
+    if (result.videoUrl) {
+      step("完成 ✓");
+      process.stdout.write(result.videoUrl + "\n");
+    } else {
+      process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    }
+  }
+  // commands with gate semantics (e.g. `gate`) surface their own exit code; everything else exits 0
+  return typeof result?.exitCode === "number" ? result.exitCode : 0;
+}
+
+// Only run when executed as an entry point (not when imported by unit tests)
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main()
+    .then((code) => process.exit(code ?? 0))
+    .catch((e) => {
+      process.stderr.write(`✗ ${e?.message || e}\n`);
+      process.exit(1);
+    });
+}

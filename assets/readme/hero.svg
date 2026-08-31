@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="380" viewBox="0 0 1200 380" role="img" aria-labelledby="title desc">
+  <title id="title">Mora — local-first AI video workspace</title>
+  <desc id="desc">Mora turns a brief into a script with a text model, organizes local or generated media, and produces a versioned final video.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1200" y2="380" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07111C"/>
+      <stop offset="1" stop-color="#0B2133"/>
+    </linearGradient>
+    <linearGradient id="logo" x1="65" y1="45" x2="123" y2="103" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8EDBFF"/>
+      <stop offset="1" stop-color="#087BDF"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="380" rx="28" fill="url(#background)"/>
+  <rect x="1" y="1" width="1198" height="378" rx="27" fill="none" stroke="#28526F"/>
+
+  <g id="identity">
+    <g transform="translate(58 42)">
+      <rect width="70" height="70" rx="18" fill="#0D355A" stroke="#5AB9EF"/>
+      <rect x="13" y="13" width="44" height="44" rx="11" fill="none" stroke="url(#logo)" stroke-width="4"/>
+      <rect x="20" y="20" width="30" height="19" rx="6" fill="#DDF4FF" fill-opacity="0.08" stroke="#DDF4FF" stroke-opacity="0.78" stroke-width="2"/>
+      <path d="M31 24.5L43 30.2C45.2 31.3 45.2 34.5 43 35.6L31 41.3V24.5Z" fill="#DDF4FF"/>
+      <rect x="20" y="45" width="30" height="7" rx="3.5" fill="#07111C" stroke="#8EDBFF" stroke-opacity="0.58"/>
+      <rect x="24" y="47" width="8" height="3" rx="1.5" fill="#DDF4FF"/>
+      <rect x="35" y="47" width="11" height="3" rx="1.5" fill="#8EDBFF"/>
+    </g>
+    <text x="58" y="146" fill="#8EDBFF" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="700" letter-spacing="2.2">LOCAL-FIRST AI VIDEO WORKSPACE</text>
+    <text x="54" y="235" fill="#F4FAFF" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="86" font-weight="760" letter-spacing="-3">Mora</text>
+    <text x="59" y="279" fill="#DDF4FF" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="25" font-weight="650">从创作意图到可追踪的完整成片</text>
+    <text x="59" y="316" fill="#A8BDD0" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="20">文本模型写脚本 · 本地或 AI 素材组织画面</text>
+    <text x="59" y="346" fill="#A8BDD0" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="20">配音、字幕与 FFmpeg 回到同一个项目</text>
+  </g>
+
+  <path d="M548 50V330" stroke="#28526F" stroke-width="1"/>
+  <text x="590" y="56" fill="#7990A4" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" font-weight="700" letter-spacing="1.6">FROM BRIEF TO FINAL VIDEO</text>
+
+  <g id="script-motion">
+    <g transform="translate(590 82)">
+      <rect width="250" height="104" rx="18" fill="#0B2032" stroke="#087BDF"/>
+      <text x="22" y="35" fill="#8EDBFF" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" font-weight="700">01 · TEXT LLM</text>
+      <text x="22" y="70" fill="#F4FAFF" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="22" font-weight="700">自动脚本</text>
+      <text x="22" y="93" fill="#A8BDD0" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="17">生成 · 改写 · 审查</text>
+    </g>
+    <g transform="translate(866 82)">
+      <rect width="276" height="104" rx="18" fill="#0B2032" stroke="#28526F"/>
+      <text x="22" y="35" fill="#8EDBFF" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" font-weight="700">02 · SCRIPT</text>
+      <text x="22" y="70" fill="#F4FAFF" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="22" font-weight="700">脚本与分镜</text>
+      <text x="22" y="93" fill="#A8BDD0" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="17">卖点 · 节拍 · 画面约束</text>
+    </g>
+  </g>
+
+  <g id="media-motion">
+    <g transform="translate(590 212)">
+      <rect width="250" height="104" rx="18" fill="#0B2032" stroke="#28526F"/>
+      <text x="22" y="35" fill="#8EDBFF" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" font-weight="700">03 · MEDIA</text>
+      <text x="22" y="70" fill="#F4FAFF" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="22" font-weight="700">组织画面</text>
+      <text x="22" y="93" fill="#A8BDD0" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="17">本地素材 · 图库 · AI 镜头</text>
+    </g>
+  </g>
+
+  <g id="finish-motion">
+    <g transform="translate(866 212)">
+      <rect width="276" height="104" rx="18" fill="#0D355A" stroke="#5AB9EF"/>
+      <text x="22" y="35" fill="#8EDBFF" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" font-weight="700">04 · FINAL</text>
+      <text x="22" y="70" fill="#F4FAFF" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="22" font-weight="700">配音、字幕与成片</text>
+      <text x="22" y="93" fill="#DDF4FF" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="17">本地渲染或云端最终视频</text>
+    </g>
+  </g>
+</svg>
