@@ -93,6 +93,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Prepare and verify bundled media binaries
+        run: pnpm media:prepare
+
       - name: Test
         run: pnpm test
 
@@ -136,6 +139,14 @@ jobs:
           test -n "$app_path"
           app_binary="$app_path/Contents/MacOS/Mora"
           file "$app_binary" | grep -q '${{ matrix.expected_arch }}'
+
+          ffmpeg_path="$(find "$app_path/Contents/Resources/app.asar.unpacked/node_modules/ffmpeg-static" -type f -name ffmpeg -print -quit)"
+          ffprobe_path="$(find "$app_path/Contents/Resources/app.asar.unpacked/node_modules/@ffprobe-installer" -type f -name ffprobe -print -quit)"
+          test -x "$ffmpeg_path"
+          test -x "$ffprobe_path"
+          "$ffmpeg_path" -version
+          "$ffprobe_path" -version
+
           HEADLESS_SMOKE=1 "$app_binary" --user-data-dir="$RUNNER_TEMP/mora-smoke"
 
           hdiutil detach "$mount_dir"

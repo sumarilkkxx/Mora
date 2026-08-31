@@ -19,14 +19,15 @@
     "test": "vitest run",
     "cli": "node bin/mora.mjs",
     "render:element": "node scripts/render-element.mjs",
+    "media:prepare": "node scripts/prepare-media-binaries.mjs",
     "bundle:standalone": "node scripts/bundle-standalone.mjs",
     "bundle:desktop": "next build && pnpm bundle:standalone",
     "electron": "electron .",
     "electron:rebuild": "electron-rebuild -f -w better-sqlite3",
-    "pack:dir": "pnpm bundle:desktop && electron-builder --dir",
-    "dist": "pnpm bundle:desktop && electron-builder --publish never",
-    "dist:win": "pnpm bundle:desktop && electron-builder --win nsis --x64 --publish never",
-    "dist:mac": "pnpm bundle:desktop && electron-builder --mac dmg --publish never"
+    "pack:dir": "pnpm media:prepare && pnpm bundle:desktop && electron-builder --dir",
+    "dist": "pnpm media:prepare && pnpm bundle:desktop && electron-builder --publish never",
+    "dist:win": "pnpm media:prepare && pnpm bundle:desktop && electron-builder --win nsis --x64 --publish never",
+    "dist:mac": "pnpm media:prepare && pnpm bundle:desktop && electron-builder --mac dmg --publish never"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
