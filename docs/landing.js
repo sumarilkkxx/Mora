@@ -908,6 +908,48 @@
 
   initializeWorkflowStack();
 
+  function initializeLastCallReveal() {
+    var lastCall = document.querySelector(".last-call");
+    if (!lastCall || reduceMotion || !("IntersectionObserver" in window)) return;
+
+    var particles = [
+      [9, 59, 4, 15, 13], [15, 28, 3, 145, 17], [21, 76, 5, 75, 20],
+      [27, 39, 4, 210, 14], [33, 16, 3, 35, 18], [39, 68, 4, 170, 15],
+      [45, 31, 5, 95, 22], [51, 82, 3, 235, 13], [56, 48, 4, 55, 16],
+      [62, 20, 3, 190, 19], [68, 71, 5, 120, 14], [73, 37, 4, 20, 21],
+      [79, 63, 3, 220, 16], [85, 24, 4, 80, 18], [91, 53, 5, 155, 15],
+      [18, 52, 2, 250, 12], [31, 88, 3, 130, 17], [48, 11, 2, 200, 14],
+      [65, 91, 3, 45, 19], [82, 46, 2, 175, 13]
+    ];
+    var particleLayer = document.createElement("span");
+    particleLayer.className = "last-call-particles";
+    particleLayer.setAttribute("aria-hidden", "true");
+
+    particles.forEach(function (particle) {
+      var point = document.createElement("i");
+      point.className = "last-call-particle";
+      point.style.setProperty("--particle-x", particle[0] + "%");
+      point.style.setProperty("--particle-y", particle[1] + "%");
+      point.style.setProperty("--particle-size", particle[2] + "px");
+      point.style.setProperty("--particle-delay", particle[3] + "ms");
+      point.style.setProperty("--particle-travel", particle[4] + "px");
+      particleLayer.appendChild(point);
+    });
+
+    lastCall.prepend(particleLayer);
+    lastCall.classList.add("last-call-ready");
+
+    var lastCallObserver = new IntersectionObserver(function (entries) {
+      if (!entries[0] || !entries[0].isIntersecting) return;
+      lastCall.classList.add("is-illuminated");
+      lastCallObserver.disconnect();
+    }, { threshold: 0.42, rootMargin: "0px 0px -4% 0px" });
+
+    lastCallObserver.observe(lastCall);
+  }
+
+  initializeLastCallReveal();
+
   if (reduceMotion || !("IntersectionObserver" in window)) return;
 
   document.documentElement.classList.add("motion-ready");

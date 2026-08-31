@@ -5,7 +5,8 @@
 <p align="center"><a href="./README.md">中文</a> · <strong>English</strong></p>
 
 <h1 align="center">Mora</h1>
-<p align="center"><strong>Not another isolated generated clip—a production path from creative intent to a traceable, recoverable, exportable final video.</strong></p>
+<p align="center">(<strong>M</strong>ultimodal <strong>O</strong>rchestration for <strong>R</strong>etail <strong>A</strong>utomation)</p>
+<p align="center"><strong>Mora goes beyond isolated generated clips, carrying creative intent into a traceable, recoverable, exportable final video.</strong></p>
 <p align="center">A text model handles automatic scripting and storyboards; local media, open libraries, and generated visuals are used as needed; voice, captions, tasks, versions, and FFmpeg composition stay in one project.</p>
 
 <p align="center">
@@ -38,7 +39,7 @@ The two MP4 files below come from those separate workflows. They share project, 
 
 ### Workflow one: one product image and a short description become a complete product film
 
-The pet-fountain project begins with only a product image and a brief introduction. A text model expands that limited input into a structured script, shot rhythm, and visual constraints. Generated or reference-conditioned media fills the missing shots, while candidates, script relationships, and the final result return to the same project instead of becoming an untraceable folder of model outputs.
+Start with the pet-fountain example below: the project begins with just one product image and a brief introduction. A text model expands that limited input into a structured script, shot rhythm, and visual constraints. Generated or reference-conditioned media fills the missing shots, while candidates, script relationships, and the final result return to the same project instead of becoming an untraceable folder of model outputs.
 
 <p align="center">
   <a href="https://sumarilkkxx.github.io/Mora/videos/mora-ai-showcase.mp4"><img src="./assets/readme/showcase-generative.webp" width="100%" alt="Play a 30-second pet-fountain film built from a text-model script, shot rhythm, and generated or reference visuals"></a>
@@ -46,11 +47,11 @@ The pet-fountain project begins with only a product image and a brief introducti
 
 <p align="center"><strong>Generative product film · 30.02s · 1080×1920</strong><br><sub>Product image + short description → text script and storyboard → generated shots → complete video version</sub></p>
 
-This output demonstrates that a model may produce the visuals, but a production system still has to own the script, shot relationships, candidates, and versions.
+In this generative workflow, the model is responsible for producing visuals. Mora connects the text script, shot relationships, candidate media, version management, and final composition, turning scattered model outputs into one manageable, deliverable video-production flow.
 
 ### Workflow two: existing footage goes through intelligent local editing
 
-The salon project begins with an already-recorded vertical video and does not regenerate the subject. Mora preserves the source, splits scenes, extracts content, restructures the promotional rhythm, creates voice and timed captions, and renders an independent version locally with FFmpeg. The source footage, edit plan, and previous outputs remain intact.
+Now consider the salon example below: the project begins with an already-recorded vertical video, so there is no need to regenerate the subject. Mora preserves the source, splits scenes, extracts content, restructures the promotional rhythm, creates voice and timed captions, and renders an independent version locally with FFmpeg. The source footage, edit plan, and previous outputs remain intact.
 
 <p align="center">
   <a href="https://sumarilkkxx.github.io/Mora/videos/mora-guided-edit-latest.mp4"><img src="./assets/readme/showcase-guided.webp" width="100%" alt="Play an existing salon video split into scenes, paced against a script, voiced, captioned, and rendered locally"></a>
@@ -58,7 +59,7 @@ The salon project begins with an already-recorded vertical video and does not re
 
 <p align="center"><strong>Existing-footage edit · 16.4s · local render</strong><br><sub>Source upload → scene split → rhythm edit → voice and captions → local FFmpeg final</sub></p>
 
-This output demonstrates that existing usable shots do not need to be regenerated for the sake of looking “AI.” Intelligence should help understand the media, organize the structure, and assist the edit, while the final output continues through the local post-production path.
+This local-editing workflow shows how Mora treats existing media: when usable shots already exist, the system does not regenerate the subject merely to look “AI.” Instead, intelligence helps understand the media, split scenes, organize structure, and assist the edit before the local post-production path produces the complete final video.
 
 These are not two input variants of the same workflow. The first path creates shots when visuals are missing; the second carries existing shots through intelligent local post-production. Together, they define Mora's boundary: **media may come from a camera, a library, or an AI model, but the final video's origin defines the production path.** An AI image can still be ordinary source media. If Mora and FFmpeg render the final MP4, the project remains on a local-final path. Only a final video directly produced by a cloud video model belongs to the generative-video path.
 
