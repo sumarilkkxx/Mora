@@ -205,6 +205,19 @@ describe("smart sampling plan (pure)", () => {
     expect(audioInputIndex).toBeNull();
     expect(filter).not.toContain("showwavespic");
   });
+
+  it("keeps smart sampling and cut markers when drawtext is unavailable", () => {
+    const layout = { frames: 2, thumbWidth: 120, waveHeight: 0, sheetWidth: 240 };
+    const { filter, outLabel } = buildSmartSheetFilter(
+      layout,
+      { times: [0.15, 2], cuts: [false, true] },
+      { hasAudio: false, duration: 4, allCuts: [2], drawTimestamps: false },
+    );
+    expect(outLabel).toBe("strip");
+    expect(filter).not.toContain("drawtext=");
+    expect(filter).toContain("drawbox=x=0:y=0:w=iw:h=ih");
+    expect(filter).toContain("hstack=inputs=2[strip]");
+  });
 });
 
 describe("cut-time merge (pure)", () => {

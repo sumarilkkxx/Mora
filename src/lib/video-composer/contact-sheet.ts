@@ -18,6 +18,36 @@ import { mkdir } from "fs/promises";
 import { ffmpegBin, ffprobeBin } from "@/lib/ffmpeg-path";
 import { buildDrawtext, resolveChineseFontFile, unshellFilter } from "./composer";
 
+const drawtextSupportByBinary = new Map<string, Promise<boolean>>();
+
+/**
+ * Some otherwise capable static FFmpeg builds (notably the Intel macOS tessus build) omit
+ * drawtext. A contact sheet is still useful without timestamp labels, so detect the optional
+ * filter once per resolved binary and let the smart renderer degrade only that decoration.
+ */
+async function supportsDrawtextFilter(): Promise<boolean> {
+  const binary = ffmpegBin();
+  const cached = drawtextSupportByBinary.get(binary);
+  if (cached) return cached;
+
+  const check = (async () => {
+    const { execFile } = await import("child_process");
+    const { promisify } = await import("util");
+    try {
+      const { stdout, stderr } = await promisify(execFile)(binary, ["-hide_banner", "-filters"], {
+        maxBuffer: 8 * 1024 * 1024,
+        timeout: 30_000,
+      });
+      return /(^|\s)drawtext(\s|$)/m.test(`${stdout ?? ""}\n${stderr ?? ""}`);
+    } catch {
+      return false;
+    }
+  })();
+
+  drawtextSupportByBinary.set(binary, check);
+  return check;
+}
+
 export interface ContactSheetLayout {
   /** number of thumbnails in the strip */
   frames: number;
@@ -132,25 +162,28 @@ export function planFrameTimes(opts: { duration: number; frames: number; sceneTi
 export function buildSmartSheetFilter(
   layout: ContactSheetLayout,
   plan: FramePlan,
-  opts: { hasAudio: boolean; duration: number; allCuts: number[]; fontFile?: string }
+  opts: { hasAudio: boolean; duration: number; allCuts: number[]; fontFile?: string; drawTimestamps?: boolean }
 ): { filter: string; outLabel: string; audioInputIndex: number | null } {
   const n = plan.times.length;
   const sheetWidth = n * layout.thumbWidth;
   const fontSize = Math.max(14, Math.round(layout.thumbWidth * 0.11));
   const chains: string[] = [];
   for (let i = 0; i < n; i++) {
-    const label = buildDrawtext({
-      fontFile: opts.fontFile,
-      text: `${plan.times[i].toFixed(1)}s`,
-      fontSize,
-      fontColor: "white",
-      box: { color: "black@0.55", borderW: 4 },
-      x: "6",
-      y: "6",
-    });
+    const label =
+      opts.drawTimestamps === false
+        ? ""
+        : `,${buildDrawtext({
+            fontFile: opts.fontFile,
+            text: `${plan.times[i].toFixed(1)}s`,
+            fontSize,
+            fontColor: "white",
+            box: { color: "black@0.55", borderW: 4 },
+            x: "6",
+            y: "6",
+          })}`;
     // red outline flags "this thumb sits on a splice point" without relying on glyph coverage
     const outline = plan.cuts[i] ? `,drawbox=x=0:y=0:w=iw:h=ih:color=0xf87171@0.9:t=4` : "";
-    chains.push(`[${i}:v]trim=end_frame=1,scale=${layout.thumbWidth}:-2,${label}${outline}[f${i}]`);
+    chains.push(`[${i}:v]trim=end_frame=1,scale=${layout.thumbWidth}:-2${label}${outline}[f${i}]`);
   }
   const stripIn = Array.from({ length: n }, (_, i) => `[f${i}]`).join("");
   const strip = n > 1 ? `${stripIn}hstack=inputs=${n}[strip]` : `[f0]copy[strip]`;
@@ -276,6 +309,7 @@ export async function generateContactSheet(opts: {
         duration,
         allCuts: sceneTimes,
         fontFile: resolveChineseFontFile(),
+        drawTimestamps: await supportsDrawtextFilter(),
       });
       const args: string[] = ["-y"];
       for (const t of plan.times) args.push("-ss", t.toFixed(3), "-i", opts.videoPath);
