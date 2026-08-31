@@ -102,13 +102,10 @@ jobs:
       - name: Build package
         run: ${{ matrix.command }}
         env:
-          CSC_LINK: ${{ runner.os == 'macOS' && secrets.MAC_CSC_LINK || '' }}
-          CSC_KEY_PASSWORD: ${{ runner.os == 'macOS' && secrets.MAC_CSC_KEY_PASSWORD || '' }}
-          WIN_CSC_LINK: ${{ runner.os == 'Windows' && secrets.WIN_CSC_LINK || '' }}
-          WIN_CSC_KEY_PASSWORD: ${{ runner.os == 'Windows' && secrets.WIN_CSC_KEY_PASSWORD || '' }}
-          APPLE_ID: ${{ runner.os == 'macOS' && secrets.APPLE_ID || '' }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
-          APPLE_TEAM_ID: ${{ runner.os == 'macOS' && secrets.APPLE_TEAM_ID || '' }}
+          # v0.1.0.0 intentionally ships unsigned: the project does not use paid Apple/Windows
+          # signing certificates yet. Passing empty CSC_* values makes electron-builder treat
+          # the workspace directory as a certificate path, so signing must be disabled explicitly.
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
 
       - name: Smoke test packaged app (Windows)
         if: runner.os == 'Windows'
