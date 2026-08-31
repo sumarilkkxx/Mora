@@ -147,7 +147,7 @@ flowchart TD
 - FFmpeg and ffprobe ship through project dependencies; a separate system install is not required
 
 ```bash
-git clone https://github.com/sumarilkkxx/ClipCraft.git mora
+git clone https://github.com/sumarilkkxx/Mora.git mora
 cd mora
 pnpm install
 pnpm dev

@@ -147,7 +147,7 @@ flowchart TD
 - 项目依赖携带 FFmpeg/ffprobe，无需额外安装系统 FFmpeg
 
 ```bash
-git clone https://github.com/sumarilkkxx/ClipCraft.git mora
+git clone https://github.com/sumarilkkxx/Mora.git mora
 cd mora
 pnpm install
 pnpm dev
