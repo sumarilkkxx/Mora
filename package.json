@@ -98,6 +98,8 @@
     "mac": {
       "target": "dmg",
       "category": "public.app-category.video",
+      "identity": null,
+      "hardenedRuntime": false,
       "bundleShortVersion": "0.1.0",
       "bundleVersion": "0.1.0",
       "artifactName": "${productName}-v${version}.0-mac-${arch}.${ext}",
