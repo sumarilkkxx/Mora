@@ -116,8 +116,16 @@ jobs:
             Select-Object -First 1
           if (-not $app) { throw 'Packaged Mora.exe not found' }
           $env:HEADLESS_SMOKE = '1'
-          & $app.FullName --user-data-dir="$env:RUNNER_TEMP\mora-smoke"
-          if ($LASTEXITCODE -ne 0) { throw "Smoke test failed with exit code $LASTEXITCODE" }
+          $smokeArgs = @("--user-data-dir=$env:RUNNER_TEMP\mora-smoke")
+          $smoke = Start-Process `
+            -FilePath $app.FullName `
+            -ArgumentList $smokeArgs `
+            -NoNewWindow `
+            -PassThru `
+            -Wait
+          if ($smoke.ExitCode -ne 0) {
+            throw "Smoke test failed with exit code $($smoke.ExitCode)"
+          }
 
       - name: Verify DMG and smoke test installed app (macOS)
         if: runner.os == 'macOS'
