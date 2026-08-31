@@ -14,7 +14,7 @@
   <a href="#workflow">How it works</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#architecture">Architecture</a> ·
-  <a href="#desktop">Desktop</a> ·
+  <a href="https://github.com/sumarilkkxx/Mora/releases/tag/v0.1.0.0">Download &amp; install</a> ·
   <a href="#roadmap">Roadmap</a> ·
   <a href="./README.md">中文</a>
 </p>
@@ -352,7 +352,7 @@ GitHub Actions includes Windows x64, macOS Apple Silicon, and macOS Intel build 
 
 ## Known limitations
 
-`v0.1.0.0` remains an alpha release. The items below describe unstable boundaries in current services and integrations, rather than planned features:
+`v0.1.0.0` remains an alpha release. The following describes unstable behavior in current services and integrations:
 
 - Login walls, client-side rendering, CAPTCHAs, anti-bot controls, and cookie isolation on Taobao, Tmall, and other marketplaces can prevent product-link ingestion. The reliable fallback today is manual product data or uploaded screenshots.
 - Automatic scripting requires a reachable text model. An unavailable endpoint, exhausted quota, or regional restriction can cause generation to fail; fully offline use requires an imported script or local Ollama.
@@ -363,7 +363,7 @@ GitHub Actions includes Windows x64, macOS Apple Silicon, and macOS Intel build 
 
 ## Roadmap
 
-This roadmap describes active product directions rather than promised release dates. Priorities may change based on real projects, issues, and contributor feedback.
+The following shows the product directions currently in progress.
 
 | Direction | Planned capability and boundary |
 | --- | --- |
