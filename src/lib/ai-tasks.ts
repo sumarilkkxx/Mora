@@ -27,6 +27,7 @@ export interface RecordAiTaskInput {
   mode?: string;
   prompt?: string;
   taskId: string;
+  keyframePath?: string;
 }
 
 /** Insert a row right after task submission; returns the row id (null if the DB write failed) */
@@ -44,6 +45,7 @@ export async function recordAiTask(input: RecordAiTaskInput): Promise<string | n
         mode: input.mode ?? null,
         prompt: input.prompt ?? null,
         taskId: input.taskId,
+        keyframePath: input.keyframePath ?? null,
         status: "submitted",
       })
       .returning({ id: aiTasks.id });

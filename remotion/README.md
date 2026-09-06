@@ -30,4 +30,4 @@ Add your own composition in `Root.tsx` and a matching `--kind`.
 
 ## Status
 
-The renderer + templates are shipped. **Auto-prepending an animated intro/outro inside the compose step** is the next step — it touches the compositor and will land as a follow-up; for now render elements here and use them as intro/outro clips or local materials.
+The renderer and templates support standalone element rendering. Render an element here, then add it to a project as an intro/outro clip or local material. Automatic intro/outro insertion during composition is not currently supported.

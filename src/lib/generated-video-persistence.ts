@@ -35,6 +35,7 @@ export async function persistRecoveredShotVideo(input: {
   provider: string;
   model: string;
   prompt?: string | null;
+  keyframePath?: string | null;
   apiKey: string;
 }) {
   const dir = join(getDataDir(), "uploads", input.projectId);
@@ -47,12 +48,16 @@ export async function persistRecoveredShotVideo(input: {
 
   const db = getDb();
   const row = db.transaction((tx) => {
+    const previous = tx.select().from(assets).where(and(eq(assets.projectId, input.projectId), eq(assets.shotId, input.shotId))).get();
+    const thumbnailPath = input.keyframePath ?? previous?.thumbnailPath ??
+      (previous?.filePath && /\.(png|jpe?g|webp|gif|avif)(?:[?#]|$)/i.test(previous.filePath) ? previous.filePath : null);
     tx.delete(assets).where(and(eq(assets.projectId, input.projectId), eq(assets.shotId, input.shotId))).run();
     return tx.insert(assets).values({
       projectId: input.projectId,
       shotId: input.shotId,
       type: "ai_generated",
       filePath,
+      thumbnailPath,
       provider: input.provider,
       model: input.model,
       prompt: input.prompt ?? undefined,

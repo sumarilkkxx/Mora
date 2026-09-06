@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
+import { waitForBatchComposition } from "@/lib/batch-compose";
 import {
   LuCheck,
   LuLoader,
@@ -224,30 +225,25 @@ export default function BatchPage() {
     productCard: boolean;
     jobId?: string;
     itemIdByProduct: Map<string, string>;
+    writes?: Map<string, Promise<void>>;
+    hasFailures?: boolean;
   }
 
-  /** best-effort item write-through; never blocks or fails the run */
+  /** Serialize each item's writes so a late stage update cannot overwrite completion. */
   const reportItem = (ctx: BatchCtx, productId: string, patch: Record<string, unknown>) => {
     const itemId = ctx.itemIdByProduct.get(productId);
     if (!itemId) return;
-    void fetch("/api/batch", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itemId, patch }),
-    }).catch(() => {});
-  };
-
-  /** Poll one composition to a terminal status (~3.75 min budget). */
-  const pollCompose = async (projectId: string, compositionId?: string): Promise<boolean> => {
-    const query = compositionId ? `?compositionId=${encodeURIComponent(compositionId)}` : "";
-    for (let i = 0; i < 90 && !abortRef.current; i++) {
-      await new Promise((r) => setTimeout(r, 2500));
-      const c = await fetch(`/api/project/${projectId}/compose${query}`).then((x) => x.json()).catch(() => ({}));
-      const st = c?.composition?.status;
-      if (st === "done") return true;
-      if (st === "failed") throw new Error(t("errorComposeFailed"));
-    }
-    return abortRef.current; // an abort mid-poll is not a failure
+    const writes = ctx.writes ??= new Map();
+    const pending = (writes.get(itemId) ?? Promise.resolve()).then(async () => {
+      const response = await fetch("/api/batch", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId, patch }),
+      });
+      if (!response.ok) throw new Error("Batch progress could not be saved");
+    }).catch(() => { ctx.hasFailures = true; });
+    writes.set(itemId, pending);
+    return pending;
   };
 
   /** Visual-fill + free-TTS render on an existing project (the compose sub-chain). */
@@ -275,9 +271,10 @@ export default function BatchPage() {
     });
     if (!composeRes.ok) throw new Error(t("errorComposeFailed"));
     const composeData = await composeRes.json().catch(() => ({}));
-    if (composeData?.compositionId) reportItem(ctx, product.id, { compositionId: composeData.compositionId });
-    const composed = await pollCompose(projectId, composeData?.compositionId);
-    if (!composed && !abortRef.current) throw new Error(t("errorComposeFailed"));
+    if (composeData?.compositionId) await reportItem(ctx, product.id, { compositionId: composeData.compositionId });
+    if (!composeData?.compositionId) throw new Error(t("errorComposeFailed"));
+    const composed = await waitForBatchComposition(projectId, composeData.compositionId, () => abortRef.current);
+    if (composed === "failed") throw new Error(t("errorComposeFailed"));
   };
 
   // Process a single product (updates by task.id, supports out-of-order concurrency);
@@ -295,18 +292,11 @@ export default function BatchPage() {
       // resume shortcut: a composition was already submitted — check it before re-rendering
       if (resume?.projectId && resume.compositionId) {
         setBatchTasks((prev) => prev.map((tk) => (tk.id === product.id ? { ...tk, status: "composing", projectId: resume.projectId ?? undefined } : tk)));
-        try {
-          const c = await fetch(`/api/project/${resume.projectId}/compose?compositionId=${encodeURIComponent(resume.compositionId)}`)
-            .then((x) => x.json()).catch(() => ({}));
-          if (c?.composition?.status === "done") {
-            incrementVideoCount(product.id);
-            reportItem(ctx, product.id, { status: "done" });
-            setBatchTasks((prev) => prev.map((tk) => (tk.id === product.id ? { ...tk, status: "done", projectId: resume.projectId ?? undefined } : tk)));
-            return;
-          }
-        } catch { /* fall through to a fresh render */ }
         reportItem(ctx, product.id, { status: "composing" });
-        await composeSubChain(ctx, product, resume.projectId, slot);
+        const status = await waitForBatchComposition(resume.projectId, resume.compositionId, () => abortRef.current);
+        if (status === "cancelled") return;
+        if (status === "failed") await composeSubChain(ctx, product, resume.projectId, slot);
+        if (abortRef.current) return;
         incrementVideoCount(product.id);
         reportItem(ctx, product.id, { status: "done" });
         setBatchTasks((prev) => prev.map((tk) => (tk.id === product.id ? { ...tk, status: "done", projectId: resume.projectId ?? undefined } : tk)));
@@ -401,10 +391,12 @@ export default function BatchPage() {
         await composeSubChain(ctx, product, projectId, slot);
       }
 
+      if (abortRef.current) return;
       incrementVideoCount(product.id);
       reportItem(ctx, product.id, { status: "done" });
       setBatchTasks((prev) => prev.map((tk) => (tk.id === product.id ? { ...tk, status: "done", projectId } : tk)));
     } catch (err) {
+      ctx.hasFailures = true;
       const msg = err instanceof Error ? err.message : t("errorGenerateFailed");
       reportItem(ctx, product.id, { status: "failed", error: msg });
       setBatchTasks((prev) =>
@@ -429,16 +421,23 @@ export default function BatchPage() {
       }
     };
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, workItems.length) }, worker));
+    await Promise.all(ctx.writes?.values() ?? []);
 
     if (ctx.jobId) {
-      void fetch("/api/batch", {
+      await fetch("/api/batch", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId: ctx.jobId, status: abortRef.current ? "cancelled" : "done" }),
+        body: JSON.stringify({ jobId: ctx.jobId, status: abortRef.current ? "cancelled" : ctx.hasFailures ? "running" : "done" }),
       }).catch(() => {});
+      if (ctx.hasFailures && !abortRef.current) {
+        try {
+          const response = await fetch(`/api/batch?jobId=${encodeURIComponent(ctx.jobId)}`);
+          if (response.ok) setResumableJob(await response.json());
+        } catch { /* The running job remains available after a refresh. */ }
+      }
     }
     if (!abortRef.current) {
-      setIsComplete(true);
+      setIsComplete(!ctx.hasFailures);
       // template self-check across the freshly generated projects (needs ≥2 to compare)
       if (workItems.length >= 2) {
         try {

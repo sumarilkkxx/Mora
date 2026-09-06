@@ -548,12 +548,8 @@ export default function AssetsPage() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || t("taskResumeFailed"));
         if (data.status === "completed" && data.videoUrls?.[0]) {
-          if (task.shotId != null) {
-            const asset = assets.find((a) => a.shotId === task.shotId);
-            // best-effort keyframe provenance: the task was submitted from the shot's static frame
-            const keyframe = asset && !asset.isVideo ? asset.thumbnailUrl : asset?.keyframeUrl;
-            await saveVideoAsset(task.shotId, data.videoUrls[0], asset?.prompt, task.provider, task.model, keyframe);
-          }
+          // The recovery endpoint owns persistence, including concurrent/already-completed calls.
+          await reloadAssets();
           setTaskMsg(t("taskResumeDone"));
         } else if (data.status === "failed" || data.status === "cancelled") {
           setTaskMsg(`${t("taskResumeFailed")}${data.error ? `: ${data.error}` : ""}`);
@@ -571,7 +567,7 @@ export default function AssetsPage() {
         });
       }
     },
-    [providers, assets, saveVideoAsset, reloadPendingTasks, t]
+    [providers, reloadPendingTasks, reloadAssets, t]
   );
 
   // convert to motion shot: use the already-generated image for this shot as the first frame, call the image-to-video model, and save the result as the shot's asset (video).

@@ -60,6 +60,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const abandonedEdits = edits.filter((edit) =>
       edit.status === "rendering"
       && !isTranscriptRenderActive(edit.id)
+      && !projectCompositions.some((c) => c.id === edit.compositionId && c.renderOwner && (c.status === "composing" || c.status === "pending"))
       && Boolean(edit.updatedAt && edit.updatedAt.getTime() < interruptedAt)
     );
     const abandonedEditIds = new Set(abandonedEdits.map((edit) => edit.id));

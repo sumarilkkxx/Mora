@@ -27,6 +27,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const abandonedPlans = plans.filter((plan) =>
       plan.status === "rendering"
       && !isGuidedRenderActive(plan.id)
+      && !projectCompositions.some((c) => c.id === plan.compositionId && c.renderOwner && (c.status === "composing" || c.status === "pending"))
       && Boolean(plan.updatedAt && plan.updatedAt.getTime() < interruptedAt)
     );
     const abandonedPlanIds = new Set(abandonedPlans.map((plan) => plan.id));

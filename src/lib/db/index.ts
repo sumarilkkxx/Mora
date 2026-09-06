@@ -5,6 +5,7 @@ import path from "path";
 import fs from "fs";
 import * as schema from "./schema";
 import { getDataDir, getMigrationsDir } from "@/lib/paths";
+import { startRenderRecovery } from "@/lib/render-recovery";
 
 // Database file path: writable data directory (injected by the main process as APP_DATA_DIR=userData/data when packaged with Electron)
 const DB_DIR = getDataDir();
@@ -75,57 +76,10 @@ if (realDb && process.env.NEXT_PHASE !== "phase-production-build") {
     console.error("Database migration failed:", err);
   }
 
-  // Crash-recovery sweep: compose jobs run as in-memory fire-and-forget tasks, so if the
-  // process dies mid-render the composition row stays 'composing'/'pending' forever — the web
-  // spinner never stops and CLI pollers hang until their own timeout. On startup, mark
-  // rows stuck in a non-terminal status for over 15 minutes as 'failed' so the UI can recover.
-  // created_at is stored as unix-epoch SECONDS (drizzle integer { mode: "timestamp" }).
-  // Failure here must never break startup (e.g. fresh DB where migration hasn't created the table).
-  try {
-    const staleCutoff = Math.floor(Date.now() / 1000) - 15 * 60;
-    const recoverStaleRenders = sqlite!.transaction((cutoff: number) => {
-      const interruptedMessage = "应用在渲染过程中退出，请重新开始渲染";
-      // Update dependants before compositions, because they identify the abandoned task through
-      // the still-non-terminal composition row. Project recovery excludes another recent render.
-      sqlite!.prepare(`
-        UPDATE guided_edit_plans
-        SET status = 'failed', error = COALESCE(error, ?), updated_at = unixepoch()
-        WHERE status = 'rendering' AND composition_id IN (
-          SELECT id FROM compositions WHERE status IN ('composing', 'pending') AND created_at < ?
-        )
-      `).run(interruptedMessage, cutoff);
-      sqlite!.prepare(`
-        UPDATE media_edits
-        SET status = 'failed', error = COALESCE(error, ?), updated_at = unixepoch()
-        WHERE status = 'rendering' AND composition_id IN (
-          SELECT id FROM compositions WHERE status IN ('composing', 'pending') AND created_at < ?
-        )
-      `).run(interruptedMessage, cutoff);
-      sqlite!.prepare(`
-        UPDATE projects
-        SET status = 'video', updated_at = unixepoch()
-        WHERE status = 'composing'
-          AND id IN (
-            SELECT project_id FROM compositions
-            WHERE status IN ('composing', 'pending') AND created_at < ?
-          )
-          AND NOT EXISTS (
-            SELECT 1 FROM compositions active
-            WHERE active.project_id = projects.id
-              AND active.status IN ('composing', 'pending')
-              AND active.created_at >= ?
-          )
-      `).run(cutoff, cutoff);
-      return sqlite!.prepare(
-        "UPDATE compositions SET status = 'failed' WHERE status IN ('composing', 'pending') AND created_at < ?"
-      ).run(cutoff);
-    });
-    const swept = recoverStaleRenders(staleCutoff);
-    if (swept.changes > 0) {
-      console.warn(`Recovered ${swept.changes} stale composition(s) stuck in composing/pending → marked failed`);
-    }
-  } catch (err) {
-    console.warn("Stale composition sweep failed (non-fatal):", err);
+  // Executor leases recover interrupted renders immediately after a restart.
+  if (!dbMigrationError) {
+    try { startRenderRecovery(sqlite!, DB_PATH); }
+    catch (error) { console.warn("Render recovery failed (non-fatal):", error); }
   }
 }
 

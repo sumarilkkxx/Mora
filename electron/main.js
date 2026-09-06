@@ -9,6 +9,10 @@ const http = require("http");
 const { getStableServerPort } = require("./server-port.cjs");
 const path = require("path");
 const fs = require("fs");
+const { randomBytes } = require("node:crypto");
+const { checkServer } = require("./smoke-check.cjs");
+const { installApiCredentials } = require("./api-session.cjs");
+const apiToken = randomBytes(32).toString("hex");
 
 let serverChild = null;
 let mainWindow = null;
@@ -100,6 +104,7 @@ function waitReady(port, tries = 120) {
         retry(n);
       });
       req.on("error", () => retry(n));
+      req.setTimeout(2000, () => req.destroy(new Error("Readiness timeout")));
     };
     const retry = (n) => (n <= 0 ? reject(new Error("本地服务未就绪（超时）")) : setTimeout(() => attempt(n - 1), 250));
     attempt(tries);
@@ -112,6 +117,7 @@ async function startServer(port) {
   const serverDir = path.dirname(entry);
   const dataDir = path.join(app.getPath("userData"), "data");
   fs.mkdirSync(dataDir, { recursive: true });
+  fs.writeFileSync(path.join(app.getPath("userData"), "api-token"), apiToken, { mode: 0o600 });
 
   const ffmpegPath = resolveBinary(() => require("ffmpeg-static"));
   const ffprobePath = resolveBinary(() => require("@ffprobe-installer/ffprobe").path);
@@ -137,6 +143,8 @@ async function startServer(port) {
       NODE_ENV: "production",
       PORT: String(port),
       HOSTNAME: "127.0.0.1",
+      MORA_API_TOKEN: apiToken,
+      MORA_SERVER_ORIGIN: `http://127.0.0.1:${port}`,
       APP_DATA_DIR: dataDir,
       APP_MIGRATIONS_DIR: migrationsDir(serverDir),
       ...(ffmpegPath ? { FFMPEG_PATH: ffmpegPath } : {}),
@@ -194,6 +202,7 @@ function createMainWindow(url) {
       sandbox: true,
     },
   });
+  installApiCredentials(mainWindow, url, apiToken);
   // Keep arbitrary web pages outside the privileged application window. Product/provider links
   // open in the user's default browser, while same-origin Next navigations stay inside Mora.
   mainWindow.webContents.setWindowOpenHandler(({ url: target }) => {
@@ -244,25 +253,24 @@ app.whenReady().then(async () => {
     } else {
       console.error("启动本地服务失败:", msg);
     }
-    app.quit();
+    killServer();
+    app.exit(1);
     return;
   }
 
   // Headless smoke mode: verify the server can start under the Electron runtime and hit a DB route
   // (triggers better-sqlite3 load + migrate under the Electron Node ABI); no window is opened, exits immediately
   if (process.env.HEADLESS_SMOKE) {
-    const dbProbe = await new Promise((resolve) => {
-      const req = http.get(url + "/api/project", (r) => {
-        let d = "";
-        r.on("data", (c) => (d += c));
-        r.on("end", () => resolve(`status=${r.statusCode} body=${d.slice(0, 60)}`));
-      });
-      req.on("error", (e) => resolve("err=" + e.message));
-    });
-    console.log("DB_ROUTE", dbProbe);
-    console.log("SMOKE_OK", url, "DATA_DIR=" + path.join(app.getPath("userData"), "data"));
-    killServer();
-    app.exit(0);
+    try {
+      await checkServer(url, apiToken);
+      console.log("SMOKE_OK", url, "DATA_DIR=" + path.join(app.getPath("userData"), "data"));
+      killServer();
+      app.exit(0);
+    } catch (error) {
+      console.error("SMOKE_FAILED", error.message);
+      killServer();
+      app.exit(1);
+    }
     return;
   }
 

@@ -7,6 +7,9 @@ import { recordAiTask, updateAiTask } from "@/lib/ai-tasks";
 import { normalizeVideoOptionsForModel } from "@/lib/normalize-video-options";
 import { insufficientBalanceDetails } from "@/lib/provider-billing-error";
 import type { VideoWorkflow } from "@/lib/providers/types";
+import { persistDerivedImage } from "@/lib/derived-image";
+import { getUploadsDir } from "@/lib/paths";
+import { relative, sep } from "node:path";
 
 const VIDEO_WORKFLOWS = new Set<VideoWorkflow>(["shot-motion", "storyboard-film", "reference-replication", "prompt-video"]);
 
@@ -87,6 +90,14 @@ export async function POST(req: NextRequest) {
 
     // Phase 1: submit. Mode/model capability is validated inside the provider BEFORE any
     // billable call; base.request() never auto-retries this POST on timeout (money safety).
+    let keyframePath: string | undefined;
+    if (firstFrameUrl && projectId && Number.isInteger(shotId)) {
+      if (!/^[a-zA-Z0-9-]+$/.test(projectId)) return apiError(req, "项目 ID 无效", "Invalid project ID");
+      // Snapshot the exact first frame sent to the provider before the billable call.
+      const localFrame = await persistDerivedImage(projectId, firstFrameUrl, `keyframe-${crypto.randomUUID()}`);
+      keyframePath = `/api/files/${relative(getUploadsDir(), localFrame).split(sep).join("/")}`;
+      videoOptions.firstFrameUrl = await toRemoteUsableImage(keyframePath);
+    }
     const startTime = Date.now();
     const { taskId, modelId } = await provider.submitVideoTask(videoOptions);
 
@@ -100,6 +111,7 @@ export async function POST(req: NextRequest) {
           mode: workflow ?? videoOptions.mode,
       prompt: videoOptions.prompt,
       taskId,
+      keyframePath,
     });
 
     // Background mode ends the paid submit request here. The global task center owns

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { and, desc, eq, gt, inArray } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { aiTasks, batchJobItems, batchJobs, compositions, pipelineRuns, projects } from "@/lib/db/schema";
 import { isPipelineRunActive } from "@/lib/pipeline-runner";
@@ -30,10 +30,14 @@ export async function GET() {
 
     // server-side pipelines: verify against the in-process registry; a "running" row whose
     // executor is gone (restart) is settled to failed and surfaced as resumable instead
-    const runningPipelines = await db.select().from(pipelineRuns).where(eq(pipelineRuns.status, "running"));
+    const runningPipelines = await db.select().from(pipelineRuns).orderBy(desc(pipelineRuns.createdAt), desc(sql`${pipelineRuns}.rowid`));
+    const seenProjects = new Set<string>();
     const pipelineComposeIds = new Set<string>();
     for (const run of runningPipelines) {
-      if (isPipelineRunActive(run.id)) {
+      if (seenProjects.has(run.projectId)) continue;
+      seenProjects.add(run.projectId);
+      if (run.status !== "running" && !(run.status === "failed" && run.error === "interrupted")) continue;
+      if (run.status === "running" && isPipelineRunActive(run.id)) {
         if (run.compositionId) pipelineComposeIds.add(run.compositionId);
         active.push({
           kind: "pipeline",

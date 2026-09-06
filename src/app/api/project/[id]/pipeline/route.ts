@@ -66,7 +66,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const runId = await startPipelineRun({
       projectId: id,
       scriptId: scriptId ?? (resuming ? latest?.scriptId ?? undefined : undefined),
-      origin: req.nextUrl.origin,
+      origin: process.env.MORA_SERVER_ORIGIN ?? req.nextUrl.origin,
       llmConfig,
       ...(resuming ? { fromStage: latest.stage } : {}),
     });
