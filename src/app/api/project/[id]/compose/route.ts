@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDataDir, fileNameOf } from "@/lib/paths";
 import { ffprobeBin, ffmpegBin } from "@/lib/ffmpeg-path";
 import { join } from "path";
-import { existsSync } from "fs";
+import { resolveExistingUploadFilePath } from "@/lib/upload-path";
 import { mkdir, writeFile } from "fs/promises";
 import { generateSpeech, estimateSpeechSeconds, type TTSConfig } from "@/lib/tts";
 import { stripPauseMarks } from "@/lib/voice-markup";
@@ -72,10 +72,7 @@ export async function GET(
 /** 把 /api/files/{pid}/{file} 形式的访问路径还原为本地磁盘绝对路径 */
 function toLocalPath(fileRef: string | undefined): string | undefined {
   if (!fileRef) return undefined;
-  const m = fileRef.match(/\/api\/files\/(.+)/);
-  if (!m) return undefined;
-  const p = join(getDataDir(), "uploads", m[1]);
-  return existsSync(p) ? p : undefined;
+  return resolveExistingUploadFilePath(fileRef) ?? undefined;
 }
 
 /** 按镜头类型给商品原图分镜分配一个默认运镜 */

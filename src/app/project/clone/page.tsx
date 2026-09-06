@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useSettingsStore } from "@/lib/stores/settings-store";
+import { notifyTaskSubmitted } from "@/lib/task-events";
 import { mergeCustomModels, buildVideoOptions } from "@/lib/gen-params";
 import { referenceModelFor, buildReplicatePrompt, REPLICATE_MAX_REF_SEC, type ReplicateShot } from "@/lib/replicate-plan";
 import { useT } from "@/lib/i18n";
@@ -247,6 +248,7 @@ export default function ClonePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || t("modelTierFailed"));
       if (data.queued && data.taskId) {
+        notifyTaskSubmitted();
         setReplicateQueued({ taskId: data.taskId, projectId });
         return;
       }

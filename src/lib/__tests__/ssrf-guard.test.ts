@@ -33,6 +33,19 @@ describe("isBlockedIp", () => {
 });
 
 describe("assertPublicUrl（IP 字面量，无需 DNS）", () => {
+  it.each([
+    "::ffff:127.0.0.1", "::ffff:7f00:1", "0:0:0:0:0:ffff:7f00:1",
+    "::FFFF:169.254.169.254", "::ffff:a9fe:a9fe", "::ffff:a00:1",
+    "::ffff:c0a8:1", "0:0:0:0:0:0:0:1", "febf::1",
+  ])("blocks equivalent internal IPv6 spelling %s", async (ip) => {
+    expect(isBlockedIp(ip)).toBe(true);
+    await expect(assertPublicUrl(`http://[${ip}]/`)).rejects.toThrow();
+  });
+
+  it("allows IPv4-mapped public addresses", async () => {
+    expect(isBlockedIp("::ffff:8.8.8.8")).toBe(false);
+    await expect(assertPublicUrl("https://[::ffff:808:808]/")).resolves.toBeUndefined();
+  });
   it("内网/元数据/回环 IP 抛错", async () => {
     await expect(assertPublicUrl("http://127.0.0.1/")).rejects.toThrow();
     await expect(assertPublicUrl("http://169.254.169.254/latest/meta-data/")).rejects.toThrow();

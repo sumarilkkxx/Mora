@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSettingsStore } from "@/lib/stores/settings-store";
+import { notifyTaskSubmitted } from "@/lib/task-events";
 import { mergeCustomModels, buildImageOptions, buildVideoOptions, toEditVariant } from "@/lib/gen-params";
 import { useCharacterStore } from "@/lib/stores/project-store";
 import type { Shot } from "@/lib/db/schema";
@@ -695,6 +696,7 @@ export default function AssetsPage() {
           // the paid task may already exist in the cloud — surface its ID and the recovery
           // path instead of a bare failure that invites a duplicate (billed) resubmit
           if (data.taskId) {
+            notifyTaskSubmitted();
             await reloadPendingTasks();
             throw new Error(
               t("errorWithTaskId", { msg: data.error || t("errorImageToVideoFailed"), taskId: data.taskId })
@@ -703,6 +705,7 @@ export default function AssetsPage() {
           throw new Error(data.error || t("errorImageToVideoFailed"));
         }
         if (data.queued && data.taskId) {
+          notifyTaskSubmitted();
           setAssets((prev) => prev.map((a) => a.shotId === shotId ? { ...a, status: "generating", error: undefined } : a));
           setTaskMsg(t("taskQueuedBackground", { taskId: data.taskId }));
           await reloadPendingTasks();

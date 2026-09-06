@@ -29,6 +29,14 @@ describe("readResponseBuffer", () => {
 });
 
 describe("safeFetch", () => {
+  it("rejects redirects into mapped loopback before sending the second request", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, {
+      status: 302, headers: { location: "http://[::ffff:127.0.0.1]/private" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(safeFetch("https://93.184.216.34/start")).rejects.toThrow("目标地址被拒绝");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
   it("does not forward authorization when a redirect changes origin", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(null, {

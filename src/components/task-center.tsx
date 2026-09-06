@@ -7,8 +7,10 @@ import { useT } from "@/lib/i18n";
 import { useSettingsStore } from "@/lib/stores/settings-store";
 import { EMPTY_TASK_FEED, type TaskFeed, type TaskRow } from "@/lib/task-feed";
 import { TASKS_SEEN_STORAGE_KEY, taskTimestamp, unreadCompletedCount } from "@/lib/task-notifications";
+import { TASK_SUBMITTED_EVENT } from "@/lib/task-events";
 
 const POLL_MS = 15_000;
+const IDLE_POLL_MS = 60_000;
 
 /**
  * Global task center: a bell with a live badge and a panel answering "what is
@@ -87,24 +89,27 @@ export function TaskCenter({ collapsed = false, enableRecovery = false }: { coll
     }
   }, [enableRecovery, providers]);
 
-  // initial load + keep polling while anything is in flight or needs attention;
+  // Keep a low-frequency discovery poll even when idle (e.g. CLI submissions).
+  // Accepted browser submissions wake the worker immediately.
   // the leading setTimeout(…, 0) keeps the first fetch off the synchronous effect body
   const busy = feed.active.length > 0 || feed.attention.length > 0;
   useEffect(() => {
-    const tick = () => void recoverPaidTasks().finally(refresh);
+    const tick = () => void recoverPaidTasks().catch(() => {}).then(refresh);
     const kickoff = setTimeout(tick, 0);
-    const interval = busy ? setInterval(tick, POLL_MS) : null;
+    const interval = setInterval(tick, busy ? POLL_MS : IDLE_POLL_MS);
     const onFocus = () => {
       if (document.visibilityState === "visible") tick();
     };
     window.addEventListener("focus", onFocus);
     window.addEventListener("online", onFocus);
+    window.addEventListener(TASK_SUBMITTED_EVENT, tick);
     document.addEventListener("visibilitychange", onFocus);
     return () => {
       clearTimeout(kickoff);
-      if (interval) clearInterval(interval);
+      clearInterval(interval);
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("online", onFocus);
+      window.removeEventListener(TASK_SUBMITTED_EVENT, tick);
       document.removeEventListener("visibilitychange", onFocus);
     };
   }, [busy, refresh, recoverPaidTasks]);

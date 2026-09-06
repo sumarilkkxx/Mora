@@ -2,11 +2,11 @@
 // Key points (all validated through real packaging tests):
 //  - Data is written to app.getPath('userData')/data (writable), injected into the server via APP_DATA_DIR (standalone cwd is read-only)
 //  - ffmpeg/ffprobe use bundled binaries, injected via FFMPEG_PATH/FFPROBE_PATH (no ffmpeg install required on the user's machine)
-//  - Acquire a free port (not hardcoded to 3000), poll HTTP until ready before loadURL, kill child process on exit
+//  - Persist the local port to preserve browser storage across launches; kill the server on exit
 const { app, BrowserWindow, dialog, shell } = require("electron");
 const { fork } = require("child_process");
 const http = require("http");
-const net = require("net");
+const { getStableServerPort } = require("./server-port.cjs");
 const path = require("path");
 const fs = require("fs");
 
@@ -59,19 +59,6 @@ function readLogTail(maxChars = 3000) {
   }
 }
 
-/** Find a free local port */
-function getFreePort() {
-  return new Promise((resolve, reject) => {
-    const srv = net.createServer();
-    srv.unref();
-    srv.on("error", reject);
-    srv.listen(0, "127.0.0.1", () => {
-      const { port } = srv.address();
-      srv.close(() => resolve(port));
-    });
-  });
-}
-
 /** Resolve the absolute path of a bundled binary, correcting asar → asar.unpacked */
 function resolveBinary(getter) {
   try {
@@ -120,12 +107,11 @@ function waitReady(port, tries = 120) {
 }
 
 /** Start the standalone server child process, wait until ready, and return the access URL */
-async function startServer() {
+async function startServer(port) {
   const entry = serverEntry();
   const serverDir = path.dirname(entry);
   const dataDir = path.join(app.getPath("userData"), "data");
   fs.mkdirSync(dataDir, { recursive: true });
-  const port = await getFreePort();
 
   const ffmpegPath = resolveBinary(() => require("ffmpeg-static"));
   const ffprobePath = resolveBinary(() => require("@ffprobe-installer/ffprobe").path);
@@ -237,10 +223,12 @@ function createMainWindow(url) {
 
 app.whenReady().then(async () => {
   if (!hasSingleInstanceLock) return;
-  initLog();
   let url;
   try {
-    url = await startServer();
+    // Read the previous launch log before initLog truncates it (legacy migration).
+    const port = await getStableServerPort(app.getPath("userData"));
+    initLog();
+    url = await startServer(port);
     serverUrl = url;
   } catch (e) {
     const msg = (e && (e.stack || e.message)) || String(e);
