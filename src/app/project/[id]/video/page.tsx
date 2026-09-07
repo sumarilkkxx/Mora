@@ -23,6 +23,11 @@ import { ProjectHeader } from "@/components/project-header";
 import { normalizeProductionMode, type ProductionMode } from "@/lib/production-mode";
 import { buildAssetRows, type SavedAssetRow } from "@/lib/assets-view";
 import {
+  LOCAL_MOTION_KINDS,
+  planLocalMotionSequence,
+  type LocalMotionKind,
+} from "@/lib/video-composer/local-motion";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -37,6 +42,8 @@ interface VideoClipItem {
   type: Shot["type"];
   duration: number;
   voiceover: string;
+  camera: string;
+  localMotion: LocalMotionKind | "auto";
   transition: "ai_start_end" | "ai_reference" | "direct_concat" | "ffmpeg_fade";
 }
 
@@ -64,6 +71,8 @@ interface ComposeConfig {
   bgmDuck: boolean;
   /** voice grounding: TTS de-broadcast chain + room-tone bed (default on; off = clean studio read) */
   voiceGround: boolean;
+  /** Preserve the complete product silhouette and use restrained crop ranges. */
+  productSafe: boolean;
 }
 
 // 免费配音音色（微软 Edge keyless TTS，无需 Key）——与后端 FREE_TTS_VOICES 对应
@@ -108,6 +117,7 @@ interface DbShot {
   type: VideoClipItem["type"];
   duration: number;
   voiceover: string;
+  camera: string;
   transition: VideoClipItem["transition"];
 }
 
@@ -119,7 +129,7 @@ export default function VideoPage() {
   const locale = useLocale();
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
-  const { defaultResolution, defaultAspectRatio, tts, providers } = useSettingsStore();
+  const { defaultResolution, defaultAspectRatio, tts, providers, motionIntensity, setMotionIntensity } = useSettingsStore();
   const [clips, setClips] = useState<VideoClipItem[]>([]);
   // 分镜缩略图：shotId → 素材文件路径（在时间线里直接预览每段画面）
   const [thumbs, setThumbs] = useState<Record<number, string>>({});
@@ -144,6 +154,7 @@ export default function VideoPage() {
     captionPreset: "standard",
     bgmDuck: false,
     voiceGround: true,
+    productSafe: true,
   });
 
   // 合成状态
@@ -248,6 +259,8 @@ export default function VideoPage() {
               type: s.type,
               duration: s.duration,
               voiceover: s.voiceover ?? "",
+              camera: s.camera ?? "",
+              localMotion: "auto",
               transition: s.transition ?? "ai_start_end",
             }))
           );
@@ -287,6 +300,26 @@ export default function VideoPage() {
       )
     );
   };
+
+  const updateLocalMotion = (shotId: number, motion: LocalMotionKind | "auto") => {
+    setClips((prev) => prev.map((clip) => (clip.shotId === shotId ? { ...clip, localMotion: motion } : clip)));
+  };
+
+  const motionPreviewKinds = useMemo(
+    () => planLocalMotionSequence(clips.map((clip) => ({
+      shotId: clip.shotId,
+      shotType: clip.type,
+      camera: clip.camera,
+      override: clip.localMotion,
+      intensity: motionIntensity,
+      productSafe: config.productSafe,
+    }))).map((plan) => plan.kind),
+    [clips, motionIntensity, config.productSafe]
+  );
+
+  const motionOverrides = () => clips.flatMap((clip) =>
+    clip.localMotion === "auto" ? [] : [{ shotId: clip.shotId, motion: clip.localMotion }]
+  );
 
   // style packs: declarative JSON recipes (caption preset / BGM / quality / CTA / product card).
   // Novice-safe style pack: pure data validated against a whitelist — nothing executable.
@@ -445,6 +478,9 @@ export default function VideoPage() {
             resolution: config.resolution,
             renderPreset: config.renderPreset,
             aspectRatio: config.aspectRatio,
+            motionIntensity,
+            productSafe: config.productSafe,
+            motionOverrides: motionOverrides(),
             label: combo.label,
             ...(hookShot && { voiceoverOverrides: [{ shotId: hookShot.shotId, voiceover: hookShot.voiceover ?? "" }] }),
             ...(config.ctaEnabled && config.ctaText.trim() && { ctaText: config.ctaText.trim() }),
@@ -514,6 +550,9 @@ export default function VideoPage() {
           resolution: config.resolution,
           renderPreset: config.renderPreset,
           aspectRatio: config.aspectRatio,
+          motionIntensity,
+          productSafe: config.productSafe,
+          motionOverrides: motionOverrides(),
           ...(config.ctaEnabled && config.ctaText.trim() && { ctaText: config.ctaText.trim() }),
           ...(config.productCard && { productCard: true }),
           ...(config.captionPreset !== "standard" && { captionPreset: config.captionPreset }),
@@ -679,6 +718,21 @@ export default function VideoPage() {
                             <p className="text-xs text-muted-foreground truncate">
                               {clip.voiceover}
                             </p>
+                            <div className="mt-2 flex items-center gap-2">
+                              <span className="shrink-0 text-[10px] text-muted-foreground">{t("motionShotLabel")}</span>
+                              <select
+                                value={clip.localMotion}
+                                onChange={(event) => updateLocalMotion(clip.shotId, event.target.value as LocalMotionKind | "auto")}
+                                aria-label={`${t("motionShotLabel")} ${clip.shotId}`}
+                                title={clip.camera}
+                                className="min-w-0 max-w-48 rounded border border-border/40 bg-muted/20 px-2 py-1 text-[10px] text-muted-foreground outline-none focus:border-primary/60"
+                              >
+                                <option value="auto">{t("motionAuto")} · {t(`motion_${motionPreviewKinds[index]}`)}</option>
+                                {LOCAL_MOTION_KINDS.map((motion) => (
+                                  <option key={motion} value={motion}>{t(`motion_${motion}`)}</option>
+                                ))}
+                              </select>
+                            </div>
                           </div>
 
                           {/* 序号 */}
@@ -929,6 +983,38 @@ export default function VideoPage() {
             <Card className="glass-card">
               <CardContent className="p-4 space-y-4">
                 <Label className="text-sm font-medium">{t("canvasLabel")}</Label>
+                <div className="space-y-2">
+                  <span className="text-xs text-muted-foreground">{t("motionIntensityLabel")}</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["subtle", "normal", "strong"] as const).map((intensity) => (
+                      <button
+                        key={intensity}
+                        type="button"
+                        aria-pressed={motionIntensity === intensity}
+                        onClick={() => setMotionIntensity(intensity)}
+                        className={`h-9 rounded-md text-xs border transition-[transform,background-color,border-color,color,box-shadow,opacity] ${
+                          motionIntensity === intensity
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border/50 bg-muted/20 text-muted-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        {t(`motionIntensity_${intensity}`)}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">{t("motionIntensityDesc")}</p>
+                </div>
+                <div className="flex items-center justify-between rounded-md border border-border/40 bg-muted/10 px-3 py-2.5">
+                  <div className="pr-3">
+                    <p className="text-xs text-muted-foreground">{t("productSafeLabel")}</p>
+                    <p className="mt-0.5 text-[10px] text-muted-foreground/80">{t("productSafeDesc")}</p>
+                  </div>
+                  <Switch
+                    checked={config.productSafe}
+                    onCheckedChange={(checked) => setConfig((current) => ({ ...current, productSafe: checked }))}
+                    aria-label={t("productSafeLabel")}
+                  />
+                </div>
                 {/* 输出档位：一次选择同时决定分辨率与编码质量，避免下方重复选择分辨率 */}
                 <div className="space-y-2">
                   <span className="text-xs text-muted-foreground">{t("renderQualityLabel")}</span>
