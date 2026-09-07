@@ -6,21 +6,21 @@
 
 <h1 align="center">Mora</h1>
 <p align="center">(<strong>M</strong>ultimodal <strong>O</strong>rchestration for <strong>R</strong>etail <strong>A</strong>utomation)</p>
-<p align="center"><strong>Mora goes beyond isolated generated clips, carrying creative intent into a traceable, recoverable, exportable final video.</strong></p>
-<p align="center">A text model handles automatic scripting and storyboards; local media, open libraries, and generated visuals are used as needed; voice, captions, tasks, versions, and FFmpeg composition stay in one project.</p>
+<p align="center"><strong>A local-first AI video workspace, from scripts and media to voice, captions, and video export.</strong></p>
+<p align="center">Write scripts and storyboards with a text model, combine local, stock, or AI media, and manage production, tasks, and versions in one project.</p>
 
 <p align="center">
   <a href="#showcase">Real cases</a> ·
   <a href="#workflow">How it works</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#architecture">Architecture</a> ·
-  <a href="https://github.com/sumarilkkxx/Mora/releases/tag/v0.1.0.0">Download &amp; install</a> ·
+  <a href="#desktop">Desktop</a> ·
   <a href="#roadmap">Roadmap</a> ·
   <a href="./README.md">中文</a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v0.1.0.0-087BDF?style=flat-square" alt="Version v0.1.0.0">
+  <img src="https://img.shields.io/badge/version-v0.1.1.0-087BDF?style=flat-square" alt="Version v0.1.1.0">
   <img src="https://img.shields.io/badge/license-AGPL--3.0--only-28526F?style=flat-square" alt="License AGPL-3.0-only">
   <img src="https://img.shields.io/badge/local--first-FFmpeg%20%2B%20SQLite-0D355A?style=flat-square" alt="Local-first with FFmpeg and SQLite">
   <img src="https://img.shields.io/badge/status-alpha-087BDF?style=flat-square" alt="Status alpha">
@@ -29,17 +29,17 @@
 
 <a id="showcase"></a>
 
-## Project story: two real starting points
+## Project story: starting with product images and recorded footage
 
-Mora did not begin as an attempt to connect one more video-generation model. It began with two concrete—and fundamentally different—production problems: **how to build a complete product video from a single product image and a short description, and how to preserve already-recorded footage while completing understanding, editing, and delivery locally.**
+Mora began with two production needs: **making a product video from one image and a short description, and editing recorded footage into a short video ready to publish.**
 
-The first problem lacks usable shots, so models help establish the script, storyboard, and visuals. The second already has the shots; what it lacks is media understanding, pacing, and a reliable post-production path. Mora therefore does not force every project through one “AI generation” pipeline. It first considers the starting media and how the final video will be produced, then selects the appropriate workflow.
+Starting with a product image, models can help write a script, plan a storyboard, and generate shots. With recorded footage, you can analyze the source, adjust the pacing, then add voice and captions and render locally.
 
-The two MP4 files below come from those separate workflows. They share project, script, asset, task, version, and export infrastructure, but their inputs, model responsibilities, and final-video paths are different. Click either board to play the complete video.
+The examples below show both approaches. Click a preview to play the complete video.
 
 ### Workflow one: one product image and a short description become a complete product film
 
-Start with the pet-fountain example below: the project begins with just one product image and a brief introduction. A text model expands that limited input into a structured script, shot rhythm, and visual constraints. Generated or reference-conditioned media fills the missing shots, while candidates, script relationships, and the final result return to the same project instead of becoming an untraceable folder of model outputs.
+The pet-fountain video starts with one product image and a short description. A text model writes the script, plans the shot order, and describes the visuals. Image or video generation supplies the missing shots. Scripts, candidate media, and finished versions are saved in the project.
 
 <p align="center">
   <a href="https://sumarilkkxx.github.io/Mora/videos/mora-ai-showcase.mp4"><img src="./assets/readme/showcase-generative.webp" width="100%" alt="Play a 30-second pet-fountain film built from a text-model script, shot rhythm, and generated or reference visuals"></a>
@@ -47,11 +47,9 @@ Start with the pet-fountain example below: the project begins with just one prod
 
 <p align="center"><strong>Generative product film · 30.02s · 1080×1920</strong><br><sub>Product image + short description → text script and storyboard → generated shots → complete video version</sub></p>
 
-In this generative workflow, the model is responsible for producing visuals. Mora connects the text script, shot relationships, candidate media, version management, and final composition, turning scattered model outputs into one manageable, deliverable video-production flow.
-
 ### Workflow two: existing footage goes through intelligent local editing
 
-Now consider the salon example below: the project begins with an already-recorded vertical video, so there is no need to regenerate the subject. Mora preserves the source, splits scenes, extracts content, restructures the promotional rhythm, creates voice and timed captions, and renders an independent version locally with FFmpeg. The source footage, edit plan, and previous outputs remain intact.
+The salon video starts with recorded vertical footage. Mora splits scenes, analyzes the content, arranges shots around a promotional script, adds voice and captions, and renders locally with FFmpeg. The source, edit plan, and previous outputs are saved separately for comparison and further editing.
 
 <p align="center">
   <a href="https://sumarilkkxx.github.io/Mora/videos/mora-guided-edit-latest.mp4"><img src="./assets/readme/showcase-guided.webp" width="100%" alt="Play an existing salon video split into scenes, paced against a script, voiced, captioned, and rendered locally"></a>
@@ -59,34 +57,32 @@ Now consider the salon example below: the project begins with an already-recorde
 
 <p align="center"><strong>Existing-footage edit · 16.4s · local render</strong><br><sub>Source upload → scene split → rhythm edit → voice and captions → local FFmpeg final</sub></p>
 
-This local-editing workflow shows how Mora treats existing media: when usable shots already exist, the system does not regenerate the subject merely to look “AI.” Instead, intelligence helps understand the media, split scenes, organize structure, and assist the edit before the local post-production path produces the complete final video.
-
-These are not two input variants of the same workflow. The first path creates shots when visuals are missing; the second carries existing shots through intelligent local post-production. Together, they define Mora's boundary: **media may come from a camera, a library, or an AI model, but the final video's origin defines the production path.** An AI image can still be ordinary source media. If Mora and FFmpeg render the final MP4, the project remains on a local-final path. Only a final video directly produced by a cloud video model belongs to the generative-video path.
-
 > [!IMPORTANT]
-> **A local final does not mean that no model is ever called.** Automatically generating, rewriting, or reviewing a script requires a text LLM. You can bring a key for a cloud OpenAI-compatible service or connect local Ollama. Manually writing, importing, and editing a script can skip that call. Image and video models remain optional and path-dependent; organizing local media, captions, and FFmpeg composition does not require a paid image or video model.
+> Generating, rewriting, or reviewing scripts automatically requires a text model, using a cloud service with your own key or local Ollama. Writing and importing scripts manually requires no model call. See [Where models participate](#where-models-participate) for dependencies and the [FAQ](#faq) for network requirements.
 
 ## What Mora is solving
 
-### 1. One project owns the full production context
+### 1. Keep project materials and progress together
 
-Scripts, storyboards, product data, media provenance, voice, captions, model jobs, compositions, and exports belong to one project. After a refresh or restart, users see recoverable production state instead of a pile of unrelated temporary results.
+Scripts, storyboards, product data, media sources, voice, captions, model jobs, compositions, and exports are saved in one project, making it easier to find media, check progress, and compare versions.
 
-### 2. Automation begins with a script, not random visuals
+### 2. Organize production around a script
 
-A text model turns selling points, audience, platform, duration, and creative form into a structured script. That script drives media selection, voice length, caption timing, and final rhythm. Users may import or edit every script; model output is not treated as an immutable answer.
+A text model writes a script based on selling points, audience, platform, duration, and format. The script guides media selection, voice length, caption timing, and pacing. Scripts can also be edited manually or imported.
 
 ### 3. Local work and potentially billable calls stay distinct
 
-Local transcription, scene splitting, captions, FFmpeg composition, and file management are separated from requests to text, image, video, or hosted voice providers. Mora does not collect provider fees or present unknown prices as fake precision.
+Local transcription, scene splitting, captions, FFmpeg composition, and file management are shown separately from third-party model and voice calls. Model fees are charged by the provider, not collected by Mora. Refer to the provider's billing information for prices.
 
-### 4. Failure state is part of the product
+### 4. Check failures and resume tasks
 
 Pipeline stages, cloud jobs, compositions, and failure reasons are persisted. A run can resume from a breakpoint, and completed or potentially billable stages are not accidentally resubmitted after a page refresh.
 
 <a id="workflow"></a>
 
-## How it works: the script is the spine, the final video's origin selects the path
+## How it works
+
+Projects are classified by how the final video is made: videos rendered by Mora and FFmpeg follow the local path, while final videos generated directly by a cloud video model follow the generative path. Recorded footage has a dedicated editing workflow for local post-production.
 
 ```mermaid
 flowchart TD
@@ -110,7 +106,7 @@ flowchart TD
 
 - Use local uploads, project history, and configured open-media sources.
 - Voice, burned captions, karaoke timing, BGM, ducking, aspect ratios, and render presets are supported.
-- AI images do not automatically turn the project into “generative video.” If Mora renders the final MP4 locally, it remains a local-final path.
+- AI images can also serve as media for local composition.
 
 ### Path B: generative video
 
@@ -292,7 +288,7 @@ flowchart TB
 - **AI jobs and pipelines** store provider jobs, stages, failure reasons, and breakpoints.
 - **Compositions and edit plans** store input relationships, render state, output files, and version history.
 
-## Models, media, and cost boundaries
+## Models, media, and costs
 
 Most configuration lives in Settings; keys do not need to be committed.
 
@@ -305,7 +301,7 @@ Most configuration lives in Settings; keys do not need to be committed.
 
 Provider keys, balances, regional availability, and content rules remain with each provider. Before starting a potentially billable generation, verify the model, duration, resolution, and current provider price.
 
-## Data boundary and security
+## Data storage and security
 
 - Development data lives under `data/`; packaged desktop data lives in Mora's OS user-data directory.
 - SQLite state, uploads, cached media, outputs, and logs remain local by default.
@@ -330,14 +326,14 @@ pnpm dist:win
 pnpm dist:mac
 ```
 
-GitHub Actions includes Windows x64, macOS Apple Silicon, and macOS Intel build jobs, followed by installer verification and packaged-app smoke tests. During the alpha stage, macOS DMGs may be published as unsigned previews, but they must be clearly labeled as unsigned and unnotarized. On first launch, users may need to approve the app manually in Privacy & Security.
+GitHub Actions includes Windows x64, macOS Apple Silicon, and macOS Intel build jobs, followed by installer verification and packaged-app smoke tests. The current `v0.1.1.0` build configuration does not enable code signing, and macOS installers are not notarized. On first launch, you may need to allow the macOS app manually in Privacy & Security.
 
 | Version layer | Current convention |
 | --- | --- |
-| Git tag | `v0.1.0.0` |
-| npm / Electron SemVer | `0.1.0` |
-| Windows FileVersion | `0.1.0.0` |
-| Artifacts | `Mora-Setup-v0.1.0.0-win-x64.exe` / `Mora-v0.1.0.0-mac-<arch>.dmg` |
+| Git tag | `v0.1.1.0` |
+| npm / Electron SemVer | `0.1.1` |
+| Windows FileVersion | `0.1.1.0` |
+| Artifacts | `Mora-Setup-v0.1.1.0-win-x64.exe` / `Mora-v0.1.1.0-mac-<arch>.dmg` |
 
 ## HTTP API and automation surfaces
 
@@ -352,7 +348,7 @@ GitHub Actions includes Windows x64, macOS Apple Silicon, and macOS Intel build 
 
 ## Known limitations
 
-`v0.1.0.0` remains an alpha release. The following describes unstable behavior in current services and integrations:
+`v0.1.1.0` is an alpha release with the following known limitations:
 
 - Login walls, client-side rendering, CAPTCHAs, anti-bot controls, and cookie isolation on Taobao, Tmall, and other marketplaces can prevent product-link ingestion. The reliable fallback today is manual product data or uploaded screenshots.
 - Automatic scripting requires a reachable text model. An unavailable endpoint, exhausted quota, or regional restriction can cause generation to fail; fully offline use requires an imported script or local Ollama.
@@ -363,12 +359,12 @@ GitHub Actions includes Windows x64, macOS Apple Silicon, and macOS Intel build 
 
 ## Roadmap
 
-The following shows the product directions currently in progress.
+The following features have no scheduled release dates. Priorities may change based on usage feedback, issues, and contributions.
 
-| Direction | Planned capability and boundary |
+| Direction | Planned improvements |
 | --- | --- |
 | **LLM-assisted intelligent editing** | Add scene-semantic understanding, highlight suggestions, pacing alternatives, and explainable edit plans to the existing-footage workflow. Models propose; users can confirm, modify, and roll back. |
-| **Compliant product-link ingestion** | Prefer official platform APIs, open interfaces, and user-authorized import methods where platform terms allow them, while retaining manual data, screenshot, and product-library fallbacks. Mora will not attempt to bypass CAPTCHAs, anti-bot controls, or access restrictions. |
+| **Better product-link import** | Add official platform APIs, open interfaces, and user-authorized import methods permitted by platform terms, alongside manual data entry, screenshots, and product-library imports. |
 | **More resilient provider adapters** | Maintain capability manifests, parameter preflight checks, compatibility tests, and graceful fallbacks to reduce failures after provider changes. |
 | **Finer local post-production control** | Expand timeline, caption, voice, BGM, shot replacement, and partial re-render controls so intelligent suggestions remain editable production steps. |
 | **Traceable media and publication data** | Improve media provenance, rights records, model-generation history, AIGC-label reminders, and export manifests to support users' own publication checks. |
@@ -385,19 +381,19 @@ Local media, captions, and FFmpeg composition can remain on the machine. Automat
 <details>
 <summary><strong>Does using an AI image make the project an AI-video project?</strong></summary>
 <br>
-No. Path classification follows the origin of the final video. AI images may be ordinary source media in a local composition. Only a final video generated by a cloud video model belongs to the generative-video path.
+No. A video composed locally using AI images still follows the local path. See [How it works](#workflow) for the classification.
 </details>
 
 <details>
 <summary><strong>Why can Taobao or Tmall product links fail?</strong></summary>
 <br>
-Backend ingestion does not share login cookies from an external Edge or browser session and must enforce SSRF and private-address protection. Login walls, anti-bot systems, regional restrictions, and client-side rendering may require manual product data or uploaded screenshots.
+Mora's backend cannot use your browser's login session. Pages that require login, CAPTCHAs, or browser-side loading may not be readable directly. Platform anti-bot controls and regional restrictions can also prevent access. If import fails, enter product information manually or upload screenshots.
 </details>
 
 <details>
 <summary><strong>Does Mora automatically upload the whole project?</strong></summary>
 <br>
-Mora does not require every project to enter one central cloud. Only the text, image, video, stock, or voice services you explicitly call receive the data needed for that request. The local database and output files remain on the machine.
+No. The local database and output files stay on your machine. Calling a third-party text, image, video, stock, or voice service sends the data needed for that request. See [Data storage and security](#data-storage-and-security).
 </details>
 
 ## Contributing

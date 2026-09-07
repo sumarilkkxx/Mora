@@ -119,7 +119,7 @@ async function api(path, { method = "GET", body, timeoutMs = 600000 } = {}) {
   try {
     res = await fetch(`${BASE_URL}${path}`, {
       method,
-      headers: body ? { "Content-Type": "application/json" } : undefined,
+      headers: { ...(["POST", "PUT", "PATCH"].includes(method) || body ? { "Content-Type": "application/json" } : {}), ...(process.env.MORA_API_TOKEN ? { "x-mora-token": process.env.MORA_API_TOKEN } : {}) },
       body: body ? JSON.stringify(body) : undefined,
       signal: ctrl.signal,
     });
@@ -617,6 +617,7 @@ const HELP = `Mora CLI · 命令行一句话出片
 
 环境变量：
   MORA_BASE_URL（默认 http://localhost:3000，需先 pnpm dev/start）
+  MORA_API_TOKEN（桌面版必需，从 userData/api-token 读取；重启后更新）
   MORA_LLM_BASE_URL / MORA_LLM_API_KEY / MORA_LLM_MODEL（create 必需）
   MORA_PEXELS_KEY / MORA_PIXABAY_KEY（可选）
 

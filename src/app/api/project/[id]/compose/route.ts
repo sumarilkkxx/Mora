@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDataDir, fileNameOf } from "@/lib/paths";
 import { ffprobeBin, ffmpegBin } from "@/lib/ffmpeg-path";
 import { join } from "path";
-import { existsSync } from "fs";
-import { mkdir, writeFile } from "fs/promises";
+import { resolveExistingUploadFilePath } from "@/lib/upload-path";
+import { mkdir, writeFile, rm } from "fs/promises";
 import { generateSpeech, estimateSpeechSeconds, type TTSConfig } from "@/lib/tts";
 import { stripPauseMarks } from "@/lib/voice-markup";
 import { shotEmotion, EMOTION_TTS } from "@/lib/emotion-acting";
@@ -72,10 +72,7 @@ export async function GET(
 /** 把 /api/files/{pid}/{file} 形式的访问路径还原为本地磁盘绝对路径 */
 function toLocalPath(fileRef: string | undefined): string | undefined {
   if (!fileRef) return undefined;
-  const m = fileRef.match(/\/api\/files\/(.+)/);
-  if (!m) return undefined;
-  const p = join(getDataDir(), "uploads", m[1]);
-  return existsSync(p) ? p : undefined;
+  return resolveExistingUploadFilePath(fileRef) ?? undefined;
 }
 
 /** 按镜头类型给商品原图分镜分配一个默认运镜 */
@@ -162,8 +159,8 @@ export async function POST(
     const useFreeTts = !ttsConfig && freeTts?.enabled === true;
     const freeVoice = freeTts?.voice || DEFAULT_FREE_VOICE;
     const freeRate = typeof freeTts?.rate === "string" ? freeTts.rate : undefined;
-    const ttsDir = join(getDataDir(), "uploads", id, "tts");
-    if (ttsConfig || useFreeTts) await mkdir(ttsDir, { recursive: true });
+    const compositionId = crypto.randomUUID();
+    const ttsDir = join(getDataDir(), "work", "compose", compositionId);
 
     /** 探测视频文件是否带「可听见」的音轨（自带语音/音效）；仅静音/空轨不算，让免费 TTS 旁白照常生效 */
     async function videoHasAudio(filePath: string): Promise<boolean> {
@@ -294,13 +291,14 @@ export async function POST(
     // 立即建合成记录(composing)并返回；重活(TTS+FFmpeg)后台异步跑，前端轮询 GET 获取结果
     const [comp] = await db
       .insert(compositions)
-      .values({ projectId: id, resolution: outputCfg.resolution, aspectRatio: outputCfg.aspectRatio, aigcBadge, ...(label && { label }), videoOrigin: "local_render", status: "composing" })
+      .values({ id: compositionId, projectId: id, resolution: outputCfg.resolution, aspectRatio: outputCfg.aspectRatio, aigcBadge, ...(label && { label }), videoOrigin: "local_render", status: "composing" })
       .returning();
     await db.update(projects).set({ status: "composing", productionMode: "local", updatedAt: new Date() }).where(eq(projects.id, id));
 
     // 后台异步合成（不阻塞请求，避免长视频超时）
     void (async () => {
      try {
+    await mkdir(ttsDir, { recursive: true });
     // Breathing gap in seconds between the end of one narration and the start of the next;
     // the extra tail needed by acrossfade transitions is added separately by padDurationsForFade
     const VOICE_GAP = 0.45;
@@ -476,7 +474,7 @@ export async function POST(
     const wantKaraoke = body.karaoke === true || (captionPreset && CAPTION_PRESETS[captionPreset].karaoke === true);
     if (wantKaraoke && karaokeLines.length > 0) {
       const ass = buildKaraokeAss(karaokeLines, { fontName: resolveChineseFontFamily() });
-      const assDir = join(getDataDir(), "output", id);
+      const assDir = ttsDir;
       await mkdir(assDir, { recursive: true });
       const assPath = join(assDir, `karaoke_${comp.id}.ass`);
       await writeFile(assPath, ass, "utf8");
@@ -523,6 +521,8 @@ export async function POST(
         console.error("后台合成失败:", e);
         await db.update(compositions).set({ status: "failed" }).where(eq(compositions.id, comp.id)).catch(() => {});
         await db.update(projects).set({ status: "video", updatedAt: new Date() }).where(eq(projects.id, id)).catch(() => {});
+      } finally {
+        await rm(ttsDir, { recursive: true, force: true }).catch((error) => console.warn("合成临时文件清理失败", error));
       }
     })();
 

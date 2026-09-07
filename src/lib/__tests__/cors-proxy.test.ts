@@ -1,18 +1,18 @@
-import { describe, it, expect } from "vitest";
+import { beforeEach, afterEach, describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { proxy } from "@/proxy";
 
 /**
- * Local-tool CORS (v0.8.79): /api/* reflects localhost origins only, so browser
- * pages on other local ports (the infinite-canvas Mora node) can call us,
- * while a remote malicious page — whose origin can never be localhost — still
- * hits the browser's same-origin wall. These tests pin that security boundary.
+ * Cross-origin integrations require an explicit allowlist; rejected requests
+ * must stop at the server boundary, including requests that need no preflight.
  */
 
 const url = "http://localhost:3457/api/health";
+beforeEach(() => vi.stubEnv("MORA_ALLOWED_ORIGINS", "http://localhost:3800,http://127.0.0.1:5173"));
+afterEach(() => vi.unstubAllEnvs());
 
 describe("CORS proxy 安全边界", () => {
-  it("localhost 任意端口来源：预检 204 + 头精确回显", () => {
+  it("已配置 localhost 来源：预检 204 + 头精确回显", () => {
     const res = proxy(
       new NextRequest(url, {
         method: "OPTIONS",
@@ -34,6 +34,7 @@ describe("CORS proxy 安全边界", () => {
     for (const origin of ["https://evil.example.com", "http://localhost.evil.com", "http://sub.localhost:3800"]) {
       const res = proxy(new NextRequest(url, { method: "GET", headers: { origin } }));
       expect(res.headers.get("access-control-allow-origin"), `origin ${origin} 不应被放行`).toBeNull();
+      expect(res.status).toBe(403);
     }
   });
 

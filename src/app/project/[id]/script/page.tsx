@@ -1,5 +1,7 @@
 "use client";
 
+import { notifyTaskSubmitted } from "@/lib/task-events";
+
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { LuWand, LuClock, LuImage, LuArrowRight, LuBookmarkPlus, LuLoaderCircle, LuTriangleAlert, LuCircleCheck, LuCircleX, LuPencil } from "react-icons/lu";
@@ -676,6 +678,7 @@ export default function ScriptPage() {
       });
       const filmData = await filmRes.json().catch(() => ({}));
       if (!filmRes.ok) throw new Error(filmData.error || t("aiFilmFailed"));
+      notifyTaskSubmitted();
       // 3) the film landed in compositions — the export page shows it
       setFilmPreview(null);
       router.push(`/project/${id}/export`);

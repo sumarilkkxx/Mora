@@ -1,26 +1,7 @@
 import { readFile } from "fs/promises";
-import { join, sep } from "path";
-import { getDataDir } from "@/lib/paths";
+import { resolveExistingUploadFilePath } from "@/lib/upload-path";
+export { resolveUploadFilePath } from "@/lib/upload-path";
 import { imageDataUri, normalizeImageDataUri } from "@/lib/image-format";
-
-/**
- * Resolve a local `/api/files/{relative-path}` reference to a safe absolute path inside the uploads directory.
- *
- * Security note: `m[1]` comes from the request body and is attacker-controlled. A value containing `../` could
- * let join escape the uploads directory, reading arbitrary files (which toRemoteUsableImage would then base64-encode
- * and leak to a remote provider configured by the attacker).
- * join already normalises `..`; we then verify the result still lives inside uploads — any escape returns null (rejected).
- *
- * Pure function, easy to unit-test (no disk access). Returns a safe absolute path, or null (non-/api/files path or path traversal).
- */
-export function resolveUploadFilePath(ref: string): string | null {
-  const m = ref.match(/\/api\/files\/(.+)/);
-  if (!m) return null;
-  const uploadsRoot = join(getDataDir(), "uploads");
-  const filePath = join(uploadsRoot, m[1]);
-  if (filePath !== uploadsRoot && !filePath.startsWith(uploadsRoot + sep)) return null; // path traversal detected, reject
-  return filePath;
-}
 
 /**
  * Convert a local `/api/files` path to a base64 data URI (remote providers cannot access localhost and require a data URI or public URL).
@@ -30,7 +11,7 @@ export async function toRemoteUsableImage(ref: string | undefined): Promise<stri
   if (!ref) return undefined;
   if (ref.startsWith("data:")) return normalizeImageDataUri(ref);
   if (ref.startsWith("http")) return ref;
-  const filePath = resolveUploadFilePath(ref);
+  const filePath = resolveExistingUploadFilePath(ref);
   if (!filePath) return ref; // not an /api/files path or path traversal — skip disk read, return as-is
   try {
     const buf = await readFile(filePath);

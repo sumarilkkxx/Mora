@@ -1,4 +1,5 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { renderOwner } from "@/lib/render-recovery";
 import type {
   CreativeIntent,
   ProductionSnapshot,
@@ -143,6 +144,7 @@ export const aiTasks = sqliteTable("ai_tasks", {
   prompt: text("prompt"),
   // provider-side task/prediction ID — the recovery handle for a paid task
   taskId: text("task_id").notNull(),
+  keyframePath: text("keyframe_path"),
   // unknown = client lost contact (poll timeout / restart); the cloud task may still be running
   status: text("status", { enum: ["submitted", "processing", "completed", "failed", "unknown"] }).notNull().default("submitted"),
   resultUrls: text("result_urls", { mode: "json" }).$type<string[]>(),
@@ -153,6 +155,8 @@ export const aiTasks = sqliteTable("ai_tasks", {
 
 // Compositions table
 export const compositions = sqliteTable("compositions", {
+  renderOwner: text("render_owner").$defaultFn(() => renderOwner),
+  renderHeartbeat: integer("render_heartbeat").$defaultFn(() => Math.floor(Date.now() / 1000)),
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   outputPath: text("output_path"),

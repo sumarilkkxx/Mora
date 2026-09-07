@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSettingsStore } from "@/lib/stores/settings-store";
+import { notifyTaskSubmitted } from "@/lib/task-events";
 import { mergeCustomModels, buildImageOptions, buildVideoOptions, toEditVariant } from "@/lib/gen-params";
 import { useCharacterStore } from "@/lib/stores/project-store";
 import type { Shot } from "@/lib/db/schema";
@@ -547,12 +548,8 @@ export default function AssetsPage() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || t("taskResumeFailed"));
         if (data.status === "completed" && data.videoUrls?.[0]) {
-          if (task.shotId != null) {
-            const asset = assets.find((a) => a.shotId === task.shotId);
-            // best-effort keyframe provenance: the task was submitted from the shot's static frame
-            const keyframe = asset && !asset.isVideo ? asset.thumbnailUrl : asset?.keyframeUrl;
-            await saveVideoAsset(task.shotId, data.videoUrls[0], asset?.prompt, task.provider, task.model, keyframe);
-          }
+          // The recovery endpoint owns persistence, including concurrent/already-completed calls.
+          await reloadAssets();
           setTaskMsg(t("taskResumeDone"));
         } else if (data.status === "failed" || data.status === "cancelled") {
           setTaskMsg(`${t("taskResumeFailed")}${data.error ? `: ${data.error}` : ""}`);
@@ -570,7 +567,7 @@ export default function AssetsPage() {
         });
       }
     },
-    [providers, assets, saveVideoAsset, reloadPendingTasks, t]
+    [providers, reloadPendingTasks, reloadAssets, t]
   );
 
   // convert to motion shot: use the already-generated image for this shot as the first frame, call the image-to-video model, and save the result as the shot's asset (video).
@@ -695,6 +692,7 @@ export default function AssetsPage() {
           // the paid task may already exist in the cloud — surface its ID and the recovery
           // path instead of a bare failure that invites a duplicate (billed) resubmit
           if (data.taskId) {
+            notifyTaskSubmitted();
             await reloadPendingTasks();
             throw new Error(
               t("errorWithTaskId", { msg: data.error || t("errorImageToVideoFailed"), taskId: data.taskId })
@@ -703,6 +701,7 @@ export default function AssetsPage() {
           throw new Error(data.error || t("errorImageToVideoFailed"));
         }
         if (data.queued && data.taskId) {
+          notifyTaskSubmitted();
           setAssets((prev) => prev.map((a) => a.shotId === shotId ? { ...a, status: "generating", error: undefined } : a));
           setTaskMsg(t("taskQueuedBackground", { taskId: data.taskId }));
           await reloadPendingTasks();

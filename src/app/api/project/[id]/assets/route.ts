@@ -10,6 +10,7 @@ import { MAX_DOWNLOAD_BYTES } from "@/lib/providers/stock-types";
 import { extractLastFrame, LAST_FRAME_SUFFIX } from "@/lib/video-composer/frame-extract";
 import { detectImageMime, imageExtension } from "@/lib/image-format";
 import { readResponseBuffer, safeFetch } from "@/lib/ssrf-guard";
+import { resolveExistingUploadFilePath } from "@/lib/upload-path";
 
 /** Decode-level check after writing to disk: AI providers' expiring links often answer with an
  * error page or a truncated body — those must be stopped before the DB row exists, or the
@@ -43,7 +44,10 @@ export async function GET(
 /** 把远程图片下载到本地 uploads，返回可访问的 /api/files 路径；本地路径则原样返回 */
 async function persistSource(projectId: string, sourceUrl: string, shotId: number): Promise<string> {
   // 已是本项目本地文件，直接复用
-  if (sourceUrl.startsWith("/api/files/")) return sourceUrl;
+  if (sourceUrl.startsWith("/api/files/")) {
+    if (!resolveExistingUploadFilePath(sourceUrl)) throw new Error("素材路径无效或文件不存在");
+    return sourceUrl;
+  }
 
   // base64 data URI（如 OpenAI gpt-image-1 只返回 base64）：直接解码落盘
   if (sourceUrl.startsWith("data:")) {

@@ -26,12 +26,24 @@ export function isBlockedIp(ip: string): boolean {
     return false;
   }
   if (net.isIPv6(ip)) {
-    const low = ip.toLowerCase();
+    // WHATWG URL normalizes dotted IPv4 tails and expanded IPv6 forms to hex.
+    // Normalize before testing so all spellings of the same address agree.
+    let low: string;
+    try {
+      low = new URL(`http://[${ip}]/`).hostname.slice(1, -1);
+    } catch {
+      return true;
+    }
     if (low === "::1" || low === "::") return true; // loopback / unspecified
-    if (low.startsWith("fe80")) return true; // link-local
+    const firstWord = parseInt(low.split(":")[0] || "0", 16);
+    if ((firstWord & 0xffc0) === 0xfe80) return true; // fe80::/10 link-local
     if (low.startsWith("fc") || low.startsWith("fd")) return true; // fc00::/7 ULA
-    const mapped = low.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/); // IPv4-mapped
-    if (mapped) return isBlockedIp(mapped[1]);
+    const mapped = low.match(/^::ffff:([\da-f]+):([\da-f]+)$/);
+    if (mapped) {
+      const high = parseInt(mapped[1], 16);
+      const tail = parseInt(mapped[2], 16);
+      return isBlockedIp([high >>> 8, high & 255, tail >>> 8, tail & 255].join("."));
+    }
     return false;
   }
   return true; // invalid IP — block unconditionally

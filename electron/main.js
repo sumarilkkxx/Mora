@@ -2,13 +2,17 @@
 // Key points (all validated through real packaging tests):
 //  - Data is written to app.getPath('userData')/data (writable), injected into the server via APP_DATA_DIR (standalone cwd is read-only)
 //  - ffmpeg/ffprobe use bundled binaries, injected via FFMPEG_PATH/FFPROBE_PATH (no ffmpeg install required on the user's machine)
-//  - Acquire a free port (not hardcoded to 3000), poll HTTP until ready before loadURL, kill child process on exit
+//  - Persist the local port to preserve browser storage across launches; kill the server on exit
 const { app, BrowserWindow, dialog, shell } = require("electron");
 const { fork } = require("child_process");
 const http = require("http");
-const net = require("net");
+const { getStableServerPort } = require("./server-port.cjs");
 const path = require("path");
 const fs = require("fs");
+const { randomBytes } = require("node:crypto");
+const { checkServer } = require("./smoke-check.cjs");
+const { installApiCredentials } = require("./api-session.cjs");
+const apiToken = randomBytes(32).toString("hex");
 
 let serverChild = null;
 let mainWindow = null;
@@ -59,19 +63,6 @@ function readLogTail(maxChars = 3000) {
   }
 }
 
-/** Find a free local port */
-function getFreePort() {
-  return new Promise((resolve, reject) => {
-    const srv = net.createServer();
-    srv.unref();
-    srv.on("error", reject);
-    srv.listen(0, "127.0.0.1", () => {
-      const { port } = srv.address();
-      srv.close(() => resolve(port));
-    });
-  });
-}
-
 /** Resolve the absolute path of a bundled binary, correcting asar → asar.unpacked */
 function resolveBinary(getter) {
   try {
@@ -113,6 +104,7 @@ function waitReady(port, tries = 120) {
         retry(n);
       });
       req.on("error", () => retry(n));
+      req.setTimeout(2000, () => req.destroy(new Error("Readiness timeout")));
     };
     const retry = (n) => (n <= 0 ? reject(new Error("本地服务未就绪（超时）")) : setTimeout(() => attempt(n - 1), 250));
     attempt(tries);
@@ -120,12 +112,12 @@ function waitReady(port, tries = 120) {
 }
 
 /** Start the standalone server child process, wait until ready, and return the access URL */
-async function startServer() {
+async function startServer(port) {
   const entry = serverEntry();
   const serverDir = path.dirname(entry);
   const dataDir = path.join(app.getPath("userData"), "data");
   fs.mkdirSync(dataDir, { recursive: true });
-  const port = await getFreePort();
+  fs.writeFileSync(path.join(app.getPath("userData"), "api-token"), apiToken, { mode: 0o600 });
 
   const ffmpegPath = resolveBinary(() => require("ffmpeg-static"));
   const ffprobePath = resolveBinary(() => require("@ffprobe-installer/ffprobe").path);
@@ -151,6 +143,8 @@ async function startServer() {
       NODE_ENV: "production",
       PORT: String(port),
       HOSTNAME: "127.0.0.1",
+      MORA_API_TOKEN: apiToken,
+      MORA_SERVER_ORIGIN: `http://127.0.0.1:${port}`,
       APP_DATA_DIR: dataDir,
       APP_MIGRATIONS_DIR: migrationsDir(serverDir),
       ...(ffmpegPath ? { FFMPEG_PATH: ffmpegPath } : {}),
@@ -208,6 +202,7 @@ function createMainWindow(url) {
       sandbox: true,
     },
   });
+  installApiCredentials(mainWindow, url, apiToken);
   // Keep arbitrary web pages outside the privileged application window. Product/provider links
   // open in the user's default browser, while same-origin Next navigations stay inside Mora.
   mainWindow.webContents.setWindowOpenHandler(({ url: target }) => {
@@ -237,10 +232,12 @@ function createMainWindow(url) {
 
 app.whenReady().then(async () => {
   if (!hasSingleInstanceLock) return;
-  initLog();
   let url;
   try {
-    url = await startServer();
+    // Read the previous launch log before initLog truncates it (legacy migration).
+    const port = await getStableServerPort(app.getPath("userData"));
+    initLog();
+    url = await startServer(port);
     serverUrl = url;
   } catch (e) {
     const msg = (e && (e.stack || e.message)) || String(e);
@@ -256,25 +253,24 @@ app.whenReady().then(async () => {
     } else {
       console.error("启动本地服务失败:", msg);
     }
-    app.quit();
+    killServer();
+    app.exit(1);
     return;
   }
 
   // Headless smoke mode: verify the server can start under the Electron runtime and hit a DB route
   // (triggers better-sqlite3 load + migrate under the Electron Node ABI); no window is opened, exits immediately
   if (process.env.HEADLESS_SMOKE) {
-    const dbProbe = await new Promise((resolve) => {
-      const req = http.get(url + "/api/project", (r) => {
-        let d = "";
-        r.on("data", (c) => (d += c));
-        r.on("end", () => resolve(`status=${r.statusCode} body=${d.slice(0, 60)}`));
-      });
-      req.on("error", (e) => resolve("err=" + e.message));
-    });
-    console.log("DB_ROUTE", dbProbe);
-    console.log("SMOKE_OK", url, "DATA_DIR=" + path.join(app.getPath("userData"), "data"));
-    killServer();
-    app.exit(0);
+    try {
+      await checkServer(url, apiToken);
+      console.log("SMOKE_OK", url, "DATA_DIR=" + path.join(app.getPath("userData"), "data"));
+      killServer();
+      app.exit(0);
+    } catch (error) {
+      console.error("SMOKE_FAILED", error.message);
+      killServer();
+      app.exit(1);
+    }
     return;
   }
 

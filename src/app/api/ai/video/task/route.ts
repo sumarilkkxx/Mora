@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
                   provider: providerName,
                   model: task.model,
                   prompt: task.prompt,
+                  keyframePath: task.keyframePath,
                   apiKey,
                 })
               : await persistRecoveredComposition({
