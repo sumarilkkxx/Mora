@@ -102,7 +102,7 @@ jobs:
       - name: Build package
         run: ${{ matrix.command }}
         env:
-          # v0.1.0.0 intentionally ships unsigned: the project does not use paid Apple/Windows
+          # v0.1.1.0 intentionally ships unsigned: the project does not use paid Apple/Windows
           # signing certificates yet. Passing empty CSC_* values makes electron-builder treat
           # the workspace directory as a certificate path, so signing must be disabled explicitly.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
@@ -194,14 +194,21 @@ jobs:
           cd release-assets
           sha256sum ./*.exe ./*.dmg > SHA256SUMS.txt
 
-      - name: Create GitHub pre-release
+      - name: Publish installers to GitHub pre-release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          gh release create "${GITHUB_REF_NAME}" release-assets/* \
-            --repo "${GITHUB_REPOSITORY}" \
-            --verify-tag \
-            --generate-notes \
-            --prerelease \
-            --title "Mora ${GITHUB_REF_NAME}"
+          # Browser-created releases already exist when their tag triggers this workflow.
+          # Preserve their release notes and attach the verified installers after all builds pass.
+          if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" release-assets/* \
+              --repo "${GITHUB_REPOSITORY}" --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" release-assets/* \
+              --repo "${GITHUB_REPOSITORY}" \
+              --verify-tag \
+              --generate-notes \
+              --prerelease \
+              --title "Mora ${GITHUB_REF_NAME}"
+          fi
