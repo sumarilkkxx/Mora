@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LuArrowLeft, LuBrainCircuit, LuCheck, LuFileVideo, LuLoaderCircle, LuScissors, LuSlidersHorizontal, LuUpload } from "react-icons/lu";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Notice } from "@/components/ui/notice";
 import { PageFrame, PageHeader } from "@/components/studio/page";
@@ -19,6 +19,8 @@ export default function NewGuidedEditPage() {
   const t = useT("guidedEdit");
   const locale = useLocale();
   const inputRef = useRef<HTMLInputElement>(null);
+  const createdProject = useRef<string | null>(null);
+  const submitting = useRef(false);
   const [projectName, setProjectName] = useState("");
   const [productName, setProductName] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -27,22 +29,30 @@ export default function NewGuidedEditPage() {
   const [aiEdit, setAiEdit] = useState(true);
 
   async function createProject() {
-    if (!file || busy) return;
+    if (!file || submitting.current) return;
+    if (!/\.(mp4|mov|webm|mkv|m4v)$/i.test(file.name) || file.size > 1024 * 1024 * 1024) {
+      setError(locale === "en" ? "Choose a supported video under 1 GB." : "请选择 1 GB 以内的 MP4、MOV、WebM、MKV 或 M4V 视频。");
+      return;
+    }
+    submitting.current = true;
     setBusy(true);
     setError("");
     try {
-      const projectResponse = await fetch("/api/project", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Accept-Language": locale },
-        body: JSON.stringify({
-          name: projectName.trim() || productName.trim() || file.name.replace(/\.[^.]+$/, ""),
-          productName: productName.trim(),
-          workflowType: "edit",
-        }),
-      });
-      const project = await projectResponse.json();
-      if (!projectResponse.ok || !project.id) throw new Error(project.error || t("createFailed"));
-      const uploadResponse = await fetch(`/api/project/${project.id}/media`, {
+      if (!createdProject.current) {
+        const projectResponse = await fetch("/api/project", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept-Language": locale },
+          body: JSON.stringify({
+            name: projectName.trim() || productName.trim() || file.name.replace(/\.[^.]+$/, ""),
+            productName: productName.trim(),
+            workflowType: "edit",
+          }),
+        });
+        const project = await projectResponse.json();
+        if (!projectResponse.ok || !project.id) throw new Error(project.error || t("createFailed"));
+        createdProject.current = project.id;
+      }
+      const uploadResponse = await fetch(`/api/project/${createdProject.current}/media`, {
         method: "POST",
         headers: {
           "Content-Type": file.type || "application/octet-stream",
@@ -53,10 +63,11 @@ export default function NewGuidedEditPage() {
       });
       const uploaded = await uploadResponse.json();
       if (!uploadResponse.ok || !uploaded.id) throw new Error(uploaded.error || t("createFailed"));
-      router.push(`/project/${project.id}/${aiEdit ? "auto-edit" : "edit"}`);
+      router.push(`/project/${createdProject.current}/${aiEdit ? "auto-edit" : "edit"}`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("createFailed"));
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   }
@@ -67,7 +78,7 @@ export default function NewGuidedEditPage() {
         eyebrow={t("createEyebrow")}
         title={t("createTitle")}
         description={t("createDescription")}
-        actions={<Link href="/start"><Button variant="ghost"><LuArrowLeft />{t("backProjects")}</Button></Link>}
+        actions={<Link href="/start" className={buttonVariants({ variant: "ghost" })}><LuArrowLeft />{t("backProjects")}</Link>}
       />
       <section className={styles.creator} aria-labelledby="workflow-choice-title">
         <div className={styles.sectionHeading}>
@@ -83,6 +94,7 @@ export default function NewGuidedEditPage() {
               <button
                 key={prefix}
                 type="button"
+                disabled={busy}
                 id={isAi ? "workflow-tab-ai" : "workflow-tab-local"}
                 role="tab"
                 aria-selected={selected}
@@ -113,23 +125,14 @@ export default function NewGuidedEditPage() {
           <span>{aiEdit ? t("workflowAiLimit") : t("workflowLocalLimit")}</span>
         </div>
         <p className={styles.workflowDescription}>{aiEdit ? t("workflowAiDescription") : t("workflowLocalDescription")}</p>
-        <div className={styles.fields}>
-          <label className={styles.field}>
-            <span>{t("projectName")}</span>
-            <Input value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder={t("projectNamePlaceholder")} />
-          </label>
-          <label className={styles.field}>
-            <span>{t("productName")}</span>
-            <Input value={productName} onChange={(event) => setProductName(event.target.value)} placeholder={t("productNamePlaceholder")} />
-          </label>
-        </div>
         <div className={styles.uploadSection}>
           <div className={styles.uploadHeading}>
             <p>{t("sourceVideo")}</p>
-            {file ? <Button variant="ghost" size="sm" onClick={() => inputRef.current?.click()}>{t("replaceVideo")}</Button> : null}
+            {file ? <Button variant="ghost" size="sm" disabled={busy} onClick={() => inputRef.current?.click()}>{t("replaceVideo")}</Button> : null}
           </div>
           <button
             type="button"
+            disabled={busy}
             onClick={() => inputRef.current?.click()}
             className={styles.upload}
           >
@@ -141,8 +144,19 @@ export default function NewGuidedEditPage() {
               <span className={styles.uploadHint}>{file ? `${(file.size / 1024 / 1024).toFixed(1)} MB` : t("sourceVideoHint")}</span>
             </span>
           </button>
-          <input ref={inputRef} hidden type="file" accept={ACCEPT} onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+          <input ref={inputRef} hidden type="file" accept={ACCEPT} onChange={(event) => { if (event.target.files?.[0]) { setFile(event.target.files[0]); setError(""); } event.target.value = ""; }} />
         </div>
+        <div className={styles.fields}>
+          <label className={styles.field}>
+            <span>{t("projectName")} · {locale === "en" ? "optional" : "选填"}</span>
+            <Input name="project-name" autoComplete="off" disabled={busy || Boolean(createdProject.current)} value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder={file?.name.replace(/\.[^.]+$/, "") || t("projectNamePlaceholder")} />
+          </label>
+          <label className={styles.field}>
+            <span>{t("productName")} · {locale === "en" ? "optional" : "选填"}</span>
+            <Input name="product-name" autoComplete="off" disabled={busy || Boolean(createdProject.current)} value={productName} onChange={(event) => setProductName(event.target.value)} placeholder={t("productNamePlaceholder")} />
+          </label>
+        </div>
+        <p className={styles.workflowDescription}>{createdProject.current ? (locale === "en" ? "Your project is saved. Retrying the upload continues in this project." : "项目已保存，重新上传会继续使用此项目。") : (locale === "en" ? "The file name becomes the project name when left blank." : "项目名称留空时，自动使用视频文件名。")}</p>
         {error ? <Notice tone="danger" className="mt-5">{error}</Notice> : null}
         <div className={styles.footer}>
           <Button size="lg" className={styles.submit} disabled={!file || busy} onClick={() => void createProject()}>

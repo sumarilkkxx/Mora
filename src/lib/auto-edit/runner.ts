@@ -13,10 +13,11 @@ import { generateSpeechFreeDetailed } from "@/lib/edge-tts";
 import { extractFirstFrame } from "@/lib/video-composer/frame-extract";
 import { resolveExistingUploadFilePath } from "@/lib/upload-path";
 import type { LLMConfig } from "@/lib/script-engine/generator";
-import { EditModel, analysisPrompt, parseAnalysis, type Action, type ToolName } from "./model";
+import { EditModel, analysisPrompt, parseAnalysis, promotionCopyPrompt, type Action, type ToolName } from "./model";
 import { frameAt, ownedSourcePath, sceneSamples, transcribe } from "./media";
 import { renderAutoEdit, checkOutput } from "./render";
-import { outputReviewSamples, parseBrief, parsePlan, sampleTimes, timeline, validateSource, validateSpeechCuts, text, candidateSignature, type Checkpoint, type Speech, type EditPlan } from "./contract";
+import { fallbackCandidatePlans } from "./planning";
+import { outputReviewSamples, parseBrief, parsePlan, parsePromotionCopy, sampleTimes, timeline, validateSource, validateSpeechCuts, text, candidateSignature, type Checkpoint, type Speech, type EditPlan } from "./contract";
 
 export interface Credentials { llm: LLMConfig; tts?: TTSConfig }
 type Run = typeof autoEditRuns.$inferSelect;
@@ -44,8 +45,13 @@ async function fileHash(file: string, signal: AbortSignal) {
   return hash.digest("hex");
 }
 
-export function startAutoEdit(run: Run, credentials: Credentials, options: { exportOnly?: boolean; candidatesOnly?: boolean; manualPlan?: EditPlan } = {}) {
-  options = { exportOnly: run.checkpoint.operation === "export", candidatesOnly: run.checkpoint.operation === "candidates", manualPlan: run.checkpoint.operation === "manual" ? run.checkpoint.plan : undefined, ...options };
+export function startAutoEdit(run: Run, credentials: Credentials, options: { analysisOnly?: boolean; exportOnly?: boolean; candidatesOnly?: boolean; manualPlan?: EditPlan } = {}) {
+  options = {
+    analysisOnly: options.analysisOnly ?? run.checkpoint.operation === "analysis",
+    exportOnly: options.exportOnly ?? run.checkpoint.operation === "export",
+    candidatesOnly: options.candidatesOnly ?? run.checkpoint.operation === "candidates",
+    manualPlan: options.manualPlan ?? (run.checkpoint.operation === "manual" ? run.checkpoint.plan : undefined),
+  };
   if (runtime.controllers.has(run.id)) return;
   const controller = new AbortController();
   runtime.controllers.set(run.id, controller);
@@ -72,7 +78,7 @@ export function startAutoEdit(run: Run, credentials: Credentials, options: { exp
   })().catch(() => { runtime.controllers.delete(run.id); });
 }
 
-async function execute(run: Run, credentials: Credentials, owner: string, signal: AbortSignal, options: { exportOnly?: boolean; candidatesOnly?: boolean; manualPlan?: EditPlan }) {
+async function execute(run: Run, credentials: Credentials, owner: string, signal: AbortSignal, options: { analysisOnly?: boolean; exportOnly?: boolean; candidatesOnly?: boolean; manualPlan?: EditPlan }) {
   const db = getDb();
   const scope = and(eq(autoEditRuns.id, run.id), eq(autoEditRuns.owner, owner), eq(autoEditRuns.status, "running"));
   const cp: Checkpoint = structuredClone(run.checkpoint);
@@ -91,6 +97,9 @@ async function execute(run: Run, credentials: Credentials, owner: string, signal
   const file = ownedSourcePath(run.projectId, source.filePath);
   const metadata = await probeMedia(file);
   validateSource(metadata.duration, (await stat(file)).size);
+  // Persisted media duration is millisecond-precision and is also used by the
+  // API when the user selects a plan, so generated clip bounds must match it.
+  const planDuration = Math.min(metadata.duration, source.duration / 1000);
   const sourceHash = await fileHash(file, signal);
   if (cp.sourceHash && cp.sourceHash !== sourceHash) throw new Error("原素材已发生变化，请创建新任务 / Source changed; start a new run");
   cp.sourceHash = sourceHash;
@@ -145,10 +154,17 @@ async function execute(run: Run, credentials: Credentials, owner: string, signal
     cp.analysis.speech = await transcribe(file, directory, signal, run.brief.locale);
     if (!cp.analysis.speech.length) throw new Error("保留原声需要可用转写 / Original audio requires transcript");
   }
+  if (options.analysisOnly) {
+    await save("copywriting");
+    cp.promotionCopy = parsePromotionCopy(await model.json(promotionCopyPrompt(run.brief, cp.analysis)));
+    await save("copy_review", "promotion_copy", JSON.stringify(cp.promotionCopy));
+    await db.update(autoEditRuns).set({ status: "waiting_input", error: null }).where(scope);
+    return;
+  }
   function selectPlan(raw: unknown) {
-    const plan = parsePlan(raw, run.sourceId, metadata.duration, run.brief);
+    const plan = parsePlan(raw, run.sourceId, planDuration, run.brief);
     if (run.brief.audio !== "muted") for (const clip of plan.clips) clip.transition = "cut";
-    const checked = parsePlan(plan, run.sourceId, metadata.duration, run.brief);
+    const checked = parsePlan(plan, run.sourceId, planDuration, run.brief);
     if (run.brief.audio === "original") {
       validateSpeechCuts(checked, cp.analysis!.speech);
       for (const clip of checked.clips) clip.text = cp.analysis!.speech.filter(s => s.start >= clip.start - 0.12 && s.end <= clip.end + 0.12).map(s => s.text).join(" ");
@@ -162,18 +178,15 @@ async function execute(run: Run, credentials: Credentials, owner: string, signal
   }
   if (options.manualPlan) selectPlan(options.manualPlan);
   if (options.candidatesOnly) {
+    if (!cp.promotionCopy) throw new Error("请先确认推广文案 / Approve promotion copy first");
     await save("planning");
-    const raw = await model.json(`Create up to 3 substantively different editing plans using this analyzed source. JSON {plans:[{version:1,title,explanation,clips:[{sourceId,start,end,speed:1,fit:'contain',transition:'cut',text,reason,evidence}]}]}. No fabricated claims; actual output <= target. ${JSON.stringify({ sourceId: run.sourceId, duration: metadata.duration, brief: run.brief, analysis: cp.analysis, current: cp.plan })}`);
-    if (!Array.isArray(raw.plans)) throw new Error("Invalid candidates");
-    const candidates: EditPlan[] = [];
-    for (const rawPlan of raw.plans.slice(0, 3)) {
-      selectPlan(rawPlan);
-      if (!candidates.some(p => candidateSignature(p) === candidateSignature(cp.plan!))) candidates.push(structuredClone(cp.plan!));
-    }
-    if (!candidates.length) throw new Error("No valid candidates");
-    cp.candidates = candidates; cp.plan = undefined;
-    await save("candidates");
+    // Planning is deterministic once copy is approved: this makes the confirmation
+    // click idempotent and avoids another slow model request or accidental rendering.
+    cp.candidates = fallbackCandidatePlans(run.sourceId, planDuration, run.brief, cp.analysis, cp.promotionCopy);
+    cp.plan = undefined;
+    await save("candidates", "candidate_directions", cp.candidates.map(plan => plan.title).join(" · "));
     await db.update(autoEditRuns).set({ status: "waiting_input", error: null }).where(scope);
+    if (run.parentId) await db.update(autoEditRuns).set({ status: "done", stage: "selected", error: null, updatedAt: Date.now() }).where(and(eq(autoEditRuns.id, run.parentId), eq(autoEditRuns.projectId, run.projectId), inArray(autoEditRuns.status, ["waiting_input", "failed", "interrupted", "cancelled", "needs_review"])));
     return;
   }
   let rendered = 0, inspected = false, inspectionCount = 0, voiceCalls = 0;
@@ -198,7 +211,8 @@ async function execute(run: Run, credentials: Credentials, owner: string, signal
         cp.voices = [...cp.voices.filter(v => v.index !== index), voice];
         await save("voicing");
       }
-      if (voice.duration <= 0 || voice.duration + 0.08 > (clip.end - clip.start) / clip.speed) throw new Error(`镜头 ${index + 1} 旁白需 ${voice.duration.toFixed(2)} 秒；请缩短文案或增加合法片段时长 / Voice too long`);
+      const voiceWindow = (clip.end - clip.start) / clip.speed - 0.08;
+      if (voice.duration <= 0 || voice.duration > voiceWindow * 1.3) throw new Error(`镜头 ${index + 1} 旁白需 ${voice.duration.toFixed(2)} 秒；请缩短文案或增加合法片段时长 / Voice too long`);
     }
     return { ready: true, durations: cp.voices.map(v => ({ index: v.index, duration: v.duration })) };
   }
@@ -251,7 +265,7 @@ async function execute(run: Run, credentials: Credentials, owner: string, signal
       const result = tx.update(autoEditRuns).set({ compositionId: compId, status: needsReview || cp.checks!.review.length ? "needs_review" : "done", checkpoint: cp, updatedAt: Date.now() }).where(scope).run();
       if (!result.changes) throw new Error("Task ownership lost");
       tx.update(projects).set({ status: "done", updatedAt: new Date() }).where(eq(projects.id, run.projectId)).run();
-      if (run.parentId) tx.update(autoEditRuns).set({ status: "done", stage: "selected", updatedAt: Date.now() }).where(and(eq(autoEditRuns.id, run.parentId), eq(autoEditRuns.projectId, run.projectId), eq(autoEditRuns.status, "waiting_input"))).run();
+      if (run.parentId) tx.update(autoEditRuns).set({ status: "done", stage: "selected", error: null, updatedAt: Date.now() }).where(and(eq(autoEditRuns.id, run.parentId), eq(autoEditRuns.projectId, run.projectId), inArray(autoEditRuns.status, ["waiting_input", "failed", "interrupted", "cancelled", "needs_review"]))).run();
     });
   }
   if (options.exportOnly || options.manualPlan) {

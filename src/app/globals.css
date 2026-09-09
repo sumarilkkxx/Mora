@@ -71,7 +71,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -207,7 +207,7 @@
   --popover: #242426;
   --popover-foreground: #f5f5f7;
   --primary: #2997ff;
-  --primary-foreground: #ffffff;
+  --primary-foreground: #071321;
   --secondary: #2c2c2e;
   --secondary-foreground: #f5f5f7;
   --muted: #2c2c2e;

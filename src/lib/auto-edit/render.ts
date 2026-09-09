@@ -40,8 +40,10 @@ export function buildRender(input: {
     if (brief.audio === "original") filters.push(`[0:a]atrim=start=${c.start}:end=${c.end},asetpts=PTS-STARTPTS,aresample=44100,aformat=channel_layouts=stereo,apad,atrim=duration=${d}[a${i}]`);
     else if (brief.audio === "voiceover") {
       const voice = input.voices.find(v => v.index === i);
-      if (voice && voice.duration > d - 0.08) throw new Error(`旁白 ${i + 1} 超过镜头时长，请缩短文案 / Voice exceeds clip duration`);
-      if (voice) filters.push(`[${voices.get(i)}:a]aresample=44100,aformat=channel_layouts=stereo,apad,atrim=duration=${d},asetpts=PTS-STARTPTS[a${i}]`);
+      const voiceWindow = Math.max(0.2, d - 0.08);
+      const tempo = voice ? voice.duration / voiceWindow : 1;
+      if (voice && tempo > 1.3) throw new Error(`旁白 ${i + 1} 超过镜头时长，请缩短文案 / Voice exceeds clip duration`);
+      if (voice) filters.push(`[${voices.get(i)}:a]${tempo > 1 ? `atempo=${tempo.toFixed(5)},` : ""}aresample=44100,aformat=channel_layouts=stereo,apad,atrim=duration=${d},asetpts=PTS-STARTPTS[a${i}]`);
       else if (c.text) throw new Error("缺少旁白 / Missing voiceover");
       else filters.push(`anullsrc=r=44100:cl=stereo,atrim=duration=${d}[a${i}]`);
     }

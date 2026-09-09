@@ -6,7 +6,7 @@ export type AudioMode = "original" | "voiceover" | "muted";
 export type EditStatus = "queued" | "running" | "cancel_requested" | "cancelled" | "interrupted" | "failed" | "done" | "needs_review" | "waiting_input";
 export interface EditBrief {
   instruction: string;
-  target: 15 | 20 | 30;
+  target: 15 | 20 | 25 | 30;
   aspect: "9:16" | "16:9" | "1:1";
   audio: AudioMode;
   style: "auto" | "concise" | "highlights" | "story";
@@ -29,13 +29,24 @@ export interface EditClip {
   evidence: string;
 }
 export interface EditPlan { version: 1; title: string; explanation: string; clips: EditClip[] }
+export interface PromotionCopy {
+  version: 1;
+  title: string;
+  angle: string;
+  hook: string;
+  body: string;
+  cta: string;
+  voiceover: string;
+  evidence: string[];
+}
 export interface TimelineClip extends EditClip { outputStart: number; outputEnd: number; overlap: number }
 export interface CheckResult { technical: boolean; issues: string[]; review: string[]; duration: number }
 export interface Checkpoint {
   sourceHash?: string;
-  operation?: "auto" | "manual" | "candidates" | "export";
+  operation?: "auto" | "analysis" | "manual" | "candidates" | "export";
   inheritedReview?: string[];
   analysis?: Analysis;
+  promotionCopy?: PromotionCopy;
   plan?: EditPlan;
   candidates?: EditPlan[];
   voices?: Array<{ index: number; file: string; duration: number; text: string }>;
@@ -55,21 +66,33 @@ export function validateSource(duration: number, bytes: number) {
 }
 export function parseBrief(value: unknown): EditBrief {
   const raw = object(value);
-  if (!text(raw.instruction)) throw new Error("请填写剪辑要求 / Add editing instructions");
-  if (![15, 20, 30].includes(raw.target as number)) throw new Error("目标时长必须为 15、20 或 30 秒 / Invalid target duration");
+  if (![15, 20, 25, 30].includes(raw.target as number)) throw new Error("目标时长必须为 15、20、25 或 30 秒 / Invalid target duration");
   if (!["9:16", "16:9", "1:1"].includes(String(raw.aspect))) throw new Error("Invalid aspect ratio");
   if (!["original", "voiceover", "muted"].includes(String(raw.audio))) throw new Error("Invalid audio mode");
   if (!["auto", "concise", "highlights", "story"].includes(String(raw.style))) throw new Error("Invalid style");
   return { instruction: text(raw.instruction, 4000), target: raw.target as EditBrief["target"], aspect: raw.aspect as EditBrief["aspect"], audio: raw.audio as AudioMode, style: raw.style as EditBrief["style"], captions: raw.captions !== false, locale: raw.locale === "en" ? "en" : "zh", ...(text(raw.bgm) ? { bgm: text(raw.bgm, 500) } : {}) };
 }
+export function parsePromotionCopy(value: unknown): PromotionCopy {
+  const raw = object(value);
+  const hook = text(raw.hook, 240);
+  const body = text(raw.body, 800);
+  const cta = text(raw.cta, 240);
+  const voiceover = text(raw.voiceover, 1200);
+  if (!hook || !body || !cta || !voiceover) throw new Error("推广文案缺少吸引点、主体、行动引导或旁白 / Promotion copy is incomplete");
+  const evidence = Array.isArray(raw.evidence) ? raw.evidence.map(item => text(item, 300)).filter(Boolean).slice(0, 8) : [];
+  if (!evidence.length) throw new Error("推广文案必须注明画面依据 / Promotion copy needs visual evidence");
+  return { version: 1, title: text(raw.title, 100) || hook, angle: text(raw.angle, 240), hook, body, cta, voiceover, evidence };
+}
 export function parsePlan(value: unknown, sourceId: string, duration: number, brief: EditBrief): EditPlan {
   const raw = object(value);
   if (raw.version !== 1) throw new Error("不支持的计划版本 / Unsupported plan version");
   if (!Array.isArray(raw.clips) || raw.clips.length < 1 || raw.clips.length > 20) throw new Error("计划必须包含 1–20 个片段 / Plan needs 1–20 clips");
-  const clips = raw.clips.map((item): EditClip => {
+  const clips = raw.clips.map((item, index): EditClip => {
     const c = object(item);
     if (c.sourceId !== sourceId) throw new Error("素材不属于当前任务 / Foreign source ID");
-    if (typeof c.start !== "number" || typeof c.end !== "number" || !Number.isFinite(c.start) || !Number.isFinite(c.end) || c.start < 0 || c.end > duration || c.end - c.start < 0.4) throw new Error("片段时间越界或过短 / Invalid source interval");
+    if (typeof c.start !== "number" || typeof c.end !== "number" || !Number.isFinite(c.start) || !Number.isFinite(c.end) || c.start < 0 || c.end > duration || c.end - c.start < 0.4) {
+      throw new Error(`片段 ${index + 1} 时间范围 ${String(c.start)}–${String(c.end)} 秒无效；原素材合法范围为 0–${duration.toFixed(3)} 秒，单段至少 0.4 秒，可重复使用合法范围内的镜头 / Clip ${index + 1} interval ${String(c.start)}–${String(c.end)}s is invalid; source bounds are 0–${duration.toFixed(3)}s, each clip must be at least 0.4s, and valid intervals may be reused`);
+    }
     const speed = c.speed ?? 1;
     if (typeof speed !== "number" || !Number.isFinite(speed) || speed < 0.85 || speed > 1.15 || (brief.audio === "original" && speed !== 1)) throw new Error("变速超出范围；原声须保持正常语速 / Invalid speed");
     if (c.fit !== "contain" && c.fit !== "cover") throw new Error("Invalid fit");

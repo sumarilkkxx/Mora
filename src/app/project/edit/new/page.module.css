@@ -3,10 +3,11 @@
   --choice-selected: color-mix(in srgb, var(--primary) 3%, var(--card));
   max-width: 1080px;
 }
+:global(.studio-content-column):has(.page) { background: var(--background); }
 
 .page :global(.studio-page-header) { margin-bottom: 36px; }
 .page :global(.studio-title) { font-size: clamp(30px, 3vw, 42px); letter-spacing: -.035em; }
-.creator { max-width: 720px; margin-inline: auto; padding: 28px; border: 1px solid var(--border); border-radius: 26px; background: var(--choice-surface); box-shadow: 0 12px 40px rgb(0 0 0 / 5%); }
+.creator { max-width: 720px; margin-inline: auto; padding: 28px; border: 1px solid var(--border); border-radius: 20px; background: var(--choice-surface); box-shadow: var(--shadow-surface); }
 .sectionHeading { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
 .sectionHeading h2 { font-size: 15px; font-weight: 600; }
 .sectionHeading p { font-size: 12px; color: var(--muted-foreground); text-wrap: pretty; }
@@ -87,7 +88,7 @@
 .page .form :global(input[data-slot="input"]:hover) { border-color: color-mix(in srgb, var(--foreground) 40%, var(--input)); }
 .page .form :global(input[data-slot="input"]:focus-visible) { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent); }
 .page .form :global(input[data-slot="input"]::placeholder) { color: var(--muted-foreground); opacity: 1; }
-.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 24px; }
 .field { min-width: 0; font-size: 13px; font-weight: 500; }
 .uploadSection { margin-top: 24px; }
 .uploadHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; font-size: 13px; font-weight: 500; }

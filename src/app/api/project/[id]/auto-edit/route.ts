@@ -3,7 +3,7 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { createHash, randomUUID } from "crypto";
 import { getDb } from "@/lib/db";
 import { autoEditRuns, mediaSources } from "@/lib/db/schema";
-import { parseBrief, parsePlan, validateSource, type Checkpoint } from "@/lib/auto-edit/contract";
+import { parseBrief, parsePlan, parsePromotionCopy, validateSource, type Checkpoint } from "@/lib/auto-edit/contract";
 import { cancelAutoEdit, recoverAutoEdits, startAutoEdit, type Credentials } from "@/lib/auto-edit/runner";
 import { fileNameOf } from "@/lib/paths";
 
@@ -38,16 +38,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       await cancelAutoEdit(body.runId, id);
       return NextResponse.json({ ok: true });
     }
-    if (!["start", "retry", "revise", "candidates", "export", "manual"].includes(body.action)) throw new Error("Unsupported action");
-    const parent = body.action !== "start" && body.runId && ID.test(body.runId) ? (await db.select().from(autoEditRuns).where(and(eq(autoEditRuns.id, body.runId), eq(autoEditRuns.projectId, id))))[0] : undefined;
-    if (body.action !== "start" && !parent) throw new Error("任务不存在 / Run not found");
+    if (!["start", "analyze", "approve-copy", "retry", "revise", "candidates", "export", "manual"].includes(body.action)) throw new Error("Unsupported action");
+    const isNew = body.action === "start" || body.action === "analyze";
+    const parent = !isNew && body.runId && ID.test(body.runId) ? (await db.select().from(autoEditRuns).where(and(eq(autoEditRuns.id, body.runId), eq(autoEditRuns.projectId, id))))[0] : undefined;
+    if (!isNew && !parent) throw new Error("任务不存在 / Run not found");
     if (parent && ["running", "queued", "cancel_requested"].includes(parent.status)) throw new Error("任务仍在运行 / Run is active");
     const sourceId = parent?.sourceId || body.sourceId;
     if (!ID.test(sourceId)) throw new Error("Invalid source ID");
     const [source] = await db.select().from(mediaSources).where(and(eq(mediaSources.id, sourceId), eq(mediaSources.projectId, id)));
     if (!source) throw new Error("素材不存在 / Source not found");
     validateSource(source.duration / 1000, source.sizeBytes);
-    const brief = parseBrief(["export", "retry"].includes(body.action) ? parent!.brief : body.brief ?? parent?.brief);
+    const brief = parseBrief(["export", "retry", "approve-copy"].includes(body.action) ? parent!.brief : body.brief ?? parent?.brief);
     const credentials = body.credentials as Credentials;
     const exportOperation = body.action === "export" || (body.action === "retry" && parent?.checkpoint.operation === "export");
     if (!exportOperation && (!credentials?.llm?.baseUrl || !credentials.llm.model || !credentials.llm.visionModel)) throw new Error("请配置文本和画面理解模型 / Configure text and visual understanding models");
@@ -66,15 +67,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const requestKey = createHash("sha256").update(`${id}:${body.requestId}`).digest("hex");
     const [existing] = await db.select().from(autoEditRuns).where(eq(autoEditRuns.requestKey, requestKey));
     if (existing) return NextResponse.json({ runId: existing.id }, { status: 202 });
-    const cp: Checkpoint = { operation: body.action === "export" ? "export" : body.action === "manual" ? "manual" : body.action === "candidates" ? "candidates" : "auto", history: [], repairs: 0 };
+    const cp: Checkpoint = { operation: body.action === "export" ? "export" : body.action === "manual" ? "manual" : body.action === "candidates" || body.action === "approve-copy" ? "candidates" : body.action === "analyze" ? "analysis" : "auto", history: [], repairs: 0 };
     if (parent) {
       cp.analysis = parent.checkpoint.analysis;
       cp.sourceHash = parent.checkpoint.sourceHash;
       cp.plan = parent.checkpoint.plan;
       cp.voices = parent.checkpoint.voices;
+      cp.promotionCopy = parent.checkpoint.promotionCopy;
       if (body.action === "export") cp.inheritedReview = parent.checkpoint.checks?.review;
       cp.history.push({ at: new Date().toISOString(), action: body.action, detail: `基于版本 ${parent.id} / Based on saved version` });
     }
+    if (body.action === "approve-copy") cp.promotionCopy = parsePromotionCopy(body.copy);
     if (body.action === "export" && (!cp.plan || !["done", "needs_review"].includes(parent!.status))) throw new Error("请先完成可用成片 / Finish a render first");
     const manualPlan = body.action === "manual" ? parsePlan(body.plan, sourceId, source.duration / 1000, brief) : undefined;
     if (manualPlan) cp.plan = manualPlan;
@@ -84,7 +87,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const [duplicate] = await db.select().from(autoEditRuns).where(eq(autoEditRuns.requestKey, requestKey));
       return NextResponse.json({ runId: duplicate.id }, { status: 202 });
     }
-    startAutoEdit(created, credentials ?? { llm: { baseUrl: "", apiKey: "", model: "" } }, { exportOnly: body.action === "export", candidatesOnly: body.action === "candidates", manualPlan });
+    startAutoEdit(created, credentials ?? { llm: { baseUrl: "", apiKey: "", model: "" } }, { exportOnly: body.action === "export", candidatesOnly: body.action === "candidates" || body.action === "approve-copy", manualPlan });
     return NextResponse.json({ runId: created.id }, { status: 202 });
   } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid request" }, { status: 400 }); }
 }
