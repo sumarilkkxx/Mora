@@ -429,7 +429,7 @@ export default function GuidedEditWorkspace() {
         eyebrow={t("workspaceEyebrow")}
         title={projectName || t("workspaceTitle")}
         description={t("workspaceDescription")}
-        actions={<div className="flex gap-2"><Link href={backHref}><Button variant="ghost"><LuArrowLeft />{t(fromTaskCenter ? "backTasks" : "backProjects")}</Button></Link><Link href={exportHref}><Button variant="outline">{t("openExport")}</Button></Link></div>}
+        actions={<div className="flex flex-wrap gap-2"><Link href={`/project/${id}/auto-edit`}><Button variant="outline">{locale === "en" ? "AI automatic editing" : "AI 自动剪辑"}</Button></Link><Link href={backHref}><Button variant="ghost"><LuArrowLeft />{t(fromTaskCenter ? "backTasks" : "backProjects")}</Button></Link><Link href={exportHref}><Button variant="outline">{t("openExport")}</Button></Link></div>}
       />
       {error ? <Notice tone="danger" className="mb-4">{error}</Notice> : null}
       {message ? <Notice tone="success" className="mb-4"><LuCheck className="mr-2 inline size-4" />{message}</Notice> : null}

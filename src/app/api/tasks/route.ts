@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
-import { aiTasks, batchJobItems, batchJobs, compositions, pipelineRuns, projects } from "@/lib/db/schema";
+import { aiTasks, autoEditRuns, batchJobItems, batchJobs, compositions, pipelineRuns, projects } from "@/lib/db/schema";
+import { recoverAutoEdits } from "@/lib/auto-edit/runner";
 import { isPipelineRunActive } from "@/lib/pipeline-runner";
 import { ACTIVE_AI_TASK_STATUSES } from "@/lib/ai-tasks";
 
@@ -21,12 +22,19 @@ export async function GET() {
   try {
     const db = getDb();
     const projectName = new Map<string, string>();
-    for (const p of await db.select({ id: projects.id, name: projects.name }).from(projects)) {
+    for (const p of await db.select({ id: projects.id, name: projects.name }).from(projects).where(isNull(projects.deletedAt))) {
       projectName.set(p.id, p.name);
     }
+    const activeProjectIds = new Set(projectName.keys());
 
     const active: Array<Record<string, unknown>> = [];
     const attention: Array<Record<string, unknown>> = [];
+    await recoverAutoEdits();
+    const edits = await db.select().from(autoEditRuns).where(inArray(autoEditRuns.status, ["queued", "running", "cancel_requested", "failed", "interrupted", "waiting_input", "needs_review"])).orderBy(desc(autoEditRuns.createdAt)).limit(100);
+    for (const edit of edits) {
+      if (!activeProjectIds.has(edit.projectId)) continue;
+      (["queued", "running", "cancel_requested"].includes(edit.status) ? active : attention).push({ kind: "auto_edit", id: edit.id, projectId: edit.projectId, projectName: projectName.get(edit.projectId), stage: edit.stage, status: edit.status, label: edit.checkpoint.plan?.title, createdAt: new Date(edit.createdAt).toISOString() });
+    }
 
     // server-side pipelines: verify against the in-process registry; a "running" row whose
     // executor is gone (restart) is settled to failed and surfaced as resumable instead
@@ -34,6 +42,7 @@ export async function GET() {
     const seenProjects = new Set<string>();
     const pipelineComposeIds = new Set<string>();
     for (const run of runningPipelines) {
+      if (!activeProjectIds.has(run.projectId)) continue;
       if (seenProjects.has(run.projectId)) continue;
       seenProjects.add(run.projectId);
       if (run.status !== "running" && !(run.status === "failed" && run.error === "interrupted")) continue;
@@ -66,6 +75,7 @@ export async function GET() {
     // renders in flight (skip ones already represented by their pipeline row)
     const composing = await db.select().from(compositions).where(eq(compositions.status, "composing"));
     for (const c of composing) {
+      if (!activeProjectIds.has(c.projectId)) continue;
       if (pipelineComposeIds.has(c.id)) continue;
       active.push({
         kind: "compose",
@@ -81,6 +91,7 @@ export async function GET() {
     // the row links straight to the project's recovery UI
     const paid = await db.select().from(aiTasks).where(inArray(aiTasks.status, ACTIVE_AI_TASK_STATUSES));
     for (const tsk of paid) {
+      if (tsk.projectId && !activeProjectIds.has(tsk.projectId)) continue;
       (tsk.status === "unknown" ? attention : active).push({
         kind: tsk.status === "unknown" ? "paid_unknown" : "paid",
         id: tsk.id,
@@ -122,7 +133,7 @@ export async function GET() {
       .where(and(eq(compositions.status, "done"), gt(compositions.createdAt, dayAgo)))
       .orderBy(desc(compositions.createdAt))
       .limit(8);
-    const recent = recentRows.map((c) => ({
+    const recent = recentRows.filter((c) => activeProjectIds.has(c.projectId)).map((c) => ({
       kind: "done",
       id: c.id,
       projectId: c.projectId,

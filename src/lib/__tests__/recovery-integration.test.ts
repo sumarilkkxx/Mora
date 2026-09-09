@@ -94,6 +94,15 @@ describe("recovery with migrated SQLite", () => {
     db.insert(schema.pipelineRuns).values({ id: "new", projectId: "p", status: "done", stage: "compose", createdAt }).run();
     expect((await (await GET()).json()).attention).toEqual([]);
   });
+  it("hides task-center rows after their project moves to the recoverable trash", async () => {
+    db.insert(schema.pipelineRuns).values({ id: "trashed-task", projectId: "p", status: "running", stage: "compose", createdAt: new Date() }).run();
+    expect((await (await GET()).json()).attention.map((x: { id: string }) => x.id)).toContain("trashed-task");
+    db.update(schema.projects).set({ deletedAt: new Date() }).run();
+    const feed = await (await GET()).json();
+    expect(feed.active).toEqual([]);
+    expect(feed.attention).toEqual([]);
+    expect(feed.recent).toEqual([]);
+  });
   it.each([true, false])("retains keyframe after recovered video persistence (snapshot=%s)", async (snapshot) => {
     db.insert(schema.assets).values({ projectId: "p", shotId: 1, type: "ai_generated", filePath: "/api/files/p/newer.png", status: "done" }).run();
     await recordAiTask({ projectId: "p", shotId: 1, provider: "test", model: "m", taskId: "t", ...(snapshot ? { keyframePath: "/api/files/p/original.png" } : {}) });

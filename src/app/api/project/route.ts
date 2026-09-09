@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fileNameOf } from "@/lib/paths";
 import { getDb } from "@/lib/db";
 import { compositions, projects } from "@/lib/db/schema";
 import { and, desc, inArray, isNotNull, isNull, ne } from "drizzle-orm";
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
     // One batched query (not N+1): the newest non-failed final-video job owns the
     // current workflow. Image/audio provenance is intentionally absent here.
     const compositionRows = await db
-      .select({ projectId: compositions.projectId, videoOrigin: compositions.videoOrigin })
+      .select({ projectId: compositions.projectId, videoOrigin: compositions.videoOrigin, thumbnailPath: compositions.thumbnailPath, status: compositions.status })
       .from(compositions)
       .where(and(
         inArray(compositions.projectId, result.map((project) => project.id)),
@@ -26,11 +27,17 @@ export async function GET(req: NextRequest) {
       ))
       .orderBy(desc(compositions.createdAt));
     const latestOrigin = new Map<string, string>();
+    const posters = new Map<string, string>();
     for (const row of compositionRows) {
       if (!latestOrigin.has(row.projectId)) latestOrigin.set(row.projectId, row.videoOrigin);
+      const thumbnail = fileNameOf(row.thumbnailPath);
+      if (row.status === "done" && thumbnail && !posters.has(row.projectId)) {
+        posters.set(row.projectId, `/api/output/${row.projectId}/${encodeURIComponent(thumbnail)}`);
+      }
     }
     return NextResponse.json(result.map((project) => ({
       ...project,
+      thumbnailUrl: posters.get(project.id) ?? null,
       productionMode: productionModeForVideoOrigin(latestOrigin.get(project.id), project.productionMode),
     })));
   } catch (error) {

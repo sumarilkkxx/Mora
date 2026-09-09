@@ -9,7 +9,10 @@ const nextConfig: NextConfig = {
   // used by the Electron main process to fork-start the server without requiring npm install on the user's machine. Does not affect next dev.
   output: "standalone",
   // better-sqlite3 is a native module; mark it external (loaded via require, so the bundler won't try to bundle its .node file)
-  serverExternalPackages: ["better-sqlite3", "ffmpeg-static", "@ffprobe-installer/ffprobe"],
+  serverExternalPackages: ["better-sqlite3", "ffmpeg-static", "@ffprobe-installer/ffprobe", "@huggingface/transformers"],
+  outputFileTracingIncludes: {
+    "/api/project/*/auto-edit": ["./scripts/auto-edit-asr.mjs", "./node_modules/@huggingface/transformers/dist/transformers.node.*", "./node_modules/@huggingface/transformers/package.json", "./node_modules/onnxruntime-node/**/*", "./node_modules/onnxruntime-common/**/*", "./node_modules/sharp/**/*", "./node_modules/@img/sharp-*/**/*"],
+  },
   // Keep the file trace honest: nft's conservative directory collection was dragging the local
   // data/ (user uploads/outputs — 96MB of it), the docs site and other repo-only folders into
   // .next/standalone, which then shipped inside every desktop installer (issue: 330MB dmg).

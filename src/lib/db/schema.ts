@@ -211,6 +211,32 @@ export const mediaSources = sqliteTable("media_sources", {
 // Guided editing plans turn merchant-authored promotion copy and explicitly labelled source
 // scenes into a deterministic timeline. They deliberately contain no generated claims: every
 // spoken/subtitle line is user-authored, and revisions remain reproducible.
+export const autoEditRuns = sqliteTable("auto_edit_runs", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  sourceId: text("source_id").notNull().references(() => mediaSources.id, { onDelete: "cascade" }),
+  requestKey: text("request_key").notNull().unique(),
+  parentId: text("parent_id"),
+  status: text("status").$type<import("@/lib/auto-edit/contract").EditStatus>().notNull().default("queued"),
+  stage: text("stage").notNull().default("queued"),
+  brief: text("brief", { mode: "json" }).$type<import("@/lib/auto-edit/contract").EditBrief>().notNull(),
+  checkpoint: text("checkpoint", { mode: "json" }).$type<import("@/lib/auto-edit/contract").Checkpoint>().notNull(),
+  quality: text("quality").$type<"720p" | "1080p">().notNull().default("720p"),
+  owner: text("owner"),
+  heartbeat: integer("heartbeat").notNull(),
+  attempt: integer("attempt").notNull().default(0),
+  error: text("error"),
+  compositionId: text("composition_id").references(() => compositions.id, { onDelete: "set null" }),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+export const autoEditAnalysis = sqliteTable("auto_edit_analysis", {
+  cacheKey: text("cache_key").primaryKey(),
+  sourceId: text("source_id").notNull().references(() => mediaSources.id, { onDelete: "cascade" }),
+  document: text("document", { mode: "json" }).$type<import("@/lib/auto-edit/contract").Analysis>().notNull(),
+  createdAt: integer("created_at").notNull(),
+});
+
 export const guidedEditPlans = sqliteTable("guided_edit_plans", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),

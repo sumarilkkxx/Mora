@@ -14,7 +14,10 @@ import { formatRelativeTime } from "@/lib/relative-time";
 import { PageFrame, PageHeader, SegmentedControl, SegmentedItem, Skeleton } from "@/components/studio/page";
 import { projectContinuePath, type ProductionMode } from "@/lib/production-mode";
 
+import styles from "./page.module.css";
+
 interface ProjectRow {
+  thumbnailUrl?: string | null;
   id: string;
   name: string;
   productName: string | null;
@@ -164,7 +167,7 @@ export default function ProjectsPage() {
       const res = await fetch(`/api/project/${p.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(String(res.status));
       setRows((prev) => prev.filter((r) => r.id !== p.id));
-      setTrashRows((prev) => [{ ...p, deletedAt: new Date().toISOString() }, ...prev]);
+      setTrashRows((prev) => [{ ...p, thumbnailUrl: posterByProject.get(p.id) ?? p.thumbnailUrl, deletedAt: new Date().toISOString() }, ...prev]);
       setWorks((prev) => prev.filter((w) => w.projectId !== p.id));
     } catch {
       window.alert(t("deleteFailed"));
@@ -222,7 +225,7 @@ export default function ProjectsPage() {
                 <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("searchPlaceholder")} className="h-9 pl-9 text-sm" />
               </div>
             ) : null}
-            {view === "trash" && trashRows.length > 0 ? <div className="ml-auto flex flex-wrap items-center gap-2"><Button size="sm" variant="outline" disabled={mutating || selectedTrash.size === 0} onClick={() => void mutateTrash("restore", [...selectedTrash])}><LuRotateCcw />{t("restoreSelected", { n: selectedTrash.size })}</Button><Button size="sm" variant="destructive" disabled={mutating || selectedTrash.size === 0} onClick={() => void mutateTrash("delete", [...selectedTrash])}><LuTrash2 />{t("deleteSelected", { n: selectedTrash.size })}</Button></div> : null}
+            {view === "trash" && trashRows.length > 0 ? <div className="ml-auto flex flex-wrap items-center gap-2"><Button size="sm" variant="outline" disabled={mutating || selectedTrash.size === 0} onClick={() => void mutateTrash("restore", [...selectedTrash])}><LuRotateCcw />{t("restoreSelected", { n: selectedTrash.size })}</Button><Button size="sm" variant="destructive" className={styles.deleteButton} disabled={mutating || selectedTrash.size === 0} onClick={() => void mutateTrash("delete", [...selectedTrash])}><LuTrash2 />{t("deleteSelected", { n: selectedTrash.size })}</Button></div> : null}
           </div>
           {view === "projects" && rows.length > 0 ? (
             <div className="flex gap-1 overflow-x-auto px-3 py-2.5 sm:px-4" role="tablist" aria-label={t("sourceFilter")}>
@@ -262,8 +265,8 @@ export default function ProjectsPage() {
             <label className="mb-3 inline-flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={selectedTrash.size === trashRows.length} onChange={(event) => setSelectedTrash(event.target.checked ? new Set(trashRows.map((p) => p.id)) : new Set())} />{t("selectAll")}</label>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{trashRows.map((p) => {
               const checked = selectedTrash.has(p.id);
-              const poster = posterByProject.get(p.id) ?? (p.productImages?.[0] || null);
-              return <Card key={p.id} className={`glass-card overflow-hidden ${checked ? "ring-2 ring-primary/35" : ""}`}><CardContent className="p-0"><div className="relative aspect-video bg-muted/30">{poster ? <Image src={poster} alt="" width={640} height={360} unoptimized className="h-full w-full object-cover grayscale-[.2] opacity-75" /> : <div className="absolute inset-0 flex items-center justify-center"><LuImage className="h-7 w-7 text-muted-foreground/40" /></div>}<label className="absolute left-2 top-2 grid size-7 place-items-center rounded-lg bg-card/90 shadow-sm"><input type="checkbox" checked={checked} onChange={(event) => setSelectedTrash((current) => { const next = new Set(current); if (event.target.checked) next.add(p.id); else next.delete(p.id); return next; })} aria-label={t("selectProject", { name: p.name })} /></label></div><div className="p-4"><p className="truncate text-sm font-medium">{p.name || p.productName || t("untitled")}</p><p className="mt-1 text-xs text-muted-foreground">{sourceLabel(p)}</p><div className="mt-4 flex gap-2"><Button size="sm" variant="outline" className="flex-1" disabled={mutating} onClick={() => void mutateTrash("restore", [p.id])}><LuRotateCcw />{t("restore")}</Button><Button size="sm" variant="destructive" disabled={mutating} onClick={() => void mutateTrash("delete", [p.id])}><LuTrash2 />{t("permanentDelete")}</Button></div></div></CardContent></Card>;
+              const poster = posterByProject.get(p.id) ?? p.thumbnailUrl ?? (p.productImages?.[0] || null);
+              return <Card key={p.id} className={`glass-card gap-0 overflow-hidden py-0 ${checked ? "ring-2 ring-primary/35" : ""}`}><CardContent className="p-0"><div className="relative aspect-video bg-muted/30">{poster ? <Image src={poster} alt="" width={640} height={360} unoptimized className="h-full w-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center"><LuImage className="h-7 w-7 text-muted-foreground/40" /></div>}<label className="absolute left-2 top-2 grid size-7 place-items-center rounded-lg bg-card/90 shadow-sm"><input type="checkbox" checked={checked} onChange={(event) => setSelectedTrash((current) => { const next = new Set(current); if (event.target.checked) next.add(p.id); else next.delete(p.id); return next; })} aria-label={t("selectProject", { name: p.name })} /></label></div><div className="p-4"><p className="truncate text-sm font-medium">{p.name || p.productName || t("untitled")}</p><p className="mt-1 text-xs text-muted-foreground">{sourceLabel(p)}</p><div className="mt-4 flex gap-2"><Button size="sm" variant="outline" className="flex-1" disabled={mutating} onClick={() => void mutateTrash("restore", [p.id])}><LuRotateCcw />{t("restore")}</Button><Button size="sm" variant="destructive" className={styles.deleteButton} disabled={mutating} onClick={() => void mutateTrash("delete", [p.id])}><LuTrash2 />{t("permanentDelete")}</Button></div></div></CardContent></Card>;
             })}</div>
           </>
         ) : view === "works" ? (
@@ -345,7 +348,7 @@ export default function ProjectsPage() {
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((p) => {
               const rel = formatRelativeTime(p.updatedAt, locale);
-              const poster = posterByProject.get(p.id) ?? (p.productImages?.[0] || null);
+              const poster = posterByProject.get(p.id) ?? p.thumbnailUrl ?? (p.productImages?.[0] || null);
               const SourceIcon = sourceIcon(p);
               const effectiveStatus = effectiveStatusFor(p);
               return (
