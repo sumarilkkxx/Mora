@@ -75,7 +75,6 @@ export default function NewGuidedEditPage() {
   return (
     <PageFrame width="wide" className={styles.page}>
       <PageHeader
-        eyebrow={t("createEyebrow")}
         title={t("createTitle")}
         description={t("createDescription")}
         actions={<Link href="/start" className={buttonVariants({ variant: "ghost" })}><LuArrowLeft />{t("backProjects")}</Link>}

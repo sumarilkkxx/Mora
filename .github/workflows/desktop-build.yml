@@ -102,7 +102,7 @@ jobs:
       - name: Build package
         run: ${{ matrix.command }}
         env:
-          # v0.1.1.0 intentionally ships unsigned: the project does not use paid Apple/Windows
+          # v0.1.2.0 intentionally ships unsigned: the project does not use paid Apple/Windows
           # signing certificates yet. Passing empty CSC_* values makes electron-builder treat
           # the workspace directory as a certificate path, so signing must be disabled explicitly.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"

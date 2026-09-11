@@ -388,11 +388,14 @@
 .studio-mobile-brand { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:650; letter-spacing:-.02em; }
 
 .studio-page { width:100%; margin-inline:auto; padding:34px 24px 72px; }
-.studio-page-header { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; margin-bottom:28px; }
+.studio-page-header { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; column-gap:24px; row-gap:12px; margin-bottom:calc(28px - var(--page-row-gap, 0px)); }
+.studio-page-heading { min-width:0; }
+.studio-page-context { grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:8px; color:var(--muted-foreground); font-size:.75rem; line-height:1.5; overflow-wrap:anywhere; }
 .studio-eyebrow { margin-bottom:8px; color:var(--primary); font-size:11px; font-weight:650; letter-spacing:.1em; text-transform:uppercase; }
-.studio-title { font-size:clamp(32px,4vw,48px); font-weight:680; line-height:1.05; letter-spacing:-.045em; text-wrap:balance; }
-.studio-subtitle { max-width:680px; margin-top:9px; color:var(--muted-foreground); font-size:14px; line-height:1.55; }
-.studio-page-actions { display:flex; flex:none; align-items:center; gap:8px; }
+.studio-title { margin:0; color:var(--foreground); font-size:2rem; font-weight:600; line-height:1.2; letter-spacing:-.025em; text-wrap:balance; }
+.studio-page-header[data-variant="compact"] .studio-title { font-size:1.75rem; line-height:1.25; }
+.studio-subtitle { max-width:680px; margin-top:8px; color:var(--muted-foreground); font-size:.875rem; line-height:1.6; }
+.studio-page-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; min-height:2.4rem; }
 .studio-surface,.glass-card { border:1px solid color-mix(in srgb,var(--border) 65%,transparent); border-radius:20px; background:color-mix(in srgb,var(--card) 88%,transparent); box-shadow:var(--shadow-surface); }
 .dark .studio-surface,.dark .glass-card { border-color:color-mix(in srgb,var(--border) 70%,transparent); box-shadow:var(--shadow-surface); }
 .studio-surface-interactive { transition:transform 180ms cubic-bezier(.2,.8,.2,1),border-color 180ms ease,box-shadow 180ms ease; }
@@ -459,9 +462,14 @@
   .studio-page { padding:46px 40px 88px; }
 }
 
+@media (max-width:1000px) {
+  .studio-page-header[data-variant="compact"] { grid-template-columns:minmax(0,1fr); gap:16px; }
+}
+
 @media (max-width:640px) {
   .studio-page { padding:26px 16px 56px; }
-  .studio-page-header { align-items:flex-start; flex-direction:column; gap:16px; }
+  .studio-page-header { grid-template-columns:minmax(0,1fr); gap:16px; }
+  .studio-title { font-size:1.75rem; line-height:1.25; }
   .studio-page-actions { width:100%; }
 }
 
@@ -530,8 +538,8 @@
 
 /* Transitional page adapter: keeps feature-heavy routes visually aligned while their
    domain components remain untouched. New routes should use PageFrame directly. */
-.legacy-studio-page > main { width:100%; padding-top:46px; padding-bottom:88px; }
-.legacy-studio-page > main > :first-child h1 { font-weight:680; letter-spacing:-.035em; }
+.legacy-studio-page > main:not(.studio-page) { width:100%; padding-top:46px; padding-bottom:88px; }
+
 .legacy-studio-page .glass-card { border-radius:18px; }
 .legacy-studio-page input,.legacy-studio-page textarea,.legacy-studio-page [data-slot="select-trigger"] { border-radius:10px; }
 .legacy-studio-page details { border-color:color-mix(in srgb,var(--border) 78%,transparent); }
@@ -907,7 +915,7 @@ html[lang="en"] .mora-studio .cf-tab { padding-inline:7px; font-size:12px; }
 }
 
 /* Settings uses the same restrained material hierarchy as the creation surface. */
-.mora-settings-page .studio-page-header { margin-bottom:24px; }
+
 .mora-settings-page .studio-settings-nav { padding:6px; border:1px solid color-mix(in srgb,var(--border) 66%,transparent); border-radius:17px; background:color-mix(in srgb,var(--card) 64%,transparent); box-shadow:inset 0 1px 0 rgb(255 255 255 / 55%),0 14px 38px rgb(35 67 99 / 7%); backdrop-filter:blur(22px) saturate(155%); }
 .mora-settings-nav-item { display:flex; width:100%; min-height:40px; align-items:center; justify-content:space-between; gap:8px; overflow:visible; padding:8px 10px 8px 12px; border-radius:11px; color:var(--muted-foreground); font-size:13px; font-weight:520; text-align:left; white-space:nowrap; transition:background-color 140ms ease,color 140ms ease,box-shadow 140ms ease,transform 100ms ease; }
 .mora-settings-nav-item > span { min-width:max-content; white-space:nowrap; }

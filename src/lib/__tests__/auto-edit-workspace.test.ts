@@ -51,6 +51,13 @@ describe("editing workspace state", () => {
     expect(briefChanged(copy, base)).toBe(false);
     expect(briefChanged({ ...copy, sourceId: "new-source" }, base)).toBe(true);
   });
+  it("restores the approved candidate instead of resetting to the model recommendation", () => {
+    const base = initialDraft(undefined, "source", false);
+    const recommended = { ...base.copy, id: "effect", recommended: true, hook: "A", body: "B", cta: "C", voiceover: "A\nB\nC", evidence: ["frame"] };
+    const approved = { ...recommended, id: "scenario", recommended: false, hook: "D", voiceover: "D\nB\nC" };
+    const saved = run("selected", { checkpoint: { history: [], repairs: 0, promotionCandidates: [recommended, approved], recommendedCopyId: "effect", promotionCopy: approved } });
+    expect(initialDraft(saved, "source", false).copy.id).toBe("scenario");
+  });
   it("uses approved one-sentence copy instead of stale creative references", () => {
     const draft = initialDraft(undefined, "source", false);
     const copy = { ...draft.copy, hook: "Stale hook", body: "Stale body", cta: "Stale CTA", voiceover: "唯一确认的完整文案。" };

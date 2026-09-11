@@ -80,9 +80,30 @@ export function TaskFeedback({ run, en, busy, onRetry, onCancel, compact = false
   </section>;
 }
 
+function logContent(detail: string, en: boolean) {
+  try {
+    const value: unknown = JSON.parse(detail);
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const fields = value as Record<string, unknown>;
+      const labels: Record<string, string> = en ? { title: "Title", angle: "Angle", hook: "Hook", body: "Value", cta: "Call to action" } : { title: "标题", angle: "推广角度", hook: "开场吸引", body: "价值说明", cta: "行动引导" };
+      const entries = Object.entries(labels).filter(([key]) => typeof fields[key] === "string");
+      if (entries.length) return <dl className={ui.logFields}>{entries.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{String(fields[key])}</dd></div>)}</dl>;
+    }
+    return <pre className={ui.logRaw}>{JSON.stringify(value, null, 2)}</pre>;
+  } catch { return <p className={ui.logText}>{detail}</p>; }
+}
+
 export function TechnicalDetails({ run, en }: { run: EditRun; en: boolean }) {
-  return <details className={ui.technical}><summary>{en ? "Technical details" : "技术详情"}<ChevronDown size={14} aria-hidden="true" /></summary>
-    <div><p>{en ? "Task" : "任务编号"}：{run.id}</p><p>{runLabel(run, en)}</p>
-      {run.checkpoint.history.slice(-12).map((item, i) => <p key={`${item.at}-${i}`}><time>{new Intl.DateTimeFormat(en ? "en" : "zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date(item.at))}</time> · {item.action}: {item.detail}</p>)}
+  const labels: Record<string, string> = en ? { analysis: "Source analysis", promotion_copy: "Promotion copy", validate_edit_plan: "Plan validation", render_edit: "Video rendering", inspect_output: "Output review", create_voiceover: "Voiceover", finish: "Completed" } : { analysis: "素材理解", promotion_copy: "推广文案", validate_edit_plan: "方案校验", render_edit: "视频合成", inspect_output: "成片检查", create_voiceover: "生成旁白", finish: "完成" };
+  const history = run.checkpoint.history;
+  return <details className={ui.technical}><summary><span><strong>{en ? "Run log" : "运行日志"}</strong><small>{runLabel(run, en)} · {history.length} {en ? "events" : "条记录"}</small></span><ChevronDown aria-hidden="true" /></summary>
+    <div className={ui.logBody}><p className={ui.logTask}>{en ? "Task ID" : "任务编号"}<code>{run.id}</code></p>
+      {run.error ? <Notice tone="danger" title={en ? "Task error" : "任务异常"}>{run.error}</Notice> : null}
+      {!history.length ? <p className={ui.help}>{en ? "No events recorded yet. Events appear as the task progresses." : "尚无运行记录，任务推进后会显示在这里。"}</p> : <ol className={ui.logList}>{history.map((item, i) => {
+        const date = new Date(item.at);
+        return <li key={`${item.at}-${i}`}><div className={ui.logHeading}><strong>{labels[item.action] ?? item.action}</strong><time dateTime={Number.isNaN(date.getTime()) ? undefined : date.toISOString()}>{Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat(en ? "en" : "zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(date)}</time></div>
+          <details className={ui.logEntry}><summary>{en ? "View recorded content" : "查看记录内容"}<ChevronDown aria-hidden="true" /></summary>{logContent(item.detail, en)}</details>
+        </li>;
+      })}</ol>}
     </div></details>;
 }

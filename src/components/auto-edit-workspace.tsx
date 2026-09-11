@@ -16,7 +16,7 @@ import { CopyStage, PlanStage, ResultStage, SourceStage } from "./auto-edit/edit
 import { TaskFeedback, TechnicalDetails, VersionMenu, WorkflowSteps, WorkspaceLoading } from "./auto-edit/workspace-chrome";
 import ui from "./auto-edit-workspace.module.css";
 
-type Action = "analyze" | "approve-copy" | "manual" | "retry" | "export" | "cancel";
+type Action = "analyze" | "rewrite-copy" | "approve-copy" | "manual" | "retry" | "export" | "cancel";
 const storageKey = (project: string, run: string) => `mora:edit-draft:v1:${project}:${run}`;
 
 export default function AutoEditWorkspace({ projectId }: { projectId: string }) {
@@ -140,12 +140,12 @@ export default function AutoEditWorkspace({ projectId }: { projectId: string }) 
     if (dirty) setPendingRun(row); else moveToRun(row.id);
   }
 
-  async function submit(action: Action, target = current, plan?: EditPlan) {
+  async function submit(action: Action, target = current, plan?: EditPlan, rewriteInstruction?: string) {
     if (loading || lock.current || uploadLock.current || (action !== "cancel" && runs.some(isActive))) return;
     if (action === "manual" && (changedBrief || changedCopy)) return;
     if (action === "export" && exportFor(target, runs)) return;
     lock.current = true; setBusy(true); setError("");
-    const signature = JSON.stringify({ action, run: target?.id, draft, plan });
+    const signature = JSON.stringify({ action, run: target?.id, draft, plan, rewriteInstruction });
     if (!requestId.current || requestSignature.current !== signature) requestId.current = crypto.randomUUID();
     requestSignature.current = signature;
     const state = useSettingsStore.getState();
@@ -155,12 +155,12 @@ export default function AutoEditWorkspace({ projectId }: { projectId: string }) 
       const response = await fetch(`/api/project/${projectId}/auto-edit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
         action, runId: target?.id, sourceId: draft.sourceId, requestId: requestId.current, credentials,
         brief: action === "analyze" || action === "manual" ? { ...draft.brief, locale: en ? "en" : "zh" } : undefined,
-        copy: action === "approve-copy" ? draft.copy : undefined, plan,
+        copy: action === "approve-copy" ? draft.copy : undefined, rewriteInstruction: action === "rewrite-copy" ? rewriteInstruction : undefined, plan,
       }) });
       const data = await response.json();
       if (!response.ok) { requestId.current = ""; throw new Error(data.error || "Request failed"); }
       requestId.current = "";
-      if (action === "analyze" || action === "approve-copy") clearDraft(owner);
+      if (action === "analyze" || action === "approve-copy" || action === "rewrite-copy") clearDraft(owner);
       if (data.runId && !exportAction && action !== "cancel") moveToRun(data.runId);
       if (action === "export") setViewStep(3);
       try { await refresh(); }
@@ -201,7 +201,7 @@ export default function AutoEditWorkspace({ projectId }: { projectId: string }) 
   const showTask = current && (isActive(current) || canRetry(current)) && shown === progress && !(shown === 3 && result);
 
   return <PageFrame width="wide" className={ui.page}>
-    <PageHeader title={tr("AI 智能成片", "AI smart edit")} description={tr("从素材到成片，每一步由你确认。", "From source to video, with you in control.")}
+    <PageHeader variant="compact" title={tr("AI 智能成片", "AI smart edit")} description={tr("从素材到成片，每一步由你确认。", "From source to video, with you in control.")}
       actions={<>{runs.length ? <VersionMenu runs={runs} currentId={current?.id} en={en} disabled={busy} onSelect={selectRun} /> : null}<Link href={`/project/${projectId}/edit`} className={buttonVariants({ variant: "outline", size: "sm" })}><Scissors />{tr("精细剪辑", "Detailed editor")}</Link></>} />
     <WorkflowSteps selected={shown} progress={progress} complete={complete} available={available} running={isActive(current)} review={Boolean(current && requiresReview(current))} en={en} onSelect={setViewStep} />
     {error ? <Notice tone="danger" title={tr("操作未完成", "Action not completed")} action={<Button variant="outline" size="sm" onClick={() => { setLoading(true); setReload(v => v + 1); }}>{tr("重新读取", "Reload")}</Button>}>{error}</Notice> : null}
@@ -214,8 +214,8 @@ export default function AutoEditWorkspace({ projectId }: { projectId: string }) 
     {loading ? <WorkspaceLoading en={en} /> : <>
       {shown === 0 ? <SourceStage sources={sources} draft={draft} en={en} locked={locked} configured={configured} uploading={uploading} musicUploading={musicUploading} musicError={musicError} onChange={updateDraft} onUpload={file => void uploadFile(file, false)} onMusic={file => void uploadFile(file, true)} onSubmit={() => void submit("analyze")} /> : null}
       {showTask ? <TaskFeedback run={current} en={en} busy={busy} onRetry={() => void submit("retry")} onCancel={() => void submit("cancel")} /> : null}
-      {shown === 1 && current?.checkpoint.promotionCopy && !showTask ? <CopyStage draft={draft} run={current} en={en} locked={locked || changedBrief} saved={saved} onChange={voiceover => updateDraft({ ...draft, copy: { ...draft.copy, voiceover } })} onBack={() => setViewStep(0)} onApprove={() => void submit("approve-copy")} /> : null}
-      {shown === 2 && plans.length > 0 && !showTask ? <PlanStage key={`${current?.id}-${plans.length}`} plans={plans} currentPlan={current?.checkpoint.plan} en={en} locked={locked || changedBrief || changedCopy} onBack={() => setViewStep(changedBrief || !current?.checkpoint.promotionCopy ? 0 : 1)} onChoose={plan => void submit("manual", current, plan)} /> : null}
+      {shown === 1 && current?.checkpoint.promotionCopy && !showTask ? <CopyStage draft={draft} run={current} en={en} locked={locked || changedBrief} saved={saved} onChange={copy => updateDraft({ ...draft, copy })} onBack={() => setViewStep(0)} onApprove={() => void submit("approve-copy")} onRewrite={instruction => void submit("rewrite-copy", current, undefined, instruction)} /> : null}
+      {shown === 2 && plans.length > 0 && !showTask ? <PlanStage key={`${current?.id}-${plans.length}`} plans={plans} currentPlan={current?.checkpoint.plan} copyStrategy={draft.copy.strategy} style={draft.brief.style} en={en} locked={locked || changedBrief || changedCopy} onBack={() => setViewStep(changedBrief || !current?.checkpoint.promotionCopy ? 0 : 1)} onChoose={plan => void submit("manual", current, plan)} /> : null}
       {shown === 3 && result ? <ResultStage run={result} exportRun={hdExport} en={en} locked={locked} onBack={() => setViewStep(2)} onExport={() => void submit("export", result)} onRetry={row => void submit("retry", row)} onCancel={row => void submit("cancel", row)} /> : null}
       {current ? <TechnicalDetails run={current} en={en} /> : null}
     </>}

@@ -3,7 +3,7 @@ import type { NamespaceMessages } from "../config";
 export const guidedEdit: NamespaceMessages = {
   zh: {
     createEyebrow: "商家素材成片",
-    createTitle: "选择剪辑方式",
+    createTitle: "素材剪辑",
     createDescription: "同一段原视频，可以交给 AI 自动完成，也可以进入本地工作台逐项控制。",
     workflowChoice: "选择工作流",
     workflowChoiceHint: "创建后将进入对应工作台；原视频始终保存在当前设备。",
@@ -227,7 +227,7 @@ export const guidedEdit: NamespaceMessages = {
   },
   en: {
     createEyebrow: "Merchant footage",
-    createTitle: "Choose an editing workflow",
+    createTitle: "Footage editing",
     createDescription: "Use the same source footage with an AI-directed edit or a local workspace where you control each step.",
     workflowChoice: "Choose a workflow",
     workflowChoiceHint: "Your project opens in the selected workspace. Source footage stays on this device.",

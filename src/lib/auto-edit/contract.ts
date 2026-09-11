@@ -13,6 +13,7 @@ export interface EditBrief {
   captions: boolean;
   locale: "zh" | "en";
   bgm?: string;
+  promotion?: { subject: string; audience: string; sellingPoints: string; action: string };
 }
 export interface Speech { start: number; end: number; text: string }
 export interface Scene extends Speech { evidence: number[]; uncertainty: string }
@@ -28,9 +29,15 @@ export interface EditClip {
   reason: string;
   evidence: string;
 }
-export interface EditPlan { version: 1; title: string; explanation: string; clips: EditClip[] }
+export interface EditPlan { version: 1; title: string; explanation: string; clips: EditClip[]; recommended?: boolean }
 export interface PromotionCopy {
   version: 1;
+  id?: string;
+  strategy?: "effect" | "scenario" | "explore" | "process";
+  strategyLabel?: string;
+  rationale?: string;
+  visualMatch?: string;
+  recommended?: boolean;
   title: string;
   angle: string;
   hook: string;
@@ -47,6 +54,9 @@ export interface Checkpoint {
   inheritedReview?: string[];
   analysis?: Analysis;
   promotionCopy?: PromotionCopy;
+  promotionCandidates?: PromotionCopy[];
+  recommendedCopyId?: string;
+  copyRevision?: string;
   plan?: EditPlan;
   candidates?: EditPlan[];
   voices?: Array<{ index: number; file: string; duration: number; text: string }>;
@@ -70,7 +80,15 @@ export function parseBrief(value: unknown): EditBrief {
   if (!["9:16", "16:9", "1:1"].includes(String(raw.aspect))) throw new Error("Invalid aspect ratio");
   if (!["original", "voiceover", "muted"].includes(String(raw.audio))) throw new Error("Invalid audio mode");
   if (!["auto", "concise", "highlights", "story"].includes(String(raw.style))) throw new Error("Invalid style");
-  return { instruction: text(raw.instruction, 4000), target: raw.target as EditBrief["target"], aspect: raw.aspect as EditBrief["aspect"], audio: raw.audio as AudioMode, style: raw.style as EditBrief["style"], captions: raw.captions !== false, locale: raw.locale === "en" ? "en" : "zh", ...(text(raw.bgm) ? { bgm: text(raw.bgm, 500) } : {}) };
+  const promotion = raw.promotion == null ? undefined : object(raw.promotion);
+  return { ...(promotion ? { promotion: { subject: text(promotion.subject, 200), audience: text(promotion.audience, 300), sellingPoints: text(promotion.sellingPoints, 800), action: text(promotion.action, 200) } } : {}), instruction: text(raw.instruction, 4000), target: raw.target as EditBrief["target"], aspect: raw.aspect as EditBrief["aspect"], audio: raw.audio as AudioMode, style: raw.style as EditBrief["style"], captions: raw.captions !== false, locale: raw.locale === "en" ? "en" : "zh", ...(text(raw.bgm) ? { bgm: text(raw.bgm, 500) } : {}) };
+}
+/** The editable sections are the source of truth for new copy. */
+export function composeCopy(copy: Pick<PromotionCopy, "hook" | "body" | "cta">): string {
+  return [copy.hook, copy.body, copy.cta].map(part => part.trim()).filter(Boolean).join("\n");
+}
+export function hasStructuredCopy(copy: PromotionCopy): boolean {
+  return composeCopy(copy).replace(/\s/g, "") === copy.voiceover.replace(/\s/g, "");
 }
 export function parsePromotionCopy(value: unknown): PromotionCopy {
   const raw = object(value);
@@ -81,7 +99,25 @@ export function parsePromotionCopy(value: unknown): PromotionCopy {
   if (!hook || !body || !cta || !voiceover) throw new Error("推广文案缺少吸引点、主体、行动引导或旁白 / Promotion copy is incomplete");
   const evidence = Array.isArray(raw.evidence) ? raw.evidence.map(item => text(item, 300)).filter(Boolean).slice(0, 8) : [];
   if (!evidence.length) throw new Error("推广文案必须注明画面依据 / Promotion copy needs visual evidence");
-  return { version: 1, title: text(raw.title, 100) || hook, angle: text(raw.angle, 240), hook, body, cta, voiceover, evidence };
+  const strategy = ["effect", "scenario", "explore", "process"].includes(String(raw.strategy)) ? raw.strategy as NonNullable<PromotionCopy["strategy"]> : undefined;
+  return { version: 1, ...(text(raw.id, 80) ? { id: text(raw.id, 80) } : {}), ...(strategy ? { strategy } : {}),
+    ...(text(raw.strategyLabel, 80) ? { strategyLabel: text(raw.strategyLabel, 80) } : {}),
+    ...(text(raw.rationale, 300) ? { rationale: text(raw.rationale, 300) } : {}),
+    ...(text(raw.visualMatch, 300) ? { visualMatch: text(raw.visualMatch, 300) } : {}),
+    ...(raw.recommended === true ? { recommended: true } : {}), title: text(raw.title, 100) || hook, angle: text(raw.angle, 240), hook, body, cta, voiceover, evidence };
+}
+
+export function parsePromotionCandidates(value: unknown): { candidates: PromotionCopy[]; recommendedId: string } {
+  const raw = object(value);
+  if (!Array.isArray(raw.candidates) || raw.candidates.length !== 3) throw new Error("必须生成三个推广方向 / Three promotion directions are required");
+  const candidates = raw.candidates.map((item, index) => {
+    const copy = parsePromotionCopy(item);
+    return { ...copy, id: copy.id || `copy-${index + 1}`, strategy: copy.strategy ?? (["effect", "scenario", "explore"] as const)[index] };
+  });
+  if (new Set(candidates.map(copy => copy.strategy)).size !== 3) throw new Error("推广方向需要彼此不同 / Promotion directions must be distinct");
+  const requested = text(raw.recommendedId, 80);
+  const recommendedId = candidates.some(copy => copy.id === requested) ? requested : candidates[0].id!;
+  return { candidates: candidates.map(copy => ({ ...copy, recommended: copy.id === recommendedId })), recommendedId };
 }
 export function parsePlan(value: unknown, sourceId: string, duration: number, brief: EditBrief): EditPlan {
   const raw = object(value);

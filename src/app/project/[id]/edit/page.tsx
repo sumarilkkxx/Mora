@@ -426,8 +426,9 @@ export default function GuidedEditWorkspace() {
   return (
     <PageFrame width="full" className="guided-edit-workspace">
       <PageHeader
-        eyebrow={t("workspaceEyebrow")}
-        title={projectName || t("workspaceTitle")}
+        variant="compact"
+        context={projectName}
+        title={t("workspaceEyebrow")}
         description={t("workspaceDescription")}
         actions={<div className="flex flex-wrap gap-2"><Link href={`/project/${id}/auto-edit`}><Button variant="outline">{locale === "en" ? "AI automatic editing" : "AI 自动剪辑"}</Button></Link><Link href={backHref}><Button variant="ghost"><LuArrowLeft />{t(fromTaskCenter ? "backTasks" : "backProjects")}</Button></Link><Link href={exportHref}><Button variant="outline">{t("openExport")}</Button></Link></div>}
       />

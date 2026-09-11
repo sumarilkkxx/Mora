@@ -6,6 +6,10 @@ const STYLE_RECIPES = [
   { key: "reveal", zh: "成品先行", en: "Reveal first", count: 5, anchors: [0.62, 0.08, 0.2, 0.45, 0.9] },
 ] as const;
 
+export function recommendedPlanIndex(strategy: PromotionCopy["strategy"], style: EditBrief["style"]): number {
+  return strategy === "scenario" || style === "story" ? 0 : strategy === "explore" || strategy === "process" || style === "highlights" ? 1 : 2;
+}
+
 function splitCopy(copy: PromotionCopy) {
   const voiceover = copy.voiceover.split(/[。！？.!?；;]+/).map(value => value.trim()).filter(Boolean);
   if (voiceover.length) return voiceover;
@@ -23,6 +27,7 @@ function clipWindow(duration: number, wanted: number, anchor: number) {
 export function fallbackCandidatePlans(sourceId: string, sourceDuration: number, brief: EditBrief, analysis: Analysis, copy: PromotionCopy): EditPlan[] {
   const lines = splitCopy(copy);
   const scenes = analysis.scenes.length ? analysis.scenes : [{ start: 0, end: sourceDuration, text: analysis.summary, uncertainty: "", evidence: [] }];
+  const recommendedIndex = recommendedPlanIndex(copy.strategy, brief.style);
   return STYLE_RECIPES.map((recipe, recipeIndex) => {
     const minimumCount = Math.ceil(brief.target / Math.max(0.4, sourceDuration));
     const count = Math.min(20, Math.max(recipe.count, minimumCount, lines.length));
@@ -56,6 +61,6 @@ export function fallbackCandidatePlans(sourceId: string, sourceDuration: number,
         evidence: scene.text,
       };
     });
-    return parsePlan({ version: 1, title: brief.locale === "zh" ? recipe.zh : recipe.en, explanation: brief.locale === "zh" ? `${recipe.zh}：围绕已确认文案重组可验证镜头。` : `${recipe.en}: rearranges verified shots around the approved copy.`, clips }, sourceId, sourceDuration, brief);
+    return { ...parsePlan({ version: 1, title: brief.locale === "zh" ? recipe.zh : recipe.en, explanation: brief.locale === "zh" ? `${recipe.zh}：围绕已确认文案重组可验证镜头。` : `${recipe.en}: rearranges verified shots around the approved copy.`, clips }, sourceId, sourceDuration, brief), recommended: recipeIndex === recommendedIndex };
   });
 }

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { candidateSignature, outputReviewSamples, parseBrief, parsePlan, parsePromotionCopy, sampleTimes, timeline, validateSource, validateSpeechCuts, type Analysis, type EditBrief, type EditPlan } from "../auto-edit/contract";
+import { composeCopy, hasStructuredCopy, candidateSignature, outputReviewSamples, parseBrief, parsePlan, parsePromotionCandidates, parsePromotionCopy, sampleTimes, timeline, validateSource, validateSpeechCuts, type Analysis, type EditBrief, type EditPlan } from "../auto-edit/contract";
 import { parseAction, parseAnalysis } from "../auto-edit/model";
 import { fallbackCandidatePlans } from "../auto-edit/planning";
 import { buildRender, captionLines } from "../auto-edit/render";
@@ -15,6 +15,26 @@ describe("auto edit contract", () => {
   it("accepts optional promotion goals and 25-second targets", () => {
     expect(parseBrief({ ...brief, instruction: "", target: 25 })).toMatchObject({ instruction: "", target: 25 });
     expect(parseBrief({ ...brief, instruction: undefined }).instruction).toBe("");
+  });
+  it("retains business context and preserves section order for downstream planning", () => {
+    const promotion = { subject: "卷发服务", audience: "附近顾客", sellingPoints: "卷曲层次", action: "咨询造型" };
+    expect(parseBrief({ ...brief, promotion }).promotion).toEqual(promotion);
+    const copy = parsePromotionCopy({ hook: "喜欢卷发？", body: "看看卷曲层次。", cta: "欢迎咨询。", voiceover: "喜欢卷发？ 看看卷曲层次。 欢迎咨询。", evidence: ["可见卷曲层次"] });
+    expect(hasStructuredCopy(copy)).toBe(true);
+    expect(composeCopy({ ...copy, body: "新的价值说明。" })).toBe("喜欢卷发？\n新的价值说明。\n欢迎咨询。");
+    expect(hasStructuredCopy({ ...copy, voiceover: "用户另写的完整文案" })).toBe(false);
+  });
+  it("recommends a plan that matches the selected copy direction", () => {
+    const analysis: Analysis = { version: 1, summary: "source", style: "", scenes: [{ start: 0, end: 11, text: "visible", uncertainty: "", evidence: [] }], speech: [], sampledAt: [], warnings: [] };
+    const copy = parsePromotionCopy({ id: "scenario", strategy: "scenario", hook: "代入", body: "价值", cta: "咨询", voiceover: "代入\n价值\n咨询", evidence: ["visible"] });
+    const plans = fallbackCandidatePlans("source", 11, { ...brief, audio: "voiceover" }, analysis, copy);
+    expect(plans.find(item => item.recommended)?.title).toBe("过程叙事");
+  });
+  it("accepts three distinct promotion directions and marks the recommendation", () => {
+    const copy = (id: string, strategy: "effect" | "scenario" | "explore") => ({ version: 1, id, strategy, title: id, angle: id, hook: `${id} hook`, body: `${id} body`, cta: `${id} cta`, voiceover: `${id} hook\n${id} body\n${id} cta`, evidence: ["visible"] });
+    const result = parsePromotionCandidates({ candidates: [copy("effect", "effect"), copy("scenario", "scenario"), copy("explore", "explore")], recommendedId: "scenario" });
+    expect(result.candidates).toHaveLength(3);
+    expect(result.candidates.find(item => item.recommended)?.id).toBe("scenario");
   });
   it("permits raw video only on the scoped media upload route and retains origin checks", () => {
     const media = "http://localhost:3000/api/project/p/media";
@@ -57,6 +77,19 @@ describe("auto edit contract", () => {
     expect(() => parseAction({ tool: "exec", arguments: { command: "rm" } })).toThrow();
     expect(() => parseAction({ tool: "render_edit", arguments: [] })).toThrow();
     expect(parseAction({ tool: "render_edit", arguments: {} }).tool).toBe("render_edit");
+  });
+  it("gives libass the bundled CJK font directory when burning subtitles", () => {
+    const invocation = buildRender({
+      source: "s",
+      output: "o",
+      plan,
+      brief,
+      quality: "720p",
+      voices: [],
+      subtitle: "/tmp/caption.ass",
+      subtitleFontDirectory: "/tmp/fonts",
+    });
+    expect(invocation.filter).toContain("subtitles=filename=/tmp/caption.ass:fontsdir=/tmp/fonts");
   });
   it("samples both ends and rejects invalid visual timestamps", () => {
     expect(sampleTimes(300)).toHaveLength(24);

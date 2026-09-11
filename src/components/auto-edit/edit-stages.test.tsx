@@ -26,16 +26,49 @@ describe("AI edit decisions and recovery", () => {
     const choose = vi.fn();
     await render(<PlanStage plans={[plan, { ...plan, title: "Plan B" }]} en={false} locked={false} onBack={vi.fn()} onChoose={choose} />);
     expect(button("按此方案").disabled).toBe(true);
-    await click(host.querySelectorAll('input[type="radio"]')[1]);
+    const planCardButton = host.querySelector('button[aria-label*="Plan B"]')!;
+    await click(planCardButton);
     expect(choose).not.toHaveBeenCalled();
     expect(button("按此方案").disabled).toBe(false);
+    expect(planCardButton.getAttribute("aria-pressed")).toBe("true");
+    await click(planCardButton);
+    expect(button("按此方案").disabled).toBe(true);
+    expect(planCardButton.getAttribute("aria-pressed")).toBe("false");
+    await click(planCardButton);
     await click(button("按此方案"));
     expect(choose).toHaveBeenCalledWith(expect.objectContaining({ title: "Plan B" }));
   });
-  it("has one authoritative copy editor and refuses empty copy", async () => {
-    await render(<CopyStage draft={draft} run={run} en={false} locked={false} saved="Saved" onBack={vi.fn()} onChange={vi.fn()} onApprove={vi.fn()} />);
-    expect(host.querySelectorAll("textarea")).toHaveLength(1);
+  it("opens shot details in a dialog without expanding a plan card", async () => {
+    await render(<PlanStage plans={[{ ...plan, recommended: true }]} en={false} locked={false} onBack={vi.fn()} onChoose={vi.fn()} />);
+    expect(host.textContent).toContain("AI 推荐");
+    expect(host.querySelector("details")).toBeNull();
+    await click(button("查看镜头详情"));
+    expect(host.querySelector('button[aria-label*="Plan A"]')?.getAttribute("aria-pressed")).toBe("false");
+    expect(document.body.textContent).toContain("方案 01 · Plan A");
+    expect(document.body.textContent).toContain("原片 0.0–5.0s");
+  });
+  it("offers three structured editors and refuses empty copy", async () => {
+    await render(<CopyStage draft={draft} run={run} en={false} locked={false} saved="Saved" onBack={vi.fn()} onChange={vi.fn()} onApprove={vi.fn()} onRewrite={vi.fn()} />);
+    expect(host.querySelectorAll("textarea")).toHaveLength(3);
     expect(button("确认文案，").disabled).toBe(true);
+  });
+  it("compares three directions, defaults to the recommendation, and offers optional rewriting", async () => {
+    const change = vi.fn(); const rewrite = vi.fn();
+    const candidate = (id: "effect" | "scenario" | "explore", recommended = false) => ({ ...draft.copy, id, strategy: id, strategyLabel: id, title: id, hook: `${id} hook`, body: `${id} body`, cta: `${id} cta`, voiceover: `${id} hook\n${id} body\n${id} cta`, evidence: ["visible"], recommended });
+    const candidates = [candidate("effect"), candidate("scenario", true), candidate("explore")];
+    const candidateRun = { ...run, checkpoint: { ...run.checkpoint, promotionCandidates: candidates, recommendedCopyId: "scenario", promotionCopy: candidates[1] } };
+    await render(<CopyStage draft={{ ...draft, copy: candidates[1] }} run={candidateRun} en={false} locked={false} saved="Saved" onBack={vi.fn()} onChange={change} onApprove={vi.fn()} onRewrite={rewrite} />);
+    expect(host.querySelectorAll('input[name="copy-direction"]')).toHaveLength(3);
+    expect((host.querySelectorAll('input[name="copy-direction"]')[1] as HTMLInputElement).checked).toBe(true);
+    await click(host.querySelectorAll('input[name="copy-direction"]')[2]);
+    expect(change).toHaveBeenCalledWith(expect.objectContaining({ id: "explore" }));
+    await click(button("换一批")); expect(rewrite).toHaveBeenCalledWith("");
+  });
+  it("preserves separately edited legacy copy instead of replacing it with stale sections", async () => {
+    const legacy = { ...draft, copy: { ...draft.copy, hook: "Old hook", body: "Old body", cta: "Old CTA", voiceover: "My edited script" } };
+    await render(<CopyStage draft={legacy} run={run} en={false} locked={false} saved="Saved" onBack={vi.fn()} onChange={vi.fn()} onApprove={vi.fn()} onRewrite={vi.fn()} />);
+    expect(host.querySelectorAll("textarea")).toHaveLength(1);
+    expect(host.querySelector("textarea")?.value).toBe("My edited script");
   });
   it("keeps original playback/download while an HD task fails and can resume it", async () => {
     const retry = vi.fn();

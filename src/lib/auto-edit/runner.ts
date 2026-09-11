@@ -13,11 +13,11 @@ import { generateSpeechFreeDetailed } from "@/lib/edge-tts";
 import { extractFirstFrame } from "@/lib/video-composer/frame-extract";
 import { resolveExistingUploadFilePath } from "@/lib/upload-path";
 import type { LLMConfig } from "@/lib/script-engine/generator";
-import { EditModel, analysisPrompt, parseAnalysis, promotionCopyPrompt, type Action, type ToolName } from "./model";
+import { EditModel, analysisPrompt, parseAnalysis, PROMOTION_COPY_SYSTEM, promotionCopyPrompt, promotionReviewPrompt, type Action, type ToolName } from "./model";
 import { frameAt, ownedSourcePath, sceneSamples, transcribe } from "./media";
 import { renderAutoEdit, checkOutput } from "./render";
 import { fallbackCandidatePlans } from "./planning";
-import { outputReviewSamples, parseBrief, parsePlan, parsePromotionCopy, sampleTimes, timeline, validateSource, validateSpeechCuts, text, candidateSignature, type Checkpoint, type Speech, type EditPlan } from "./contract";
+import { composeCopy, outputReviewSamples, parseBrief, parsePlan, parsePromotionCandidates, sampleTimes, timeline, validateSource, validateSpeechCuts, text, candidateSignature, type Checkpoint, type Speech, type EditPlan } from "./contract";
 
 export interface Credentials { llm: LLMConfig; tts?: TTSConfig }
 type Run = typeof autoEditRuns.$inferSelect;
@@ -156,8 +156,14 @@ async function execute(run: Run, credentials: Credentials, owner: string, signal
   }
   if (options.analysisOnly) {
     await save("copywriting");
-    cp.promotionCopy = parsePromotionCopy(await model.json(promotionCopyPrompt(run.brief, cp.analysis)));
-    await save("copy_review", "promotion_copy", JSON.stringify(cp.promotionCopy));
+    const generated = await model.json(promotionCopyPrompt(run.brief, cp.analysis, cp.copyRevision), [], { system: PROMOTION_COPY_SYSTEM, temperature: .85 });
+    const initial = parsePromotionCandidates(generated);
+    await save("copy_review", "copy_candidates", initial.candidates.map(copy => copy.strategyLabel || copy.title).join(" · "));
+    const reviewed = parsePromotionCandidates(await model.json(promotionReviewPrompt(run.brief, cp.analysis, initial, cp.copyRevision), [], { system: PROMOTION_COPY_SYSTEM, temperature: .35 }));
+    cp.promotionCandidates = reviewed.candidates.map(copy => ({ ...copy, voiceover: composeCopy(copy), recommended: copy.id === reviewed.recommendedId }));
+    cp.recommendedCopyId = reviewed.recommendedId;
+    cp.promotionCopy = cp.promotionCandidates.find(copy => copy.id === reviewed.recommendedId) ?? cp.promotionCandidates[0];
+    await save("copy_review", "promotion_copy", JSON.stringify({ recommendedId: cp.recommendedCopyId, candidates: cp.promotionCandidates }));
     await db.update(autoEditRuns).set({ status: "waiting_input", error: null }).where(scope);
     return;
   }

@@ -38,7 +38,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       await cancelAutoEdit(body.runId, id);
       return NextResponse.json({ ok: true });
     }
-    if (!["start", "analyze", "approve-copy", "retry", "revise", "candidates", "export", "manual"].includes(body.action)) throw new Error("Unsupported action");
+    if (!["start", "analyze", "rewrite-copy", "approve-copy", "retry", "revise", "candidates", "export", "manual"].includes(body.action)) throw new Error("Unsupported action");
     const isNew = body.action === "start" || body.action === "analyze";
     const parent = !isNew && body.runId && ID.test(body.runId) ? (await db.select().from(autoEditRuns).where(and(eq(autoEditRuns.id, body.runId), eq(autoEditRuns.projectId, id))))[0] : undefined;
     if (!isNew && !parent) throw new Error("任务不存在 / Run not found");
@@ -48,7 +48,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const [source] = await db.select().from(mediaSources).where(and(eq(mediaSources.id, sourceId), eq(mediaSources.projectId, id)));
     if (!source) throw new Error("素材不存在 / Source not found");
     validateSource(source.duration / 1000, source.sizeBytes);
-    const brief = parseBrief(["export", "retry", "approve-copy"].includes(body.action) ? parent!.brief : body.brief ?? parent?.brief);
+    const brief = parseBrief(["export", "retry", "approve-copy", "rewrite-copy"].includes(body.action) ? parent!.brief : body.brief ?? parent?.brief);
+    if ((body.action === "analyze" || body.action === "start") && !brief.promotion?.subject) throw new Error("请填写商品或服务 / Enter the product or service");
     const credentials = body.credentials as Credentials;
     const exportOperation = body.action === "export" || (body.action === "retry" && parent?.checkpoint.operation === "export");
     if (!exportOperation && (!credentials?.llm?.baseUrl || !credentials.llm.model || !credentials.llm.visionModel)) throw new Error("请配置文本和画面理解模型 / Configure text and visual understanding models");
@@ -67,15 +68,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const requestKey = createHash("sha256").update(`${id}:${body.requestId}`).digest("hex");
     const [existing] = await db.select().from(autoEditRuns).where(eq(autoEditRuns.requestKey, requestKey));
     if (existing) return NextResponse.json({ runId: existing.id }, { status: 202 });
-    const cp: Checkpoint = { operation: body.action === "export" ? "export" : body.action === "manual" ? "manual" : body.action === "candidates" || body.action === "approve-copy" ? "candidates" : body.action === "analyze" ? "analysis" : "auto", history: [], repairs: 0 };
+    const cp: Checkpoint = { operation: body.action === "export" ? "export" : body.action === "manual" ? "manual" : body.action === "candidates" || body.action === "approve-copy" ? "candidates" : body.action === "analyze" || body.action === "rewrite-copy" ? "analysis" : "auto", history: [], repairs: 0 };
     if (parent) {
       cp.analysis = parent.checkpoint.analysis;
       cp.sourceHash = parent.checkpoint.sourceHash;
       cp.plan = parent.checkpoint.plan;
       cp.voices = parent.checkpoint.voices;
       cp.promotionCopy = parent.checkpoint.promotionCopy;
+      cp.promotionCandidates = parent.checkpoint.promotionCandidates;
+      cp.recommendedCopyId = parent.checkpoint.recommendedCopyId;
       if (body.action === "export") cp.inheritedReview = parent.checkpoint.checks?.review;
       cp.history.push({ at: new Date().toISOString(), action: body.action, detail: `基于版本 ${parent.id} / Based on saved version` });
+    }
+    if (body.action === "rewrite-copy") {
+      if (!cp.analysis) throw new Error("请先完成素材分析 / Analyze the source first");
+      cp.promotionCopy = undefined;
+      cp.promotionCandidates = undefined;
+      cp.recommendedCopyId = undefined;
+      cp.copyRevision = typeof body.rewriteInstruction === "string" ? body.rewriteInstruction.trim().slice(0, 1000) : "";
     }
     if (body.action === "approve-copy") cp.promotionCopy = parsePromotionCopy(body.copy);
     if (body.action === "export" && (!cp.plan || !["done", "needs_review"].includes(parent!.status))) throw new Error("请先完成可用成片 / Finish a render first");

@@ -14,6 +14,7 @@ export const products: NamespaceMessages = {
     navTitle: "商品库",
     backHome: "返回首页",
     // 页面标题
+    pageTitle: "商品库",
     pageTitleAccent: "商品",
     pageTitleRest: "资产",
     pageSubtitle: "保存可复用的商品资料，让后续创作和批量制作更快开始。",
@@ -73,6 +74,7 @@ export const products: NamespaceMessages = {
     categoryOther: "Other",
     navTitle: "Products",
     backHome: "Back to home",
+    pageTitle: "Products",
     pageTitleAccent: "Product",
     pageTitleRest: " assets",
     pageSubtitle: "Save reusable product details so new projects and batch production can start faster.",

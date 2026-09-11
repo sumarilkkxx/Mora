@@ -1,5 +1,7 @@
 "use client";
 
+import { PageHeader } from "@/components/studio/page";
+
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { LuUpload, LuX, LuCircleAlert, LuZap, LuUser, LuUserX, LuBox, LuLayoutGrid, LuEye, LuVideo, LuBookmark, LuLink2, LuLoader } from "react-icons/lu";
@@ -649,16 +651,9 @@ export default function NewProjectPage() {
 
   return (
     <div className="min-h-screen grid-bg legacy-studio-page">
-      <main className="mx-auto max-w-2xl px-6 py-10">
+      <main className="studio-page max-w-2xl">
         {/* page title */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight">
-            {t("pageTitlePrefix")}<span className="brand-gradient-text">{t("pageTitleAccent")}</span>
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1.5">
-            {t("pageSubtitle")}
-          </p>
-        </div>
+        <PageHeader title={<>{t("pageTitlePrefix")}{t("pageTitleAccent")}</>} description={t("pageSubtitle")} />
 
         {/* LLM not configured warning */}
         {!isLLMConfigured && (

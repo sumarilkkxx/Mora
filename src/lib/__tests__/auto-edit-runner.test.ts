@@ -28,7 +28,7 @@ vi.mock("../video-composer/frame-extract", () => ({ extractFirstFrame: async () 
 import { cancelAutoEdit, recoverAutoEdits, startAutoEdit } from "../auto-edit/runner";
 import { GET, POST } from "../../app/api/project/[id]/auto-edit/route";
 
-const brief: EditBrief = { instruction: "展示原视频", target: 15, aspect: "9:16", audio: "muted", style: "auto", captions: true, locale: "zh" };
+const brief: EditBrief = { promotion: { subject: "测试服务", audience: "目标顾客", sellingPoints: "画面可见特点", action: "了解详情" }, instruction: "展示原视频", target: 15, aspect: "9:16", audio: "muted", style: "auto", captions: true, locale: "zh" };
 const analysis: Analysis = { version: 1, summary: "测试画面", style: "展示", scenes: [{ start: 0, end: 10, text: "画面", uncertainty: "采样", evidence: [0] }], speech: [], sampledAt: [0], warnings: [] };
 const plan: EditPlan = { version: 1, title: "展示", explanation: "test", clips: [{ sourceId: "s", start: 0, end: 5, speed: 1, fit: "contain", transition: "cut", text: "画面", reason: "test", evidence: "0s" }] };
 const credentials = { llm: { baseUrl: "http://localhost:9999/v1", apiKey: "private-test-key", model: "text", visionModel: "vision" } };

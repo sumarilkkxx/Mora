@@ -20,7 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Notice } from "@/components/ui/notice";
-import { PageFrame } from "@/components/studio/page";
+import { PageFrame, PageHeader } from "@/components/studio/page";
 import { useLocale, useT } from "@/lib/i18n";
 import { decodeAudioForAsr } from "@/lib/browser-audio";
 import {
@@ -322,19 +322,11 @@ export default function TranscriptPage() {
 
   return (
     <PageFrame width="full" className="max-w-7xl">
-      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
-          <Link href={`/project/${id}/assets`} className="mb-3 inline-flex min-h-8 items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+      <PageHeader variant="compact" title={t("title")} description={t("subtitle")} context={<>          <Link href={`/project/${id}/assets`} className="inline-flex min-h-8 items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
             <LuArrowLeft className="h-4 w-4" />{t("back")}
-          </Link>
-          {projectName && <p className="mb-1 truncate text-xs font-medium uppercase tracking-[0.18em] text-primary">{projectName}</p>}
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t("title")}</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{t("subtitle")}</p>
-        </div>
-        <div className="flex max-w-md items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-3 py-2.5 text-xs leading-5 text-emerald-700 dark:text-emerald-300">
+          </Link><span aria-hidden="true">/</span><span>{projectName}</span></>} actions={<div className="flex max-w-md items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-3 py-2.5 text-xs leading-5 text-emerald-700 dark:text-emerald-300">
           <LuShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />{t("localPrivacy")}
-        </div>
-      </header>
+        </div>} />
 
       {error && <Notice tone="danger" className="mb-5">{error}</Notice>}
 

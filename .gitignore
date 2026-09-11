@@ -94,6 +94,7 @@ Desktop.ini
 *~
 
 # Local agent and assistant context
+/docs/agents/*.md
 /AGENTS.md
 /CLAUDE.md
 /.claude/

@@ -1,8 +1,8 @@
 import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
+import { dirname, join } from "path";
 import { ffmpegBin } from "@/lib/ffmpeg-path";
 import { buildKaraokeAss } from "@/lib/video-composer/karaoke";
-import { resolveChineseFontFamily, withComposeSlot } from "@/lib/video-composer/composer";
+import { resolveChineseFontFamily, resolveChineseFontFile, withComposeSlot } from "@/lib/video-composer/composer";
 import { probeMedia } from "@/lib/media-probe";
 import { execMedia } from "./media";
 import { timeline, type EditBrief, type EditPlan, type Speech, type Checkpoint, type CheckResult } from "./contract";
@@ -18,7 +18,7 @@ export function captionLines(plan: EditPlan, brief: EditBrief, speech: Speech[])
 }
 export function buildRender(input: {
   source: string; plan: EditPlan; brief: EditBrief; quality: "720p" | "1080p";
-  voices: NonNullable<Checkpoint["voices"]>; bgm?: string; subtitle?: string; output: string;
+  voices: NonNullable<Checkpoint["voices"]>; bgm?: string; subtitle?: string; subtitleFontDirectory?: string; output: string;
 }) {
   const { plan, brief } = input;
   const [w, h] = outputSize(brief.aspect, input.quality);
@@ -63,7 +63,10 @@ export function buildRender(input: {
   if (input.subtitle) {
     // FFmpeg has two escaping layers: filter option value, then filter graph.
     const escaped = input.subtitle.replace(/\\/g, "/").replace(/[:'\\]/g, "\\$&").replace(/[\\'\[\],; ]/g, "\\$&");
-    filters.push(`[${video}]subtitles=filename=${escaped}[captioned]`); video = "captioned";
+    const fonts = input.subtitleFontDirectory
+      ? `:fontsdir=${input.subtitleFontDirectory.replace(/\\/g, "/").replace(/[:'\\]/g, "\\$&").replace(/[\\'\[\],; ]/g, "\\$&")}`
+      : "";
+    filters.push(`[${video}]subtitles=filename=${escaped}${fonts}[captioned]`); video = "captioned";
   }
   if (input.bgm) {
     filters.push(`[${bgmIndex}:a]aresample=44100,aformat=channel_layouts=stereo,atrim=duration=${duration},asetpts=PTS-STARTPTS,volume=0.12,afade=t=out:st=${Math.max(0, duration - 1)}:d=1[music]`);
@@ -75,15 +78,18 @@ export function buildRender(input: {
 export async function renderAutoEdit(input: Parameters<typeof buildRender>[0] & { directory: string; speech: Speech[]; signal: AbortSignal }) {
   await mkdir(input.directory, { recursive: true });
   let subtitle: string | undefined;
+  let subtitleFontDirectory: string | undefined;
   if (input.brief.captions) {
     const lines = captionLines(input.plan, input.brief, input.speech);
     if (lines.length) {
       subtitle = join(input.directory, "subtitles.ass");
+      const fontFile = resolveChineseFontFile();
+      subtitleFontDirectory = fontFile ? dirname(fontFile) : undefined;
       const [w, h] = outputSize(input.brief.aspect, input.quality);
       await writeFile(subtitle, buildKaraokeAss(lines, { fontName: resolveChineseFontFamily(), playResX: w, playResY: h, fontSize: Math.round(w * 0.04), marginV: Math.round(h * 0.13), primaryColour: "&H00FFFFFF", secondaryColour: "&H00FFFFFF", emphasizeNumbers: false }));
     }
   }
-  const inv = buildRender({ ...input, subtitle });
+  const inv = buildRender({ ...input, subtitle, subtitleFontDirectory });
   const script = join(input.directory, "render-filter.txt");
   await writeFile(script, inv.filter);
   await withComposeSlot(async () => {

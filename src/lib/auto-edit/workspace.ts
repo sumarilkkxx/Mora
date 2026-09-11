@@ -62,7 +62,8 @@ export function completedSteps(run: EditRun | undefined, plans: EditPlan[]): boo
 }
 
 export function initialDraft(run: EditRun | undefined, sourceId: string, en: boolean): WorkspaceDraft {
-  return { version: 1, sourceId: run?.sourceId ?? sourceId, bgmName: "", copy: run?.checkpoint.promotionCopy ?? EMPTY_COPY,
+  const recommended = run?.checkpoint.promotionCandidates?.find(copy => copy.id === run.checkpoint.recommendedCopyId) ?? run?.checkpoint.promotionCandidates?.find(copy => copy.recommended);
+  return { version: 1, sourceId: run?.sourceId ?? sourceId, bgmName: "", copy: run?.checkpoint.promotionCopy ?? recommended ?? EMPTY_COPY,
     brief: run?.brief ?? { instruction: "", target: 15, aspect: "9:16", audio: "voiceover", style: "auto", captions: true, locale: en ? "en" : "zh" } };
 }
 
@@ -83,6 +84,7 @@ export function readDraft(raw: string | null): WorkspaceDraft | undefined {
       || !["original", "voiceover", "muted"].includes(b.audio) || !["auto", "concise", "highlights", "story"].includes(b.style)
       || typeof b.instruction !== "string" || typeof b.captions !== "boolean" || !["zh", "en"].includes(b.locale)
       || (b.bgm !== undefined && typeof b.bgm !== "string")) return;
+    if (b.promotion !== undefined && (!b.promotion || typeof b.promotion !== "object" || !["subject", "audience", "sellingPoints", "action"].every(key => typeof b.promotion?.[key as keyof NonNullable<EditBrief["promotion"]>] === "string"))) return;
     if (!value.copy || !["title", "angle", "hook", "body", "cta", "voiceover"].every(k => typeof value.copy[k as keyof PromotionCopy] === "string")
       || !Array.isArray(value.copy.evidence) || !value.copy.evidence.every(item => typeof item === "string")) return;
     return value;

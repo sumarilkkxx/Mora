@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v0.1.1.0-087BDF?style=flat-square" alt="Version v0.1.1.0">
+  <img src="https://img.shields.io/badge/version-v0.1.2.0-087BDF?style=flat-square" alt="Version v0.1.2.0">
   <img src="https://img.shields.io/badge/license-AGPL--3.0--only-28526F?style=flat-square" alt="License AGPL-3.0-only">
   <img src="https://img.shields.io/badge/local--first-FFmpeg%20%2B%20SQLite-0D355A?style=flat-square" alt="Local-first with FFmpeg and SQLite">
   <img src="https://img.shields.io/badge/status-alpha-087BDF?style=flat-square" alt="Status alpha">
@@ -118,10 +118,13 @@ flowchart TD
 
 ### Path C: existing-footage editing
 
-`Upload → scene split/local transcription → rhythm or transcript edit → voice and captions → local render → export`
+`Upload → LLM picture/audio understanding → approve promotion copy → choose an edit plan → voice and captions → local render and review → export`
 
 - Designed for talking-head clips, shop visits, tutorials, interviews, and previously recorded vertical footage.
-- Guided editing and transcript-based cuts are both available.
+- AI Smart Edit uses a vision model to understand scenes and visible evidence, then combines the product or service, audience, confirmed selling points, and intended action into three promotion-copy directions. Users approve each stage, edit copy sections, or optionally request a rewrite.
+- After copy approval, Mora creates three explainable shot plans, marks its AI recommendation, and shows each shot's output time, source range, copy, and visual evidence.
+- The selected plan runs through voiceover, Chinese captions, local FFmpeg editing, and cloud visual review. Tasks, source footage, plans, and output versions remain traceable and recoverable.
+- Guided editing and transcript-based detailed cuts remain available.
 - Source footage, edit plans, and earlier versions stay intact for comparison and rollback.
 
 ## Where models participate
@@ -131,6 +134,7 @@ flowchart TD
 | **Write or import a script manually** | No model | Edited by the user and stored in the project. |
 | **Generate, rewrite, or review a script automatically** | Text LLM required | OpenRouter, DeepSeek, Kimi, GLM, MiniMax, Doubao, another OpenAI-compatible service, or local Ollama. |
 | **Understand product images** | Optional | Uses a vision-capable model; script generation can still continue from product name and selling points if analysis fails. |
+| **AI Smart Edit** | Text and vision LLMs required | The vision model understands source scenes and reviews the rendered result; the text model generates and reviews promotion copy. Shot planning, local transcription, voice, captions, and FFmpeg rendering run through the local workflow. |
 | **Generate new images or video shots** | Optional | Called only when the selected path needs missing visuals. |
 | **Voice** | Optional | Edge TTS, provider TTS, existing audio, or a project voice configuration. |
 | **Scene splitting, captions, and composition** | No generative model | FFmpeg/ffprobe and the local media pipeline; local transcription can be used when available. |
@@ -193,7 +197,7 @@ pnpm build
 | **Scripts and storyboards** | Structured fields, text-model scripts, manual scripts, template structures, shot rhythm, script checks, visual descriptions, creative intent, and constraints |
 | **Visual media** | Local media plus Pexels, Pixabay, Openverse, Coverr, and other adapters; image generation, image-to-video, reference-to-video |
 | **Voice and captions** | Edge TTS, provider TTS, voice and speed, burned captions, karaoke timing, BGM, ducking, subtitle export |
-| **Editing and composition** | Scene splitting, structure cloning, transcript editing, camera/look presets, FFmpeg composition, poster extraction, versions |
+| **Editing and composition** | LLM-assisted smart editing, scene understanding, promotion copy and candidate plans, AI recommendations, structure cloning, transcript editing, camera/look presets, FFmpeg composition, poster extraction, versions |
 | **Production management** | Persistent pipelines, resumable state, batches, task center, model preflight, production console, final-video QC |
 | **Export and publishing** | Platform presets, preview/download, publishing copy, media credits, AIGC labels, publishing checks |
 | **Developer surfaces** | Web UI, HTTP API, zero-dependency Node CLI, Electron shell, SQLite/Drizzle data layer |
@@ -326,14 +330,14 @@ pnpm dist:win
 pnpm dist:mac
 ```
 
-GitHub Actions includes Windows x64, macOS Apple Silicon, and macOS Intel build jobs, followed by installer verification and packaged-app smoke tests. The current `v0.1.1.0` build configuration does not enable code signing, and macOS installers are not notarized. On first launch, you may need to allow the macOS app manually in Privacy & Security.
+GitHub Actions includes Windows x64, macOS Apple Silicon, and macOS Intel build jobs, followed by installer verification and packaged-app smoke tests. The current `v0.1.2.0` build configuration does not enable code signing, and macOS installers are not notarized. On first launch, you may need to allow the macOS app manually in Privacy & Security.
 
 | Version layer | Current convention |
 | --- | --- |
-| Git tag | `v0.1.1.0` |
-| npm / Electron SemVer | `0.1.1` |
-| Windows FileVersion | `0.1.1.0` |
-| Artifacts | `Mora-Setup-v0.1.1.0-win-x64.exe` / `Mora-v0.1.1.0-mac-<arch>.dmg` |
+| Git tag | `v0.1.2.0` |
+| npm / Electron SemVer | `0.1.2` |
+| Windows FileVersion | `0.1.2.0` |
+| Artifacts | `Mora-Setup-v0.1.2.0-win-x64.exe` / `Mora-v0.1.2.0-mac-<arch>.dmg` |
 
 ## HTTP API and automation surfaces
 
@@ -342,13 +346,14 @@ GitHub Actions includes Windows x64, macOS Apple Silicon, and macOS Intel build 
 | `POST /api/llm/script` | Generate and persist a commerce script from product data and text-model configuration. |
 | `POST /api/topic/script` | Create a project from one topic and generate several narration scripts. |
 | `POST /api/project/:id/compose` | Submit a local composition and return a pollable composition record. |
+| `POST /api/project/:id/auto-edit` | Create, advance, or resume an AI Smart Edit task across analysis, copy, plans, rendering, and export. |
 | `GET /api/tasks` | Aggregate pipeline, render, cloud-generation, and batch task state. |
 | `GET /api/health` | Inspect runtime, database migration, and FFmpeg/ffprobe health. |
 | `pnpm cli -- --help` | Discover CLI commands from creation and dubbing through QC and publishing checks. |
 
 ## Known limitations
 
-`v0.1.1.0` is an alpha release with the following known limitations:
+`v0.1.2.0` is an alpha release with the following known limitations:
 
 - Login walls, client-side rendering, CAPTCHAs, anti-bot controls, and cookie isolation on Taobao, Tmall, and other marketplaces can prevent product-link ingestion. The reliable fallback today is manual product data or uploaded screenshots.
 - Automatic scripting requires a reachable text model. An unavailable endpoint, exhausted quota, or regional restriction can cause generation to fail; fully offline use requires an imported script or local Ollama.
@@ -363,7 +368,6 @@ The following features have no scheduled release dates. Priorities may change ba
 
 | Direction | Planned improvements |
 | --- | --- |
-| **LLM-assisted intelligent editing** | Add scene-semantic understanding, highlight suggestions, pacing alternatives, and explainable edit plans to the existing-footage workflow. Models propose; users can confirm, modify, and roll back. |
 | **Better product-link import** | Add official platform APIs, open interfaces, and user-authorized import methods permitted by platform terms, alongside manual data entry, screenshots, and product-library imports. |
 | **More resilient provider adapters** | Maintain capability manifests, parameter preflight checks, compatibility tests, and graceful fallbacks to reduce failures after provider changes. |
 | **Finer local post-production control** | Expand timeline, caption, voice, BGM, shot replacement, and partial re-render controls so intelligent suggestions remain editable production steps. |

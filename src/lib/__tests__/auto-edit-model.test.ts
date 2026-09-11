@@ -2,11 +2,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const request = vi.hoisted(() => vi.fn());
 vi.mock("../llm-error", async importOriginal => ({ ...await importOriginal<typeof import("../llm-error")>(), createLLMClient: () => ({ withOptions: () => ({ chat: { completions: { create: request } } }) }) }));
-import { EditModel } from "../auto-edit/model";
+import { EditModel, promotionCopyPrompt } from "../auto-edit/model";
+import type { Analysis, EditBrief } from "../auto-edit/contract";
 const config = { baseUrl: "http://localhost/v1", apiKey: "not-a-real-key", model: "text", visionModel: "vision" };
 const jsonReply = (data: unknown) => ({ choices: [{ message: { content: JSON.stringify(data) } }] });
 beforeEach(() => { request.mockReset(); });
 describe("model protocol adapter", () => {
+  it("requests distinct promotion directions without a category-specific example", () => {
+    const brief: EditBrief = { instruction: "", target: 15, aspect: "9:16", audio: "voiceover", style: "auto", captions: true, locale: "zh", promotion: { subject: "服务", audience: "", sellingPoints: "", action: "" } };
+    const analysis: Analysis = { version: 1, summary: "visible result", style: "", scenes: [], speech: [], sampledAt: [], warnings: [] };
+    const prompt = promotionCopyPrompt(brief, analysis);
+    expect(prompt).toContain("effect"); expect(prompt).toContain("scenario"); expect(prompt).toContain("explore");
+    expect(prompt).not.toContain("喜欢蓬松的大卷造型");
+  });
   it("uses native tool schemas and dispatches only named tools", async () => {
     request.mockResolvedValue({ choices: [{ message: { tool_calls: [{ id: "render-1", type: "function", function: { name: "render_edit", arguments: "{}" } }] } }] });
     const model = new EditModel(config, new AbortController().signal);

@@ -1,5 +1,7 @@
 "use client";
 
+import { PageHeader } from "@/components/studio/page";
+
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, ChevronRight, CircleDashed, CirclePlay, Clock3, LoaderCircle, RefreshCw, RotateCcw, Sparkles, Trash2 } from "lucide-react";
@@ -148,16 +150,11 @@ export default function TasksPage() {
 
   return (
     <main className="studio-page max-w-5xl">
-      <header className="flex flex-col gap-5 border-b border-border/60 pb-6 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="text-xs font-semibold tracking-[.12em] text-primary">{t("eyebrow")}</div>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{t("title")}</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{t("queueSubtitle")}</p>
-        </div>
+      <PageHeader title={t("title")} description={t("queueSubtitle")} actions={
         <button type="button" onClick={() => void refresh()} disabled={refreshing} className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-border/70 bg-card px-3.5 text-xs font-medium transition-[border-color,background-color,transform] hover:border-primary/25 hover:bg-primary/[.025] active:scale-[.98] disabled:opacity-60">
           <RefreshCw className={`size-3.5 ${refreshing ? "animate-spin" : ""}`} aria-hidden="true" />{t("refresh")}
         </button>
-      </header>
+      } />
 
       <div className="mt-5 flex items-start gap-3 rounded-2xl border border-primary/15 bg-primary/[.04] px-4 py-3 text-xs leading-5 text-muted-foreground">
         <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
