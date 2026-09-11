@@ -688,18 +688,18 @@
     var renderedProgress = 0;
     var visualCards = semanticCards.slice();
     var commerceVisuals = [
-      "194",
-      "264",
-      "313",
-      "358",
-      "368",
-      "373",
-      "424",
-      "438",
-      "459",
-      "462",
-      "475",
-      "519"
+      "542",
+      "539",
+      "538",
+      "537",
+      "536",
+      "534",
+      "533",
+      "532",
+      "531",
+      "530",
+      "529",
+      "528"
     ];
 
     function clamp(value, minimum, maximum) {

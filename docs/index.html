@@ -94,7 +94,7 @@
           </figure>
           <figure class="ph side r">
             <video src="videos/mora-guided-edit-latest.mp4" poster="videos/mora-guided-edit-latest.jpg" autoplay muted loop playsinline preload="metadata"></video>
-            <figcaption>已有视频 · 本地剪辑</figcaption>
+            <figcaption>已有视频 · AI 智能剪辑</figcaption>
             <button class="snd" type="button" aria-label="开启声音" aria-pressed="false">
               <svg class="sound-icon sound-icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4z"/><path d="M16 9.2c1.1 1.5 1.1 4.1 0 5.6M18.8 7c2.5 2.7 2.5 7.3 0 10"/></svg>
               <svg class="sound-icon sound-icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4z"/><path d="M17 10l4 4M21 10l-4 4"/></svg>
@@ -102,13 +102,13 @@
             </button>
           </figure>
         </div>
-        <p class="phones-note">三条视频对应三种真实起点：<b>现有素材直接组织</b>、<b>缺少镜头时连接外部模型</b>、以及<b>从已经拍好的视频继续剪辑</b>。理发店案例展示当前已实现的本地剪辑与渲染链路；AI 素材理解与智能选镜仍属于后续开发。</p>
+        <p class="phones-note">三条视频对应三种真实起点：<b>现有素材直接组织</b>、<b>缺少镜头时连接外部模型</b>、以及<b>从已经拍好的视频继续智能剪辑</b>。理发店案例展示已经接入的 AI 智能剪辑：理解原片、生成推广文案与候选方案，经用户逐步确认后在本地完成配音、字幕和渲染。</p>
       </div>
 
       <div class="marquee" aria-hidden="true">
         <div class="track">
-          <span>商品图输入</span><span>脚本与分镜</span><span>云端 AI 生成</span><span>本地素材合成</span><span>已有视频剪辑</span><span>FFmpeg 渲染</span><span>多平台导出</span>
-          <span>商品图输入</span><span>脚本与分镜</span><span>云端 AI 生成</span><span>本地素材合成</span><span>已有视频剪辑</span><span>FFmpeg 渲染</span><span>多平台导出</span>
+          <span>商品图输入</span><span>脚本与分镜</span><span>云端 AI 生成</span><span>本地素材合成</span><span>AI 智能剪辑</span><span>FFmpeg 渲染</span><span>多平台导出</span>
+          <span>商品图输入</span><span>脚本与分镜</span><span>云端 AI 生成</span><span>本地素材合成</span><span>AI 智能剪辑</span><span>FFmpeg 渲染</span><span>多平台导出</span>
         </div>
       </div>
     </header>
@@ -117,7 +117,7 @@
       <div class="sec-head"><span class="no">01</span><span class="tag">怎么用</span><h2>从输入开始，<br>三步走到可交付视频</h2></div>
       <div class="steps stagger">
         <article class="step-card"><span class="tc">商品图 / 本地素材 / 已有视频</span><h3>把你已经拥有的内容带进来</h3><p>导入商品信息、图片、音频或实拍视频。Mora 先建立项目关系并保存目标，不会因为创建任务就改变源文件。</p></article>
-        <article class="step-card"><span class="tc">先确认路径，再执行任务</span><h3>选择生成、合成或继续剪辑</h3><p>素材不够时按需连接外部模型；素材够用时直接在本地组织；已有视频则进入本地剪辑。云端调用与本地处理始终清楚区分。</p></article>
+        <article class="step-card"><span class="tc">先确认路径，再执行任务</span><h3>选择生成、合成或智能剪辑</h3><p>素材不够时按需连接外部模型；素材够用时直接在本地组织；已有视频可以先由 AI 理解并给出文案与剪辑方案，再逐步确认。云端调用与本地处理始终清楚区分。</p></article>
         <article class="step-card"><span class="tc">配音 / 字幕 / BGM / 导出</span><h3>回到本地完成并保留版本</h3><p>画面与声音进入同一条后期链路，通过 FFmpeg 生成独立输出。原始素材、任务记录和历史成片继续留在项目中。</p></article>
       </div>
     </section>
@@ -152,9 +152,9 @@
               <div class="feature-card-media"><img src="assets/gpt-image2/case454.jpg" alt="GPT-Image2 画廊中的食品包装广告示例" loading="lazy" draggable="false"><span>04 / 本地合成</span></div>
               <div class="feature-card-body"><p>本地合成</p><h3>已有素材直接成片</h3><p>直接完成镜头组织、字幕、转场、画幅与本地渲染。</p><ul><li>素材复用</li><li>字幕与声音</li><li>本地输出</li></ul></div>
             </article>
-            <article class="feature-deck-card" data-kicker="已有视频剪辑" data-title="从已经拍好的视频继续剪辑" data-summary="根据本地剪辑方案完成字幕与渲染，输出新版本并保留原片。" data-tags="已有视频|保留原片|新版本">
-              <div class="feature-card-media"><img src="assets/gpt-image2/case485.jpg" alt="GPT-Image2 画廊中的时尚电商画册示例" loading="lazy" draggable="false"><span>05 / 已有视频剪辑</span></div>
-              <div class="feature-card-body"><p>已有视频</p><h3>从原片继续，而不是重新开始</h3><p>当前链路支持本地剪辑、字幕和渲染，并保留原始素材。</p><ul><li>剪辑方案</li><li>保留原片</li><li>本地渲染</li></ul></div>
+            <article class="feature-deck-card" data-kicker="AI 智能剪辑" data-title="从已经拍好的视频继续创作" data-summary="AI 理解原片并生成推广文案与三套剪辑方案，逐步确认后在本地输出新版本，同时保留原片。" data-tags="视频理解|逐步确认|保留原片">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case485.jpg" alt="GPT-Image2 画廊中的时尚电商画册示例" loading="lazy" draggable="false"><span>05 / AI 智剪</span></div>
+              <div class="feature-card-body"><p>已有视频</p><h3>从原片继续，而不是重新开始</h3><p>模型负责理解、文案和候选方案，本地链路负责配音、字幕、剪辑与渲染。</p><ul><li>AI 推荐</li><li>保留原片</li><li>本地成片</li></ul></div>
             </article>
             <article class="feature-deck-card" data-kicker="脚本与分镜" data-title="脚本与分镜在执行前先对齐" data-summary="商品事实、创作意图、台词、镜头和素材候选始终保持关联。" data-tags="脚本|分镜|素材候选">
               <div class="feature-card-media"><img src="assets/gpt-image2/case237.jpg" alt="GPT-Image2 画廊中的夏日汽水广告示例" loading="lazy" draggable="false"><span>06 / 脚本与分镜</span></div>
@@ -184,9 +184,9 @@
               <div class="feature-card-media"><img src="assets/gpt-image2/case462.jpg" alt="GPT-Image2 画廊中的玩具包装商品示例" loading="lazy" draggable="false"><span>12 / 多种入口</span></div>
               <div class="feature-card-body"><p>运行入口</p><h3>网页、桌面与本地自动化</h3><p>既能在界面里制作，也能在私有环境中接入自动化流程。</p><ul><li>桌面应用</li><li>私有部署</li><li>本地接口</li></ul></div>
             </article>
-            <article class="feature-deck-card feature-card-future" data-kicker="后续能力" data-title="智能剪辑会建立在现有本地链路上" data-summary="内容理解、镜头选择与节奏建议属于后续开发，目前不描述为已完成能力。" data-tags="后续开发|素材理解|智能选镜">
-              <div class="feature-card-media"><img src="assets/gpt-image2/case519.jpg" alt="GPT-Image2 画廊中的香氛产品视觉示例" loading="lazy" draggable="false"><span>13 / 后续能力</span></div>
-              <div class="feature-card-body"><p>后续开发</p><h3>AI 素材理解与智能剪辑</h3><p>未来能力会从已有视频和现有剪辑链路继续生长，而不是另做一套孤立工具。</p><ul><li>素材理解</li><li>镜头选择</li><li>节奏建议</li></ul></div>
+            <article class="feature-deck-card" data-kicker="AI 智能剪辑" data-title="从内容理解到镜头方案，逐步确认" data-summary="视觉模型理解原片，文本模型生成推广文案与三套剪辑方案；确认后由本地链路完成配音、字幕和渲染。" data-tags="素材理解|推广文案|AI 推荐">
+              <div class="feature-card-media"><img src="assets/gpt-image2/case519.jpg" alt="GPT-Image2 画廊中的香氛产品视觉示例" loading="lazy" draggable="false"><span>13 / AI 智剪</span></div>
+              <div class="feature-card-body"><p>逐步确认</p><h3>AI 素材理解与智能剪辑</h3><p>从视频解析、推广文案到候选剪辑方案，每一步都可确认和调整，再进入本地成片链路。</p><ul><li>视频理解</li><li>三套方案</li><li>本地成片</li></ul></div>
             </article>
           </div>
         </div>
@@ -251,28 +251,28 @@
 
           <div class="workflow-stack-viewport" aria-label="Mora 六步工作流">
             <div class="workflow-stack-cards" data-workflow-cards>
-              <figure class="workflow-card" data-source-case="332" data-kicker="项目起点" data-title="项目工作台" data-summary="商品、主题与已有素材从这里进入，先建立一套不会散落的项目关系。">
-                <div class="workflow-card-media"><img src="assets/gpt-image2/case332.png" alt="茶饮产品宣传视觉示例" loading="lazy"></div>
+              <figure class="workflow-card" data-source-case="544" data-kicker="项目起点" data-title="项目工作台" data-summary="商品、主题与已有素材从这里进入，先建立一套不会散落的项目关系。">
+                <div class="workflow-card-media"><img src="assets/gpt-image2/case544.jpg" alt="GPT-Image2 画廊案例 544：结构化学习卡" loading="lazy"></div>
                 <figcaption><b>01</b><span>项目工作台<small>整理目标、素材与项目边界</small></span></figcaption>
               </figure>
-              <figure class="workflow-card" data-source-case="190" data-kicker="制作计划" data-title="脚本与分镜" data-summary="执行前先确认内容结构、镜头关系和制作路径，让生成与剪辑都从同一份计划出发。">
-                <div class="workflow-card-media"><img src="assets/gpt-image2/case190.jpg" alt="咖啡机电商产品展示示例" loading="lazy"></div>
+              <figure class="workflow-card" data-source-case="487" data-kicker="制作计划" data-title="脚本与分镜" data-summary="执行前先确认内容结构、镜头关系和制作路径，让生成与剪辑都从同一份计划出发。">
+                <div class="workflow-card-media"><img src="assets/gpt-image2/case487.jpg" alt="GPT-Image2 画廊案例 487：商业视频分镜" loading="lazy"></div>
                 <figcaption><b>02</b><span>脚本与分镜<small>先确认内容，再开始执行</small></span></figcaption>
               </figure>
-              <figure class="workflow-card" data-source-case="237" data-kicker="素材关系" data-title="素材工作区" data-summary="候选镜头、参考画面与项目资产留在一起，后续修改不必重新寻找上下文。">
-                <div class="workflow-card-media"><img src="assets/gpt-image2/case237.jpg" alt="夏日柑橘苏打广告示例" loading="lazy"></div>
+              <figure class="workflow-card" data-source-case="535" data-kicker="素材关系" data-title="素材工作区" data-summary="候选镜头、参考画面与项目资产留在一起，后续修改不必重新寻找上下文。">
+                <div class="workflow-card-media"><img src="assets/gpt-image2/case535.jpg" alt="GPT-Image2 画廊案例 535：多素材造型图集" loading="lazy"></div>
                 <figcaption><b>03</b><span>素材工作区<small>保留候选、参考与资产关系</small></span></figcaption>
               </figure>
-              <figure class="workflow-card" data-source-case="257" data-kicker="按需生成" data-title="AI 视频" data-summary="只有项目缺少新镜头时才连接外部模型，任务状态与返回结果继续归档在当前项目。">
-                <div class="workflow-card-media"><img src="assets/gpt-image2/case257.jpg" alt="汉服直播带货画面示例" loading="lazy"></div>
+              <figure class="workflow-card" data-source-case="540" data-kicker="按需生成" data-title="AI 视频" data-summary="只有项目缺少新镜头时才连接外部模型，任务状态与返回结果继续归档在当前项目。">
+                <div class="workflow-card-media"><img src="assets/gpt-image2/case540.jpg" alt="GPT-Image2 画廊案例 540：未来城市视觉" loading="lazy"></div>
                 <figcaption><b>04</b><span>AI 视频<small>需要新镜头时再连接模型</small></span></figcaption>
               </figure>
-              <figure class="workflow-card" data-source-case="485" data-kicker="原片继续" data-title="本地剪辑" data-summary="已经拍好的视频直接进入本地链路，完成组织、字幕和渲染，不覆盖源文件。">
-                <div class="workflow-card-media"><img src="assets/gpt-image2/case485.jpg" alt="时尚目录电商拼贴示例" loading="lazy"></div>
+              <figure class="workflow-card" data-source-case="541" data-kicker="原片继续" data-title="本地剪辑" data-summary="已经拍好的视频先由 AI 理解并给出候选方案，再经用户确认进入本地配音、字幕与渲染链路。">
+                <div class="workflow-card-media"><img src="assets/gpt-image2/case541.jpg" alt="GPT-Image2 画廊案例 541：混合媒介编辑卡" loading="lazy"></div>
                 <figcaption><b>05</b><span>本地剪辑<small>从已有视频继续完成</small></span></figcaption>
               </figure>
-              <figure class="workflow-card" data-source-case="454" data-kicker="独立输出" data-title="导出与交付" data-summary="成片、质检结果和发布衍生物从同一个项目导出，每次结果都有独立版本。">
-                <div class="workflow-card-media"><img src="assets/gpt-image2/case454.jpg" alt="旅行美食薯片广告示例" loading="lazy"></div>
+              <figure class="workflow-card" data-source-case="543" data-kicker="独立输出" data-title="导出与交付" data-summary="成片、质检结果和发布衍生物从同一个项目导出，每次结果都有独立版本。">
+                <div class="workflow-card-media"><img src="assets/gpt-image2/case543.jpg" alt="GPT-Image2 画廊案例 543：旅行纪念成品" loading="lazy"></div>
                 <figcaption><b>06</b><span>导出与交付<small>让每个结果都可回看</small></span></figcaption>
               </figure>
             </div>
@@ -308,10 +308,10 @@
       <div class="faq-list">
         <details open><summary>Mora 会要求把所有素材上传到云端吗？</summary><p>不会。本地素材合成与已有视频剪辑可以留在本机处理；只有在你选择生成新镜头时，才会按项目配置连接外部模型。</p></details>
         <details><summary>已有素材可以不调用 AI 直接成片吗？</summary><p>可以。图片、视频、音频和文案足够时，Mora 可以直接组织镜头、配音、字幕、BGM 与画幅，并通过本地 FFmpeg 输出视频。</p></details>
-        <details><summary>现在已经支持 AI 智能剪辑了吗？</summary><p>当前支持根据本地剪辑方案对已有视频完成字幕和渲染。AI 素材理解、镜头选择与节奏建议仍是后续开发内容，网站不会把它描述成已经完成。</p></details>
+        <details><summary>现在已经支持 AI 智能剪辑了吗？</summary><p>支持。导入已有视频后，视觉模型会理解画面与声音，文本模型会结合推广对象和目标生成三版文案与三套剪辑方案，并标出 AI 推荐。你可以逐步确认、修改或选填要求重写，再由本地链路完成配音、字幕和渲染。</p></details>
         <details><summary>生成能力绑定某一家模型平台吗？</summary><p>不绑定。Mora 采用 BYOK 思路，外部模型平台由你配置，调用费用由对应平台按实际使用收取。</p></details>
         <details><summary>云端生成失败后会丢失项目吗？</summary><p>项目本身不会因此消失。Mora 会保存外部任务 ID、当前状态和失败原因，方便继续查询、重试或改走本地路径。</p></details>
-        <details><summary>理发店视频展示的是什么能力？</summary><p>它展示的是把本地已有视频带入剪辑链路，根据当前剪辑方案完成字幕与渲染，并输出独立版本。它不是对未来 AI 智能选镜能力的演示。</p></details>
+        <details><summary>理发店视频展示的是什么能力？</summary><p>它展示 AI 智能剪辑的完整路径：模型理解原片，结合门店服务和目标顾客生成推广文案与候选镜头方案，用户逐步确认后，本地完成配音、字幕、剪辑和独立版本输出。</p></details>
         <details><summary>项目如何运行？</summary><p>Mora 面向本地或私有环境，可通过 Web、Electron、Docker、CLI 与 HTTP API 使用。具体安装步骤将在下一阶段的中英文 README 中完整整理。</p></details>
       </div>
     </section>
@@ -330,6 +330,6 @@
   </footer>
 </div>
 
-  <script src="landing.js?v=last-call-spark-1"></script>
+  <script src="landing.js?v=workflow-images-2"></script>
 </body>
 </html>
