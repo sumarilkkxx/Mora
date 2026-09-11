@@ -1,6 +1,6 @@
 {
   "name": "mora",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MORA — Multimodal Orchestration for Retail Automation",
   "private": true,
   "license": "AGPL-3.0-only",
@@ -76,7 +76,7 @@
   "build": {
     "appId": "com.mora.app",
     "productName": "Mora",
-    "buildVersion": "0.1.1.0",
+    "buildVersion": "0.1.2.0",
     "npmRebuild": false,
     "compression": "maximum",
     "directories": {
@@ -100,8 +100,8 @@
       "category": "public.app-category.video",
       "identity": null,
       "hardenedRuntime": false,
-      "bundleShortVersion": "0.1.1",
-      "bundleVersion": "0.1.1",
+      "bundleShortVersion": "0.1.2",
+      "bundleVersion": "0.1.2",
       "artifactName": "${productName}-v${version}.0-mac-${arch}.${ext}",
       "icon": "electron/icon.png"
     },

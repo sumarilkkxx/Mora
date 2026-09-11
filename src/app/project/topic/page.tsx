@@ -1,9 +1,11 @@
 "use client";
 
+import { PageHeader } from "@/components/studio/page";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LuSparkles, LuCircleAlert, LuLoaderCircle, LuWandSparkles } from "react-icons/lu";
+import { LuCircleAlert, LuLoaderCircle, LuWandSparkles } from "react-icons/lu";
 import { useSettingsStore } from "@/lib/stores/settings-store";
 import { useT } from "@/lib/i18n";
 import { Card, CardContent } from "@/components/ui/card";
@@ -90,18 +92,9 @@ export default function TopicProjectPage() {
 
   return (
     <div className="min-h-screen grid-bg legacy-studio-page">
-      <main className="mx-auto max-w-2xl px-6 py-10">
+      <main className="studio-page max-w-2xl">
         {/* page title */}
-        <div className="mb-8">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-            <LuSparkles className="w-3.5 h-3.5" />
-            {t("heroBadge")}
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight mb-2">{t("heroTitle")}</h1>
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            {t("heroSubtitle")}
-          </p>
-        </div>
+        <PageHeader title={t("heroTitle")} description={t("heroSubtitle")} />
 
         {/* LLM not configured guidance */}
         {!isLLMConfigured && (

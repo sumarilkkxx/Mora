@@ -27,18 +27,20 @@ export function PageFrame({
 export function PageHeader({
   title,
   description,
-  eyebrow,
+  context,
+  variant = "default",
   actions,
 }: {
   title: ReactNode;
   description?: ReactNode;
-  eyebrow?: ReactNode;
+  context?: ReactNode;
+  variant?: "default" | "compact";
   actions?: ReactNode;
 }) {
   return (
-    <header className="studio-page-header">
-      <div className="min-w-0">
-        {eyebrow && <div className="studio-eyebrow">{eyebrow}</div>}
+    <header className="studio-page-header" data-variant={variant}>
+      {context && <div className="studio-page-context">{context}</div>}
+      <div className="studio-page-heading">
         <h1 className="studio-title">{title}</h1>
         {description && <p className="studio-subtitle">{description}</p>}
       </div>

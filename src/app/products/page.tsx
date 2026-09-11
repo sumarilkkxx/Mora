@@ -1,5 +1,7 @@
 "use client";
 
+import { PageHeader } from "@/components/studio/page";
+
 import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { LuPlus, LuTrash2, LuPencil, LuPackage, LuImage, LuX, LuVideo, LuCircleAlert, LuLink, LuLoader } from "react-icons/lu";
@@ -314,18 +316,9 @@ export default function ProductsPage() {
 
   return (
     <div className="min-h-screen grid-bg legacy-studio-page">
-      <main className="mx-auto max-w-6xl px-6 py-10">
+      <main className="studio-page max-w-6xl">
         {/* Page title + add button */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              <span className="brand-gradient-text">{t("pageTitleAccent")}</span>{t("pageTitleRest")}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t("pageSubtitle")}
-            </p>
-          </div>
-          {!isFormOpen && (
+        <PageHeader title={t("pageTitle")} description={t("pageSubtitle")} actions={!isFormOpen && (
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -348,8 +341,7 @@ export default function ProductsPage() {
                 {t("addProduct")}
               </Button>
             </div>
-          )}
-        </div>
+          )} />
 
         {/* post-confirm shortcut: the freshly stocked library feeds straight into batch rendering */}
         {importedNotice && !isFormOpen && (

@@ -1,5 +1,7 @@
 "use client";
 
+import { PageHeader } from "@/components/studio/page";
+
 import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -386,16 +388,9 @@ export default function ClonePage() {
 
   return (
     <div className="min-h-screen grid-bg legacy-studio-page">
-      <main className="mx-auto max-w-4xl px-6 py-10">
+      <main className="studio-page max-w-4xl">
         {/* page title */}
-        <div className="mb-10 text-center">
-          <h1 className="text-3xl font-bold tracking-tight mb-3">
-            <span className="brand-gradient-text">{t("heroTitle")}</span>
-          </h1>
-          <p className="text-muted-foreground text-base max-w-lg mx-auto">
-            {t("heroSubtitle")}
-          </p>
-        </div>
+        <PageHeader title={t("heroTitle")} description={t("heroSubtitle")} />
 
         {/* trend handoff banner: guide the user from "saw a trend" to "found a reference to remix" */}
         {trendFrom && (

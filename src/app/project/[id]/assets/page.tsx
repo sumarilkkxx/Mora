@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
-import { LuZap, LuCheck, LuCircleX, LuImage, LuArrowRight, LuLoaderCircle, LuTriangleAlert, LuUpload, LuScissors } from "react-icons/lu";
+import { LuZap, LuCheck, LuCircleX, LuImage, LuArrowLeft, LuArrowRight, LuLoaderCircle, LuTriangleAlert, LuUpload, LuScissors } from "react-icons/lu";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1728,7 +1728,16 @@ export default function AssetsPage() {
             </div>
 
             {/* bottom action */}
-            <div className="mt-8 flex flex-wrap justify-end gap-2">
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-2">
+              {!auxiliaryAiWorkspace && (
+                <Link href={aiVideoStage ? `/project/${id}/assets` : `/project/${id}/script`}>
+                  <Button variant="outline" className="text-sm">
+                    <LuArrowLeft className="mr-1 h-4 w-4" />
+                    {t(aiVideoStage ? "backToAssetsStep" : "backToScript")}
+                  </Button>
+                </Link>
+              )}
+              <div className="ml-auto flex flex-wrap justify-end gap-2">
               {productionMode === "ai" && !aiVideoStage ? (
                 <Link href={allDone ? `/project/${id}/ai-video` : "#"}>
                   <Button className="brand-gradient text-white text-sm" disabled={!allDone}>
@@ -1771,6 +1780,7 @@ export default function AssetsPage() {
                   </Button>
                 </Link>
               )}
+              </div>
             </div>
           </>
         )}

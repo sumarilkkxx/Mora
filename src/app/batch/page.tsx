@@ -1,5 +1,7 @@
 "use client";
 
+import { PageHeader } from "@/components/studio/page";
+
 import { useState, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
 import { waitForBatchComposition } from "@/lib/batch-compose";
@@ -588,16 +590,9 @@ export default function BatchPage() {
 
   return (
     <div className="min-h-screen grid-bg legacy-studio-page">
-      <main className="mx-auto max-w-2xl px-6 py-10">
+      <main className="studio-page max-w-2xl">
         {/* Page title */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight">
-            <span className="brand-gradient-text">{t("heroTitle")}</span>
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1.5">
-            {t("heroSubtitle")}
-          </p>
-        </div>
+        <PageHeader title={t("heroTitle")} description={t("heroSubtitle")} />
 
         <div className="space-y-6">
           {/* interrupted-job choice: continue where it left off (default) or discard and start clean */}

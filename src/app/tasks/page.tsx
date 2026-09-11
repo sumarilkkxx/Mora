@@ -1,8 +1,10 @@
 "use client";
 
+import { PageHeader } from "@/components/studio/page";
+
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowUpRight, CheckCircle2, CircleDashed, Clock3, RefreshCw, Sparkles } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronRight, CircleDashed, CirclePlay, Clock3, LoaderCircle, RefreshCw, RotateCcw, Sparkles, Trash2 } from "lucide-react";
 import { useLocale, useT } from "@/lib/i18n";
 import { formatRelativeTime } from "@/lib/relative-time";
 import { EMPTY_TASK_FEED, taskHref, type TaskFeed, type TaskRow } from "@/lib/task-feed";
@@ -13,6 +15,7 @@ function taskHrefFromCenter(task: TaskRow): string {
 }
 
 function taskTitleKey(row: TaskRow): string {
+  if (row.kind === "auto_edit") return "kindAutoEdit";
   if (row.kind === "paid_unknown") return "kindUnknown";
   if (row.kind === "pipeline_interrupted") return "kindInterrupted";
   if (row.kind === "paid") return "kindPaid";
@@ -30,6 +33,8 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [trashing, setTrashing] = useState<string | null>(null);
+  const [trashFailed, setTrashFailed] = useState(false);
 
   const refresh = useCallback(async (quiet = false) => {
     if (!quiet) setRefreshing(true);
@@ -51,6 +56,26 @@ export default function TasksPage() {
     }
   }, []);
 
+  const moveProjectToTrash = useCallback(async (task: TaskRow) => {
+    if (!task.projectId || trashing) return;
+    setTrashing(task.projectId);
+    setTrashFailed(false);
+    try {
+      const response = await fetch(`/api/project/${task.projectId}`, { method: "DELETE", headers: { "Accept-Language": locale } });
+      if (!response.ok) throw new Error("TRASH_FAILED");
+      setFeed((current) => ({
+        active: current.active.filter((row) => row.projectId !== task.projectId),
+        attention: current.attention.filter((row) => row.projectId !== task.projectId),
+        recent: current.recent.filter((row) => row.projectId !== task.projectId),
+      }));
+      window.dispatchEvent(new CustomEvent("mora:project-updated"));
+    } catch {
+      setTrashFailed(true);
+    } finally {
+      setTrashing(null);
+    }
+  }, [locale, trashing]);
+
   useEffect(() => {
     void refresh();
     const timer = window.setInterval(() => void refresh(true), 10_000);
@@ -64,6 +89,7 @@ export default function TasksPage() {
 
   const renderTask = (task: TaskRow, tone: "active" | "attention" | "done") => {
     const Icon = tone === "attention" ? AlertTriangle : tone === "done" ? CheckCircle2 : CircleDashed;
+    const ActionIcon = tone === "attention" ? RotateCcw : tone === "done" ? CirclePlay : Clock3;
     const metadata = [
       task.projectName || task.label,
       task.provider,
@@ -73,11 +99,12 @@ export default function TasksPage() {
     ].filter(Boolean).join(" · ");
     const action = tone === "attention" ? t("handleTask") : tone === "done" ? t("openResult") : t("openTask");
 
+    const canTrash = tone !== "active" && Boolean(task.projectId) && !feed.active.some((row) => row.projectId === task.projectId);
     return (
+      <div key={`${task.kind}-${task.id}`} className="group flex min-w-0 items-center gap-1 px-2 transition-colors hover:bg-primary/[.025] sm:px-3">
       <Link
-        key={`${task.kind}-${task.id}`}
         href={taskHrefFromCenter(task)}
-        className="group flex min-w-0 items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-primary/[.025] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30 sm:px-5"
+        className="flex min-w-0 flex-1 items-center gap-3.5 px-2 py-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30"
       >
         <span className={`grid size-9 shrink-0 place-items-center rounded-xl border ${
           tone === "attention"
@@ -93,16 +120,28 @@ export default function TasksPage() {
             <strong className="truncate text-sm font-semibold text-foreground">
               {t(taskTitleKey(task), { done: task.done ?? 0, total: task.total ?? 0 })}
             </strong>
-            <span className={`size-1.5 shrink-0 rounded-full ${
-              tone === "attention" ? "bg-amber-500" : tone === "done" ? "bg-[var(--success)]" : "bg-primary animate-pulse"
-            }`} aria-hidden="true" />
           </span>
           <span className="mt-1 block truncate text-[11px] text-muted-foreground">{metadata || t("taskFallback")}</span>
         </span>
-        <span className="hidden shrink-0 items-center gap-1.5 text-[11px] font-medium text-muted-foreground transition-colors group-hover:text-primary sm:inline-flex">
-          {action}<ArrowUpRight className="size-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" />
+        <span className="hidden shrink-0 items-center gap-1.5 px-1 text-[11px] font-medium text-muted-foreground transition-colors group-hover:text-foreground sm:inline-flex">
+          <ActionIcon className={`size-3.5 ${tone === "attention" ? "text-amber-600 dark:text-amber-400" : tone === "done" ? "text-emerald-600 dark:text-emerald-400" : "text-primary"}`} aria-hidden="true" />
+          {action}
+          <ChevronRight className="size-3 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
         </span>
       </Link>
+      {canTrash ? <span className="ml-1 flex shrink-0 border-l border-border/55 pl-2">
+        <button
+          type="button"
+          title={t("moveToTrash")}
+          aria-label={t("moveToTrash")}
+          disabled={Boolean(trashing)}
+          onClick={() => void moveProjectToTrash(task)}
+          className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground/45 transition-[background-color,color,transform] hover:bg-muted/70 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/20 active:scale-[.94] disabled:opacity-45"
+        >
+          {trashing === task.projectId ? <LoaderCircle className="size-3.5 animate-spin motion-reduce:animate-none" /> : <Trash2 className="size-3.5" />}
+        </button>
+      </span> : null}
+      </div>
     );
   };
 
@@ -111,16 +150,11 @@ export default function TasksPage() {
 
   return (
     <main className="studio-page max-w-5xl">
-      <header className="flex flex-col gap-5 border-b border-border/60 pb-6 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="text-xs font-semibold tracking-[.12em] text-primary">{t("eyebrow")}</div>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{t("title")}</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{t("queueSubtitle")}</p>
-        </div>
+      <PageHeader title={t("title")} description={t("queueSubtitle")} actions={
         <button type="button" onClick={() => void refresh()} disabled={refreshing} className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-border/70 bg-card px-3.5 text-xs font-medium transition-[border-color,background-color,transform] hover:border-primary/25 hover:bg-primary/[.025] active:scale-[.98] disabled:opacity-60">
           <RefreshCw className={`size-3.5 ${refreshing ? "animate-spin" : ""}`} aria-hidden="true" />{t("refresh")}
         </button>
-      </header>
+      } />
 
       <div className="mt-5 flex items-start gap-3 rounded-2xl border border-primary/15 bg-primary/[.04] px-4 py-3 text-xs leading-5 text-muted-foreground">
         <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
@@ -128,6 +162,7 @@ export default function TasksPage() {
       </div>
 
       {failed ? <div className="mt-5 rounded-2xl border border-destructive/20 bg-destructive/[.05] px-4 py-3 text-sm text-destructive">{t("loadFailed")}</div> : null}
+      {trashFailed ? <div role="alert" className="mt-5 rounded-2xl border border-destructive/20 bg-destructive/[.05] px-4 py-3 text-sm text-destructive">{t("trashFailed")}</div> : null}
 
       <section className="mt-7 overflow-hidden rounded-[22px] border border-border/65 bg-card shadow-[0_14px_38px_rgba(42,74,105,.06)]" aria-labelledby="current-tasks-title">
         <div className="flex items-center justify-between gap-4 border-b border-border/55 px-4 py-4 sm:px-5">

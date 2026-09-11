@@ -26,6 +26,13 @@ next-env.d.ts
 /TUTORIAL.md
 /TUTORIAL.en.md
 
+# Local AI auto-edit development plan
+/docs/ai-auto-edit-development-plan.md
+/docs/design.md
+/docs/ai-edit-redesign-plan.md
+/docs/interface-design.md
+/docs/ai-auto-edit-acceptance.md
+
 # Generated test output
 /coverage/
 /.nyc_output/
@@ -87,6 +94,7 @@ Desktop.ini
 *~
 
 # Local agent and assistant context
+/docs/agents/*.md
 /AGENTS.md
 /CLAUDE.md
 /.claude/

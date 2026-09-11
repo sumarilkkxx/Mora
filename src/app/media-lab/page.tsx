@@ -148,7 +148,7 @@ export default function MediaLabPage() {
 
   return (
     <PageFrame width="wide">
-      <PageHeader eyebrow={t("eyebrow")} title={t("title")} description={t("subtitle")} />
+      <PageHeader title={t("eyebrow")} description={t("subtitle")} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(300px,0.8fr)_minmax(0,1.2fr)]">
         <section aria-label={t("choose")} className="space-y-4">

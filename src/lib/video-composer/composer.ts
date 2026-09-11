@@ -3,8 +3,9 @@ import { getDataDir } from "@/lib/paths";
 import { ffmpegBin } from "@/lib/ffmpeg-path";
 import { mkdir, writeFile, rm } from "fs/promises";
 import { existsSync } from "fs";
-import { TRANSITIONS, type TransitionMode } from "./transitions";
+import type { TransitionMode } from "./transitions";
 import { MOTIONS, DEFAULT_MOTION } from "./motions";
+import { localMotionFilter, type LocalMotionPlan } from "./local-motion";
 import { safeEncodeParams } from "@/lib/compose-presets";
 import { createLimiter } from "@/lib/concurrency";
 import { buildAigcMetadataArgs, buildAigcMetadataArgv } from "@/lib/compliance-metadata";
@@ -382,6 +383,8 @@ export interface ClipInput {
   duration: number; // seconds
   transition: string; // transition type
   motion?: string; // image type only — camera motion effect
+  /** Resolved local-image motion. New compose requests provide this after reading the shot camera direction. */
+  motionPlan?: LocalMotionPlan;
   /** whether this clip contains native audio (model-generated video with built-in voice-over) */
   hasAudio?: boolean;
   /** path to the TTS voice-over audio file for this clip; aligned to clip duration (padded with silence if shorter, trimmed if longer) */
@@ -476,6 +479,9 @@ function assembleComposeGraph(config: ComposeConfig): ComposeGraph {
       // product image + motion effect. falls back to default motion when the motion key is invalid; never skips the clip
       // (otherwise the inputs/filter count would mismatch the [v${i}] references in the concat below, crashing ffmpeg)
       const motion = (clip.motion && MOTIONS[clip.motion]) || MOTIONS[DEFAULT_MOTION];
+      const motionFilter = clip.motionPlan
+        ? localMotionFilter(clip.motionPlan, width * 2, height * 2, clip.duration)
+        : motion.getFilter(width * 2, height * 2, clip.duration);
       // .gif goes through ffmpeg's gif demuxer, which rejects the image2-only `-loop` option
       // (a hard error since ffmpeg 8; free stock libraries do return GIFs). The flags are
       // redundant anyway: the filter chain trims to frame 1 and zoompan+tpad generate the full
@@ -495,7 +501,22 @@ function assembleComposeGraph(config: ComposeConfig): ComposeGraph {
       // output resolution slow pans/zooms stutter one hard pixel at a time and magnified frames sample
       // an already-downscaled image. Running zoompan on a doubled canvas halves the step size (sub-pixel
       // at output scale) and keeps detail for zoom>1, then one lanczos downscale smooths everything.
-      filterParts.push(`[${i}:v]scale=${width * 2}:${height * 2}:force_original_aspect_ratio=decrease,pad=${width * 2}:${height * 2}:(ow-iw)/2:(oh-ih)/2,trim=end_frame=1,setpts=PTS-STARTPTS,${motion.getFilter(width * 2, height * 2, clip.duration)},scale=${width}:${height}:flags=lanczos,tpad=stop_mode=clone:stop_duration=${clip.duration},trim=duration=${clip.duration},setpts=PTS-STARTPTS,${SEGMENT_NORM}[v${i}]`);
+      const finish = `${motionFilter},scale=${width}:${height}:flags=lanczos,tpad=stop_mode=clone:stop_duration=${clip.duration},trim=duration=${clip.duration},setpts=PTS-STARTPTS,${SEGMENT_NORM}[v${i}]`;
+      if (clip.motionPlan?.productSafe) {
+        // Preserve the complete product silhouette while still filling the requested canvas:
+        // a blurred cover layer fills any aspect-ratio bars and a sharp contain layer stays centered.
+        // Motion is applied after the two layers are flattened, so they travel as one coherent frame.
+        filterParts.push(`[${i}:v]trim=end_frame=1,setpts=PTS-STARTPTS,split=2[imgbg${i}][imgfg${i}]`);
+        filterParts.push(`[imgbg${i}]scale=${width * 2}:${height * 2}:force_original_aspect_ratio=increase,crop=${width * 2}:${height * 2},boxblur=20:1[imgbgready${i}]`);
+        filterParts.push(`[imgfg${i}]scale=${width * 2}:${height * 2}:force_original_aspect_ratio=decrease[imgfgready${i}]`);
+        filterParts.push(`[imgbgready${i}][imgfgready${i}]overlay=(W-w)/2:(H-h)/2,${finish}`);
+      } else if (clip.motionPlan) {
+        // Editorial/non-product stills may fill the frame and use the larger travel range.
+        filterParts.push(`[${i}:v]scale=${width * 2}:${height * 2}:force_original_aspect_ratio=increase,crop=${width * 2}:${height * 2},trim=end_frame=1,setpts=PTS-STARTPTS,${finish}`);
+      } else {
+        // Compatibility path for older callers/tests that still provide only the legacy motion key.
+        filterParts.push(`[${i}:v]scale=${width * 2}:${height * 2}:force_original_aspect_ratio=decrease,pad=${width * 2}:${height * 2}:(ow-iw)/2:(oh-ih)/2,trim=end_frame=1,setpts=PTS-STARTPTS,${finish}`);
+      }
     } else {
       // video clip: scale to fill + align to shot duration. real stock library videos (Wikimedia etc.) vary in length;
       // clips shorter than the shot duration would leave a black tail and cause audio/subtitle desync if only trimmed —

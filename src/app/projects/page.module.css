@@ -1,0 +1,24 @@
+.deleteButton {
+  color: var(--danger);
+  background: var(--danger-surface);
+  border: 1px solid color-mix(in srgb, var(--danger) 18%, var(--danger-surface));
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.deleteButton:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 10%, var(--danger-surface));
+  border-color: color-mix(in srgb, var(--danger) 32%, var(--danger-surface));
+}
+
+.deleteButton:focus-visible {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+}
+
+.deleteButton:disabled {
+  color: var(--muted-foreground);
+  background: var(--muted);
+  border-color: var(--border);
+  opacity: .65;
+}

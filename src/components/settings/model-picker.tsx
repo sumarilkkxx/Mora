@@ -155,7 +155,7 @@ export function ModelPicker({ value, baseUrl, apiKey, onChange, placeholder, cap
   }, [baseUrl, apiKey, capability]);
 
   const load = async () => {
-    if (models.length) { setOpen(true); return; }
+    if (models.length) { setOpen((current) => !current); return; }
     setState("loading"); setError(""); setErrorCode("");
     try {
       const res = await fetch("/api/llm/models", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ baseUrl, apiKey, capability }) });

@@ -14,6 +14,12 @@ import { getDb } from "@/lib/db";
 import { scripts as scriptsTable, assets as assetsTable, projects, compositions } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { composeVideo, resolveChineseFontFamily, type ClipInput, type ComposeConfig } from "@/lib/video-composer/composer";
+import {
+  isLocalMotionIntensity,
+  isLocalMotionKind,
+  planLocalMotionSequence,
+  type LocalMotionKind,
+} from "@/lib/video-composer/local-motion";
 import { extractFirstFrame } from "@/lib/video-composer/frame-extract";
 import { buildSubtitleTimeline, padDurationsForFade, segmentBoundaries, type TimelineSegment } from "@/lib/video-composer/timeline";
 import { buildKaraokeAss } from "@/lib/video-composer/karaoke";
@@ -279,6 +285,16 @@ export async function POST(
       videoPreset: profile.videoPreset,
       crf: profile.crf,
     };
+    const motionIntensity = isLocalMotionIntensity(body.motionIntensity) ? body.motionIntensity : "normal";
+    const productSafe = body.productSafe !== false;
+    const motionOverrides = new Map<number, LocalMotionKind>();
+    if (Array.isArray(body.motionOverrides)) {
+      for (const item of body.motionOverrides) {
+        if (item && typeof item.shotId === "number" && isLocalMotionKind(item.motion)) {
+          motionOverrides.set(item.shotId, item.motion);
+        }
+      }
+    }
 
     // AIGC explicit badge (default ON): burned "内容由 AI 生成" corner label over the opening >=2s.
     // 2026-07 platform rules require a visible AI mark (AI-synthesized audio alone also counts);
@@ -394,6 +410,25 @@ export async function POST(
       r.clip.duration = paddedDurations[i];
     });
 
+    // Resolve the complete static-image motion sequence only after durations are final.
+    // Camera prose has priority, shot type is the fallback, and the sequence planner avoids
+    // repeating the same automatic move on adjacent stills. Video clips remain untouched.
+    const imageRows = rendered.filter((r) => r.clip.type === "image");
+    const motionPlans = planLocalMotionSequence(
+      imageRows.map(({ shot }) => ({
+        shotId: shot.shotId,
+        shotType: shot.type,
+        camera: shot.camera,
+        legacyMotion: shot.motion,
+        override: motionOverrides.get(shot.shotId),
+        intensity: motionIntensity,
+        productSafe,
+      }))
+    );
+    imageRows.forEach((row, index) => {
+      row.clip.motionPlan = motionPlans[index];
+    });
+
     const clips = rendered.map((r) => r.clip);
 
     // Subtitle + overlay timeline (pure functions in timeline.ts): accumulates the rendered
@@ -504,6 +539,12 @@ export async function POST(
             version: 1,
             boundaries: segmentBoundaries(rendered.map((r) => ({ duration: r.duration, transition: r.clip.transition }))),
             total: timeline.total,
+            motions: imageRows.map((row, index) => ({
+              shotId: row.shot.shotId,
+              kind: motionPlans[index].kind,
+              intensity: motionPlans[index].intensity,
+              productSafe: motionPlans[index].productSafe,
+            })),
             // structured degradation log (TTS fallbacks / failed shots) — surfaced by tooling later
             ...(composeWarnings.length > 0 ? { warnings: composeWarnings } : {}),
           }),

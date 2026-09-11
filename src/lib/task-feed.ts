@@ -26,6 +26,8 @@ export const EMPTY_TASK_FEED: TaskFeed = { active: [], attention: [], recent: []
 
 export function taskHref(row: TaskRow): string {
   switch (row.kind) {
+    case "auto_edit":
+      return row.projectId ? `/project/${row.projectId}/auto-edit?run=${row.id}` : "/projects";
     case "batch":
       return "/batch";
     case "paid":
