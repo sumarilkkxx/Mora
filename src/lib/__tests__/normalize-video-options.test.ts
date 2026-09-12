@@ -9,8 +9,8 @@ describe("normalizeVideoOptionsForModel", () => {
       true,
     );
 
-    expect(result.options).toMatchObject({ width: 720, height: 1280, duration: 8 });
-    expect(result.adjustments).toContainEqual(expect.objectContaining({ field: "resolution", effective: "720p" }));
+    expect(result.options).toMatchObject({ width: 1080, height: 1920, duration: 8 });
+    expect(result.adjustments).not.toContainEqual(expect.objectContaining({ field: "resolution" }));
     expect(result.allowLastFrame).toBe(true);
   });
 

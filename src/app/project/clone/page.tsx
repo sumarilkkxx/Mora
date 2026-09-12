@@ -16,6 +16,8 @@ import { useSettingsStore } from "@/lib/stores/settings-store";
 import { notifyTaskSubmitted } from "@/lib/task-events";
 import { mergeCustomModels, buildVideoOptions } from "@/lib/gen-params";
 import { referenceModelFor, buildReplicatePrompt, REPLICATE_MAX_REF_SEC, type ReplicateShot } from "@/lib/replicate-plan";
+import { ATLAS_VIDEO_FAMILIES, atlasVideoFamilyId } from "@/lib/atlas-video-models";
+import { estimateVideoSpend } from "@/lib/video-spend";
 import { useT } from "@/lib/i18n";
 
 /** storyboard card data */
@@ -53,7 +55,7 @@ interface VideoModelTarget {
 export default function ClonePage() {
   const t = useT("clone");
   const router = useRouter();
-  const { llm, providers, defaultVideoModel, defaultVideoProvider, customModels, videoParams } = useSettingsStore();
+  const { llm, providers, defaultVideoModel, defaultVideoProvider, customModels, videoParams, spendCapUsd } = useSettingsStore();
 
   // video URL and analysis state
   const [videoUrl, setVideoUrl] = useState("");
@@ -227,9 +229,24 @@ export default function ClonePage() {
     setReplicateResult(null);
     setReplicateQueued(null);
     try {
-      const { projectId, paths } = await createCloneProject();
       const videoOptions = buildVideoOptions(videoParams);
       videoOptions.duration = Math.min(15, Math.max(4, Math.round(refAnalysis.duration)));
+      const atlasFamily = videoModelTarget.provider === "atlas-cloud"
+        ? ATLAS_VIDEO_FAMILIES.find((family) => family.id === atlasVideoFamilyId(refModel))
+        : undefined;
+      const estimate = estimateVideoSpend(
+        atlasFamily?.pricePerSecond,
+        Number(videoOptions.duration),
+        videoParams.resolution,
+      );
+      const overCap = !!estimate && spendCapUsd > 0 && estimate.maxUsd > spendCapUsd;
+      const spendMessage = estimate
+        ? overCap
+          ? t("modelTierSpendOverCap", { total: estimate.maxUsd.toFixed(2), cap: spendCapUsd.toFixed(2) })
+          : t("modelTierSpendConfirm", { total: estimate.maxUsd.toFixed(2), resolution: videoParams.resolution, seconds: estimate.seconds })
+        : t("modelTierSpendUnknown", { model: refModel });
+      if (!window.confirm(spendMessage)) return;
+      const { projectId, paths } = await createCloneProject();
       const res = await fetch("/api/ai/video", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -245,6 +262,8 @@ export default function ClonePage() {
           referenceImageUrls: paths,
           projectId,
           background: true,
+          spendCapUsd,
+          acknowledgeOverCap: true,
           options: { ...videoOptions, audioEnabled: true },
         }),
       });
@@ -271,7 +290,7 @@ export default function ClonePage() {
     } finally {
       setIsReplicating(false);
     }
-  }, [isReplicating, refAnalysis, videoModelTarget, videoParams, productName, productFeatures, createCloneProject, t]);
+  }, [isReplicating, refAnalysis, videoModelTarget, videoParams, spendCapUsd, productName, productFeatures, createCloneProject, t]);
 
   /**
    * Rhythm-tier clone: create the project + generate a script whose shot count and

@@ -55,8 +55,14 @@ function resolutionValue(property: AtlasSchemaProperty, requested: string | unde
   if (property.enum.every((value) => resolutionRank(value) === 0)) {
     return enumValue(property, undefined);
   }
+  // Upscaled/enhanced tiers are separately billed products. A stable 1080p quality
+  // preference must never opt into 1080p-sr/esr merely because native 1080p is absent.
+  // An advanced caller can still request one explicitly through options.extra.resolution,
+  // which is applied after this provider-safe default mapping.
+  const nativeValues = property.enum.filter((value) => !/(?:^|[-\s])e?sr(?:\b|\s*&)|\bfps\b/i.test(String(value)));
+  if (!nativeValues.length) return enumValue(property, undefined);
   const target = resolutionRank(requested);
-  const ranked = [...property.enum].sort((a, b) => resolutionRank(a) - resolutionRank(b));
+  const ranked = [...nativeValues].sort((a, b) => resolutionRank(a) - resolutionRank(b));
   return ranked.find((value) => resolutionRank(value) >= target) ?? ranked[ranked.length - 1];
 }
 

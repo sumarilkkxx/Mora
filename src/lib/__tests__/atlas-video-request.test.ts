@@ -26,4 +26,29 @@ describe("Atlas schema request mapping", () => {
       height: 720,
     }, schema).resolution).toBe("768P");
   });
+
+  it("never upgrades a native preference into a separately billed SR tier", () => {
+    const enhancedSchema = {
+      required: ["prompt", "resolution"],
+      properties: {
+        prompt: { type: "string" },
+        resolution: { type: "string", enum: ["480p", "720p", "720p-sr", "1080p-sr", "1440p-esr"] },
+      },
+    };
+    expect(buildAtlasSchemaRequest("vendor/model", "text-to-video", {
+      modelId: "vendor/model",
+      mode: "text-to-video",
+      prompt: "demo",
+      width: 1920,
+      height: 1080,
+    }, enhancedSchema).resolution).toBe("720p");
+    expect(buildAtlasSchemaRequest("vendor/model", "text-to-video", {
+      modelId: "vendor/model",
+      mode: "text-to-video",
+      prompt: "demo",
+      width: 1920,
+      height: 1080,
+      extra: { resolution: "1080p-sr" },
+    }, enhancedSchema).resolution).toBe("1080p-sr");
+  });
 });

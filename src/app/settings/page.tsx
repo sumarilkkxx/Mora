@@ -32,7 +32,8 @@ import {
 } from "@/lib/tts-presets";
 import { mergeCustomModels } from "@/lib/gen-params";
 import { getVideoModelCapabilities, resolveModelResolution } from "@/lib/model-capabilities";
-import { ATLAS_VIDEO_FAMILIES } from "@/lib/atlas-video-models";
+import { ATLAS_VIDEO_FAMILIES, atlasVideoFamilyId } from "@/lib/atlas-video-models";
+import { estimateVideoSpend } from "@/lib/video-spend";
 import { LLM_PRESETS } from "@/lib/llm-presets";
 import { GroupedModelSelect, ModelPicker } from "@/components/settings/model-picker";
 import { GenerationSettings } from "@/components/generation-settings";
@@ -191,6 +192,7 @@ export default function SettingsPage() {
     defaultImageProvider,
     defaultVideoModel,
     defaultVideoProvider,
+    spendCapUsd,
     customModels,
     setProvider,
     setLLM,
@@ -199,6 +201,7 @@ export default function SettingsPage() {
     setDefaultAspectRatio,
     setDefaultImageModel,
     setDefaultVideoModel,
+    setSpendCapUsd,
   } = useSettingsStore();
 
   // TTS preview playback state
@@ -308,8 +311,13 @@ export default function SettingsPage() {
   const selectedVideoCapabilities = getVideoModelCapabilities(defaultVideoModel);
   const effectiveVideoResolution = resolveModelResolution(defaultResolution, selectedVideoCapabilities.resolutionValues);
   const selectedAtlasFamily = selectedVideoProvider === "atlas-cloud"
-    ? ATLAS_VIDEO_FAMILIES.find((family) => family.id === defaultVideoModel)
+    ? ATLAS_VIDEO_FAMILIES.find((family) => family.id === atlasVideoFamilyId(defaultVideoModel))
     : undefined;
+  const selectedVideoSecondEstimate = estimateVideoSpend(
+    selectedAtlasFamily?.pricePerSecond,
+    1,
+    effectiveVideoResolution.effective,
+  );
 
   // auto-select a default model after enabling a provider: if nothing is selected (or the selection is gone) and options exist, fall back to the first one
   // — prevents the beginner trap of "set up a Key but generation fails because no default model was chosen"
@@ -1032,6 +1040,17 @@ export default function SettingsPage() {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">{t("spendCap")}</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={spendCapUsd}
+                        onChange={(event) => setSpendCapUsd(Number(event.target.value))}
+                      />
+                      <p className="text-[11px] leading-4 text-muted-foreground">{t("spendCapHint")}</p>
+                    </div>
                   </div>
                   {defaultVideoModel && (
                     <div className="mt-4 rounded-xl border border-border/60 bg-muted/25 px-4 py-3 text-xs">
@@ -1042,8 +1061,8 @@ export default function SettingsPage() {
                           <strong className="font-semibold text-foreground">{effectiveVideoResolution.effective}</strong>
                           {effectiveVideoResolution.adjusted && <span className="ml-1 text-muted-foreground">({t("videoFromPreference", { value: defaultResolution })})</span>}
                         </span>
-                        {selectedAtlasFamily?.pricePerSecond != null && (
-                          <span><span className="text-muted-foreground">{t("videoBillingTier")}：</span>≈ ${selectedAtlasFamily.pricePerSecond.toFixed(3)}/s</span>
+                        {selectedVideoSecondEstimate && (
+                          <span><span className="text-muted-foreground">{t("videoBillingTier")}：</span>≈ ${selectedVideoSecondEstimate.maxUsd.toFixed(3)}/s</span>
                         )}
                       </div>
                       <p className="mt-2 leading-5 text-muted-foreground">{t("videoResolutionBehavior")}</p>

@@ -82,6 +82,7 @@ export default function ScriptPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [genError, setGenError] = useState("");
   const { llm } = useSettingsStore();
+  const spendCapUsd = useSettingsStore((st) => st.spendCapUsd);
   // beginner/director split: simple mode swaps the 3-column editor for a read-and-go card
   const uiMode = useSettingsStore((st) => st.uiMode);
   const setUiMode = useSettingsStore((st) => st.setUiMode);
@@ -502,6 +503,7 @@ export default function ScriptPage() {
   const [aiFilming, setAiFilming] = useState(false);
   const [aiFilmStage, setAiFilmStage] = useState("");
   const [aiFilmError, setAiFilmError] = useState("");
+  const [overCapAck, setOverCapAck] = useState(false);
   /** dryRun preview of the film pass — the paid submit needs an explicit confirm on this exact prompt */
   const [filmPreview, setFilmPreview] = useState<{
     prompt: string;
@@ -526,6 +528,7 @@ export default function ScriptPage() {
     referenceImages: number;
     referenceQuota?: { ok: boolean; count: number; limit?: number };
     dialogueWarnings: { index: number; seconds: number; count: number; limit: number }[];
+    estimate?: { unitUsd: number; seconds: number; calls: number; resolution: string; tierMultiplier: number; baseUsd: number; maxUsd: number };
   } | null>(null);
 
   /** Free dryRun call — full film prompt + counts + warnings, nothing submitted, nothing billed. */
@@ -577,6 +580,7 @@ export default function ScriptPage() {
       // judge pass BEFORE the preview, so the confirm shows the final (reworked) lines
       await runJudgePass(currentScript.id, setAiFilmStage);
       setAiFilmStage(t("aiFilmPreviewing"));
+      setOverCapAck(false);
       setFilmPreview(await fetchFilmPreview(currentScript.id));
       setAiFilming(false); // hand over to the preview card; nothing has been billed yet
     } catch (err) {
@@ -670,6 +674,8 @@ export default function ScriptPage() {
           scriptId: currentScript.id,
           provider: vidTarget.provider,
           model: vidTarget.model,
+          spendCapUsd: s.spendCapUsd,
+          acknowledgeOverCap: overCapAck,
           apiKey: vidTarget.apiKey,
           baseUrl: vidTarget.baseUrl,
           ...(sheet && { characterSheetUrl: sheet }),
@@ -869,6 +875,7 @@ export default function ScriptPage() {
   // dryRun preview card: the paid film call waits for an explicit confirm on this exact prompt
   if (filmPreview && !aiFilming) {
     const overQuota = filmPreview.referenceQuota && !filmPreview.referenceQuota.ok;
+    const overCap = !!filmPreview.estimate && spendCapUsd > 0 && filmPreview.estimate.maxUsd > spendCapUsd;
     return (
       <div className="min-h-screen grid-bg legacy-studio-page">
         {headerBar}
@@ -919,12 +926,39 @@ export default function ScriptPage() {
                   </Link>
                 </div>
               )}
+              <div className="rounded-lg border border-border/60 bg-muted/30 px-4 py-3 text-xs">
+                {filmPreview.estimate ? (
+                  <>
+                    <span className="font-semibold tabular-nums">{t("aiFilmEstimate", { total: filmPreview.estimate.maxUsd.toFixed(2) })}</span>
+                    <span className="ml-2 text-muted-foreground tabular-nums">
+                      {t("aiFilmEstimateFormula", {
+                        unit: filmPreview.estimate.unitUsd,
+                        seconds: filmPreview.estimate.seconds,
+                        multiplier: filmPreview.estimate.tierMultiplier,
+                      })}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-amber-700 dark:text-amber-300">{t("aiFilmEstimateUnknown", { model: filmPreview.modelId })}</span>
+                )}
+              </div>
+              {overCap && (
+                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-700 dark:text-amber-300">
+                  <input
+                    type="checkbox"
+                    checked={overCapAck}
+                    onChange={(event) => setOverCapAck(event.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-primary"
+                  />
+                  <span>{t("aiFilmOverCap", { total: filmPreview.estimate!.maxUsd.toFixed(2), cap: spendCapUsd.toFixed(2) })}</span>
+                </label>
+              )}
               <details className="rounded-lg border border-border/60 p-3 text-xs">
                 <summary className="cursor-pointer font-medium">{t("aiFilmPromptToggle")}</summary>
                 <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap text-muted-foreground">{filmPreview.prompt}</pre>
               </details>
               <div className="flex flex-wrap items-center gap-2">
-                <Button className="brand-gradient text-white" disabled={overQuota} onClick={confirmAiFilm}>
+                <Button className="brand-gradient text-white" disabled={overQuota || (overCap && !overCapAck)} onClick={confirmAiFilm}>
                   {t("aiFilmConfirm")}
                 </Button>
                 <Button variant="outline" onClick={() => { setFilmPreview(null); setAiFilmError(""); }}>

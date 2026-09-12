@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { buildVideoOptions } from "@/lib/gen-params";
+import { buildVideoOptions, DEFAULT_VIDEO_PARAMS } from "@/lib/gen-params";
 import { migrateSettings, useSettingsStore } from "@/lib/stores/settings-store";
 
 describe("video settings use one authoritative state", () => {
@@ -40,6 +40,15 @@ describe("video settings use one authoritative state", () => {
     };
     const migrated = migrateSettings(old);
     expect(migrated.videoParams).toMatchObject({ resolution: "720p", aspectRatio: "16:9", duration: 8 });
+  });
+
+  it("defaults new installs to 720p and preserves an existing 1080p preference", () => {
+    expect(DEFAULT_VIDEO_PARAMS.resolution).toBe("720p");
+    const existing = { ...useSettingsStore.getState(), spendCapUsd: undefined } as unknown as Parameters<typeof migrateSettings>[0];
+    const migrated = migrateSettings(existing);
+    expect(migrated.defaultResolution).toBe("1080p");
+    expect(migrated.videoParams.resolution).toBe("1080p");
+    expect(migrated.spendCapUsd).toBe(5);
   });
 
   it("persists the execution provider alongside a duplicate video model id", () => {

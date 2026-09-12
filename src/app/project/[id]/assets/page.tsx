@@ -43,6 +43,8 @@ import {
   type VisualBible,
 } from "@/lib/production-system";
 import { normalizeProductionMode, type ProductionMode } from "@/lib/production-mode";
+import { ATLAS_VIDEO_FAMILIES, atlasVideoFamilyId } from "@/lib/atlas-video-models";
+import { estimateVideoSpend } from "@/lib/video-spend";
 
 // shot type labels (label changed to i18n key in the assets namespace, resolved per locale)
 const shotTypeLabels: Record<Shot["type"], { key: string; color: string }> = {
@@ -91,7 +93,7 @@ export default function AssetsPage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { providers, defaultImageModel, defaultImageProvider, defaultVideoModel, defaultVideoProvider, customModels, imageParams, videoParams, llm, motionIntensity, setMotionIntensity, motionRealism, setMotionRealism, chainMode, setChainMode, visualLook, setVisualLook } = useSettingsStore();
+  const { providers, defaultImageModel, defaultImageProvider, defaultVideoModel, defaultVideoProvider, customModels, imageParams, videoParams, llm, motionIntensity, setMotionIntensity, motionRealism, setMotionRealism, chainMode, setChainMode, visualLook, setVisualLook, spendCapUsd } = useSettingsStore();
   // beginner/director split: simple mode hides the director panel, the storyboard-grid button
   // and per-shot camera tooling — beginners see shots + generate, nothing else
   const uiMode = useSettingsStore((st) => st.uiMode);
@@ -149,6 +151,13 @@ export default function AssetsPage() {
   // grid→film: one reference-to-video call turns all keyframes into a full multi-shot film
   const [isFilmGenerating, setIsFilmGenerating] = useState(false);
   const [filmNotice, setFilmNotice] = useState<{ text: string; url?: string } | null>(null);
+  const [filmPlan, setFilmPlan] = useState<{
+    modelId: string;
+    shotCount: number;
+    seconds: number;
+    requestSettings: { resolution: string; aspectRatio: string; duration: number };
+    estimate?: { unitUsd: number; seconds: number; tierMultiplier: number; maxUsd: number };
+  } | null>(null);
   // on-camera presenter from the character library; their multi-view sheet rides the
   // grid and film passes as an identity reference so the person stops morphing
   const { characters: presenterLib } = useCharacterStore();
@@ -575,7 +584,7 @@ export default function AssetsPage() {
   // supports a pinned last frame, the clip ends by flowing into the next scene — the transition is
   // generated inside the clip, and the composer's hard concat becomes seamless.
   const generateMotion = useCallback(
-    async (shotId: number, firstFrameOverride?: string, lastFrameOverride?: string | null, retake?: RetakeSymptom) => {
+    async (shotId: number, firstFrameOverride?: string, lastFrameOverride?: string | null, retake?: RetakeSymptom, spendAcknowledged = false) => {
       const asset = assets.find((a) => a.shotId === shotId);
       // prefer the freshly passed URL for the first frame: during auto-chaining React state hasn't updated yet, so the thumbnailUrl in the closure is stale
       const firstFrame = firstFrameOverride || asset?.thumbnailUrl;
@@ -657,6 +666,23 @@ export default function AssetsPage() {
         videoOptions.duration = Math.min(15, Math.max(4, Math.round(Math.min(asset.duration, profileLimit))));
       }
       try {
+        const atlasFamily = videoModelTarget.provider === "atlas-cloud"
+          ? ATLAS_VIDEO_FAMILIES.find((family) => family.id === atlasVideoFamilyId(videoModelTarget.model))
+          : undefined;
+        const estimate = estimateVideoSpend(
+          atlasFamily?.pricePerSecond,
+          Number(videoOptions.duration),
+          videoParams.resolution,
+        );
+        const overCap = !!estimate && spendCapUsd > 0 && estimate.maxUsd > spendCapUsd;
+        if (!spendAcknowledged) {
+          const message = estimate
+            ? overCap
+              ? t("motionSpendOverCap", { total: estimate.maxUsd.toFixed(2), cap: spendCapUsd.toFixed(2) })
+              : t("motionSpendConfirm", { total: estimate.maxUsd.toFixed(2), resolution: videoParams.resolution, seconds: estimate.seconds })
+            : t("motionSpendUnknown", { model: videoModelTarget.model });
+          if (!window.confirm(message)) return;
+        }
         setBillingNotice(null);
         const res = await fetch("/api/ai/video", {
           method: "POST",
@@ -676,6 +702,8 @@ export default function AssetsPage() {
             projectId: id,
             shotId,
             background: true,
+            spendCapUsd,
+            acknowledgeOverCap: spendAcknowledged || overCap,
             // user-defined video parameters (aspect ratio / resolution / duration / frame rate / motion / seed / negative prompt)
             options: videoOptions,
           }),
@@ -724,7 +752,7 @@ export default function AssetsPage() {
         });
       }
     },
-    [assets, videoModelTarget, id, videoParams, motionIntensity, motionRealism, effectiveChainMode, projectCategory, projectCreativeIntent, projectVisualBible, visualLook, saveVideoAsset, reloadPendingTasks, t, locale]
+    [assets, videoModelTarget, id, videoParams, spendCapUsd, motionIntensity, motionRealism, effectiveChainMode, projectCategory, projectCreativeIntent, projectVisualBible, visualLook, saveVideoAsset, reloadPendingTasks, t, locale]
   );
 
   // actually generate a single asset. Returns the saved static keyframe URL (undefined on failure) so
@@ -900,8 +928,37 @@ export default function AssetsPage() {
   // grid→film: every shot keyframe rides ONE request to the exact configured model
   // reference-to-video call with a timecoded multi-shot prompt — native cuts, dialogue
   // spoken verbatim, continuous audio. Lands in compositions (export page shows it).
-  const runStoryboardFilm = useCallback(async () => {
+  const previewStoryboardFilm = useCallback(async () => {
     if (!videoModelTarget || !scriptId || isFilmGenerating) return;
+    setIsFilmGenerating(true);
+    setFilmNotice(null);
+    try {
+      const res = await fetch(`/api/project/${id}/storyboard-film`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scriptId,
+          dryRun: true,
+          provider: videoModelTarget.provider,
+          model: videoModelTarget.model,
+          apiKey: videoModelTarget.apiKey,
+          baseUrl: videoModelTarget.baseUrl,
+          ...(presenterSheet && { characterSheetUrl: presenterSheet }),
+          options: buildVideoOptions(videoParams),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || t("filmFailed"));
+      setFilmPlan(data);
+    } catch (error) {
+      setFilmNotice({ text: error instanceof Error ? error.message : t("filmFailed") });
+    } finally {
+      setIsFilmGenerating(false);
+    }
+  }, [id, scriptId, videoModelTarget, videoParams, isFilmGenerating, presenterSheet, t]);
+
+  const runStoryboardFilm = useCallback(async () => {
+    if (!videoModelTarget || !scriptId || !filmPlan || isFilmGenerating) return;
     setIsFilmGenerating(true);
     setFilmNotice(null);
     setBillingNotice(null);
@@ -913,7 +970,9 @@ export default function AssetsPage() {
           scriptId,
           provider: videoModelTarget.provider,
           // The selected Settings model is authoritative; the server only repairs legacy suffixes.
-          model: videoModelTarget.model,
+          model: filmPlan.modelId,
+          spendCapUsd,
+          acknowledgeOverCap: true,
           apiKey: videoModelTarget.apiKey,
           baseUrl: videoModelTarget.baseUrl,
           // presenter sheet leads reference_images as the identity anchor (@Image1)
@@ -935,6 +994,7 @@ export default function AssetsPage() {
       setFilmNotice(data.queued
         ? { text: t("filmQueuedBackground", { taskId: data.taskId }) }
         : { text: t("filmDone"), url: data.url });
+      setFilmPlan(null);
       if (data.queued) {
         await reloadPendingTasks();
         router.push(`/project/${id}/export?taskId=${encodeURIComponent(data.taskId)}`);
@@ -946,7 +1006,7 @@ export default function AssetsPage() {
     } finally {
       setIsFilmGenerating(false);
     }
-  }, [id, scriptId, videoModelTarget, videoParams, isFilmGenerating, presenterSheet, reloadPendingTasks, router, t]);
+  }, [id, scriptId, videoModelTarget, videoParams, filmPlan, spendCapUsd, isFilmGenerating, presenterSheet, reloadPendingTasks, router, t]);
 
   // generate all in one click (sequential, to avoid hitting platform rate limits with concurrent requests).
   // With auto-motion on, this runs TWO passes: (1) every static keyframe, (2) keyframe-chained i2v per shot —
@@ -954,8 +1014,23 @@ export default function AssetsPage() {
   const generateAll = useCallback(async () => {
     const pending = assets.filter((a) => a.status === "pending" || a.status === "failed");
     if (pending.length === 0) return;
-    setIsBatchGenerating(true);
     const chained = autoMotion && !!videoModelTarget;
+    if (chained && videoModelTarget) {
+      const candidates = assets.filter((asset) => !asset.isVideo);
+      const totalSeconds = candidates.reduce((sum, asset) => {
+        const profileLimit = typeof videoParams.duration === "number" ? videoParams.duration : asset.duration;
+        return sum + Math.min(15, Math.max(4, Math.round(Math.min(asset.duration || profileLimit, profileLimit))));
+      }, 0);
+      const atlasFamily = videoModelTarget.provider === "atlas-cloud"
+        ? ATLAS_VIDEO_FAMILIES.find((family) => family.id === atlasVideoFamilyId(videoModelTarget.model))
+        : undefined;
+      const estimate = estimateVideoSpend(atlasFamily?.pricePerSecond, totalSeconds, videoParams.resolution);
+      const message = estimate
+        ? t("batchSpendConfirm", { calls: candidates.length, seconds: totalSeconds, total: estimate.maxUsd.toFixed(2) })
+        : t("batchSpendUnknown", { calls: candidates.length, model: videoModelTarget.model });
+      if (!window.confirm(message)) return;
+    }
+    setIsBatchGenerating(true);
     // freshly saved keyframes by shot — React state in this closure is stale during the loop
     const savedByShot = new Map<number, string>();
     for (const asset of pending) {
@@ -979,11 +1054,11 @@ export default function AssetsPage() {
         // pin mode pins the next keyframe as the last frame; tail/off modes never pin
         const lastFrame = effectiveChainMode === "pin" && next && chainByDefault(row.type) ? staticFrameOf(next) : undefined;
         // null = explicitly no chain (last shot / next frame unavailable)
-        await generateMotion(row.shotId, firstFrame, lastFrame ?? null);
+        await generateMotion(row.shotId, firstFrame, lastFrame ?? null, undefined, true);
       }
     }
     setIsBatchGenerating(false);
-  }, [assets, generateOne, generateMotion, autoMotion, videoModelTarget, effectiveChainMode]);
+  }, [assets, generateOne, generateMotion, autoMotion, videoModelTarget, videoParams, effectiveChainMode, t]);
 
   return (
     <div className="min-h-screen grid-bg legacy-studio-page">
@@ -1295,6 +1370,22 @@ export default function AssetsPage() {
             {filmNotice.url && (
               <video src={filmNotice.url} controls className="mt-2 max-h-64 rounded-md" />
             )}
+          </div>
+        )}
+
+        {filmPlan && (
+          <div className="mb-4 rounded-xl border border-primary/30 bg-primary/5 p-4 text-xs">
+            <p className="font-semibold">{t("filmConfirmTitle", { shots: filmPlan.shotCount, seconds: filmPlan.seconds })}</p>
+            <p className="mt-1.5 text-muted-foreground">{filmPlan.modelId} · {filmPlan.requestSettings.resolution} · {filmPlan.requestSettings.aspectRatio}</p>
+            <p className="mt-2 tabular-nums">
+              {filmPlan.estimate
+                ? t("filmEstimate", { total: filmPlan.estimate.maxUsd.toFixed(2), unit: filmPlan.estimate.unitUsd, seconds: filmPlan.estimate.seconds })
+                : t("filmEstimateUnknown", { model: filmPlan.modelId })}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="sm" onClick={runStoryboardFilm} disabled={isFilmGenerating}>{t("filmConfirmGo")}</Button>
+              <Button size="sm" variant="outline" onClick={() => setFilmPlan(null)}>{tc("cancel")}</Button>
+            </div>
           </div>
         )}
 
@@ -1753,7 +1844,7 @@ export default function AssetsPage() {
                     </Button>
                   </Link>
                   <Button
-                    onClick={runStoryboardFilm}
+                    onClick={previewStoryboardFilm}
                     disabled={!filmReady || isFilmGenerating || isGridGenerating || isBatchGenerating}
                     className="brand-gradient min-w-48 text-sm font-semibold text-white shadow-[0_8px_24px_color-mix(in_srgb,var(--primary)_22%,transparent)]"
                     title={filmReason}

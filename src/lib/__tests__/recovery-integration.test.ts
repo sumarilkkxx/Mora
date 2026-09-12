@@ -40,6 +40,21 @@ beforeEach(async () => {
 afterEach(async () => { sqlite.close(); vi.unstubAllEnvs(); await rm(directory, { recursive: true, force: true }); });
 
 describe("recovery with migrated SQLite", () => {
+  it("blocks a priced Atlas request above the default cap before paid submission", async () => {
+    const response = await videoPost(new NextRequest("http://localhost/api/ai/video", {
+      method: "POST",
+      body: JSON.stringify({
+        provider: "atlas-cloud",
+        model: "bytedance/seedance-2.5/text-to-video",
+        apiKey: "fixture",
+        prompt: "fixture",
+        options: { width: 1080, height: 1920, duration: 30 },
+      }),
+    }));
+    expect(response.status).toBe(409);
+    expect(submit).not.toHaveBeenCalled();
+  });
+
   it("snapshots the first frame before submission and persists it with the paid task", async () => {
     const imageUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB";
     submit.mockImplementation(async (options) => {

@@ -10,6 +10,9 @@ import type { VideoWorkflow } from "@/lib/providers/types";
 import { persistDerivedImage } from "@/lib/derived-image";
 import { getUploadsDir } from "@/lib/paths";
 import { relative, sep } from "node:path";
+import { ATLAS_VIDEO_FAMILIES, atlasVideoFamilyId } from "@/lib/atlas-video-models";
+import { estimateVideoSpend, resolveVideoSpendCap } from "@/lib/video-spend";
+import { videoRequestResolution } from "@/lib/storyboard-film";
 
 const VIDEO_WORKFLOWS = new Set<VideoWorkflow>(["shot-motion", "storyboard-film", "reference-replication", "prompt-video"]);
 
@@ -21,7 +24,7 @@ const VIDEO_WORKFLOWS = new Set<VideoWorkflow>(["shot-motion", "storyboard-film"
 // so the client can resume via /api/ai/video/task instead of paying again.
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { provider: providerName, model, prompt, imageUrl, lastImageUrl, mode, apiKey, baseUrl, options, projectId, shotId, referenceVideoUrls, referenceImageUrls, background } = body;
+  const { provider: providerName, model, prompt, imageUrl, lastImageUrl, mode, apiKey, baseUrl, options, projectId, shotId, referenceVideoUrls, referenceImageUrls, background, spendCapUsd, acknowledgeOverCap } = body;
   const workflow = VIDEO_WORKFLOWS.has(body.workflow) ? body.workflow as VideoWorkflow : undefined;
 
   if (!providerName || !model) {
@@ -38,6 +41,28 @@ export async function POST(req: NextRequest) {
     // The UI preflight and paid submit share one normalization policy. This is deliberately
     // completed before media upload or provider submission so unsupported values cannot bill.
     const normalized = normalizeVideoOptionsForModel(model, options, Boolean(lastImageUrl));
+    const normalizedDuration = Number(normalized.options.duration);
+    const effectiveResolution = videoRequestResolution(
+      Number(normalized.options.width),
+      Number(normalized.options.height),
+    );
+    const atlasFamily = providerName === "atlas-cloud"
+      ? ATLAS_VIDEO_FAMILIES.find((family) => family.id === atlasVideoFamilyId(model))
+      : undefined;
+    const estimate = estimateVideoSpend(
+      atlasFamily?.pricePerSecond,
+      normalizedDuration,
+      effectiveResolution,
+    );
+    const cap = resolveVideoSpendCap(spendCapUsd);
+    if (estimate && cap > 0 && estimate.maxUsd > cap && !acknowledgeOverCap) {
+      return apiError(
+        req,
+        `预估花费最高 $${estimate.maxUsd.toFixed(2)}，超过单次上限 $${cap.toFixed(2)}。请降低分辨率或时长，或明确确认继续。`,
+        `Estimated spend is up to $${estimate.maxUsd.toFixed(2)}, above the $${cap.toFixed(2)} per-run cap. Lower resolution or duration, or explicitly confirm to continue.`,
+        409,
+      );
+    }
 
     const firstFrameUrl = await toRemoteUsableImage(imageUrl);
     // Keyframe chaining (Dreamina-style first/last frame): pin the clip's last frame to the next

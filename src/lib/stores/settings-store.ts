@@ -71,6 +71,8 @@ export interface SettingsState {
   defaultVideoProvider: string;
   // 默认分辨率
   defaultResolution: "720p" | "1080p";
+  /** 单次付费视频生成的预估美元上限；0 表示关闭。 */
+  spendCapUsd: number;
   // 默认画面比例
   defaultAspectRatio: "9:16" | "16:9" | "1:1";
   // 用户自定义模型（挂在已有平台上的任意 model id）
@@ -109,6 +111,7 @@ export interface SettingsState {
   setDefaultImageModel: (model: string, provider?: string) => void;
   setDefaultVideoModel: (model: string, provider?: string) => void;
   setDefaultResolution: (resolution: "720p" | "1080p") => void;
+  setSpendCapUsd: (usd: number) => void;
   setDefaultAspectRatio: (ratio: "9:16" | "16:9" | "1:1") => void;
   addCustomModel: (model: CustomModel) => void;
   removeCustomModel: (id: string) => void;
@@ -168,6 +171,7 @@ export function migrateSettings(state: SettingsState): SettingsState {
     state.activeProductionProfile = "balanced";
   }
   state.targetVideoDuration = normalizeTargetVideoDuration(state?.targetVideoDuration);
+  state.spendCapUsd ??= 5;
   // v6: removed providers must also be removed from persisted browser state.
   const removedConfigured = Boolean(state.providers?.["fal-ai"]?.enabled);
   if (state.providers) {
@@ -235,7 +239,8 @@ export const useSettingsStore = create<SettingsState>()(
       defaultImageProvider: "",
       defaultVideoModel: "",
       defaultVideoProvider: "",
-      defaultResolution: "1080p",
+      defaultResolution: "720p",
+      spendCapUsd: 5,
       defaultAspectRatio: "9:16",
       customModels: [],
       imageParams: DEFAULT_IMAGE_PARAMS,
@@ -269,6 +274,7 @@ export const useSettingsStore = create<SettingsState>()(
         defaultResolution: resolution,
         videoParams: { ...state.videoParams, resolution },
       })),
+      setSpendCapUsd: (usd) => set({ spendCapUsd: Number.isFinite(usd) && usd >= 0 ? usd : 0 }),
       setDefaultAspectRatio: (ratio) => set((state) => ({
         defaultAspectRatio: ratio,
         videoParams: { ...state.videoParams, aspectRatio: ratio },
@@ -307,7 +313,8 @@ export const useSettingsStore = create<SettingsState>()(
       // v10：Atlas Cloud 默认模型从具体端点迁移为模型系列，端点由任务模式自动选择。
       // v11：增加请求级文本/视觉备选模型；旧配置保留主模型且备选默认为空。
       // v12：增加独立的成片目标时长；不再把单镜模型时长当作整片时长。
-      version: 12,
+      // v13：新安装默认使用 720p，并加入单次付费视频生成的费用上限。
+      version: 13,
       migrate: (persisted) => migrateSettings(persisted as SettingsState),
     }
   )
