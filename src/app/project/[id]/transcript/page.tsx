@@ -4,19 +4,19 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  LuArrowLeft,
-  LuCaptions,
-  LuCircleCheckBig,
-  LuCpu,
-  LuDownload,
-  LuFileVideo,
-  LuLoaderCircle,
-  LuRotateCcw,
-  LuScissors,
-  LuShieldCheck,
-  LuUpload,
-  LuVolume2,
-} from "react-icons/lu";
+  ArrowLeft,
+  Captions,
+  CircleCheckBig,
+  Cpu,
+  Download,
+  FileVideo,
+  LoaderCircle,
+  RotateCcw,
+  Scissors,
+  ShieldCheck,
+  Upload,
+  Volume2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Notice } from "@/components/ui/notice";
@@ -323,9 +323,9 @@ export default function TranscriptPage() {
   return (
     <PageFrame width="full" className="max-w-7xl">
       <PageHeader variant="compact" title={t("title")} description={t("subtitle")} context={<>          <Link href={`/project/${id}/assets`} className="inline-flex min-h-8 items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-            <LuArrowLeft className="h-4 w-4" />{t("back")}
+            <ArrowLeft className="h-4 w-4" />{t("back")}
           </Link><span aria-hidden="true">/</span><span>{projectName}</span></>} actions={<div className="flex max-w-md items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-3 py-2.5 text-xs leading-5 text-emerald-700 dark:text-emerald-300">
-          <LuShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />{t("localPrivacy")}
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />{t("localPrivacy")}
         </div>} />
 
       {error && <Notice tone="danger" className="mb-5">{error}</Notice>}
@@ -334,16 +334,16 @@ export default function TranscriptPage() {
         <div className="studio-surface p-4 shadow-none sm:p-5">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div><h2 className="font-semibold">{t("uploadTitle")}</h2><p className="mt-1 text-xs text-muted-foreground">{t("uploadHint")}</p></div>
-            <span className="rounded-lg bg-primary/10 p-2 text-primary"><LuUpload /></span>
+            <span className="rounded-lg bg-primary/10 p-2 text-primary"><Upload /></span>
           </div>
           <input ref={inputRef} className="hidden" type="file" accept=".mp4,.mov,.webm,.mkv,.m4v,video/mp4,video/quicktime,video/webm" onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file); }} />
           <Button className="h-10 w-full" disabled={busy === "upload"} onClick={() => inputRef.current?.click()}>
-            {busy === "upload" ? <LuLoaderCircle className="animate-spin motion-reduce:animate-none" /> : <LuFileVideo />}
+            {busy === "upload" ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : <FileVideo />}
             {busy === "upload" ? t("uploading") : t("chooseVideo")}
           </Button>
 
           <h3 className="mb-2 mt-5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("sources")}</h3>
-          {loading ? <div className="flex items-center gap-2 py-5 text-sm text-muted-foreground"><LuLoaderCircle className="animate-spin motion-reduce:animate-none" />{t("loading")}</div> : sources.length ? (
+          {loading ? <div className="flex items-center gap-2 py-5 text-sm text-muted-foreground"><LoaderCircle className="animate-spin motion-reduce:animate-none" />{t("loading")}</div> : sources.length ? (
             <div className="space-y-2">
               {sources.map((source) => <button key={source.id} type="button" aria-pressed={source.id === selectedId} onClick={() => setSelectedId(source.id)} className={`w-full rounded-xl border p-3 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary ${source.id === selectedId ? "border-primary/40 bg-primary/8" : "border-border/50 bg-background/30 hover:border-border"}`}>
                 <span className="block truncate text-sm font-medium">{source.originalName}</span>
@@ -372,7 +372,7 @@ export default function TranscriptPage() {
                 </select>
               </label>
               <Button className="h-10 sm:min-w-36" disabled={!selected.hasAudio || selected.duration > 45 * 60 * 1000 || busy === "decode" || busy === "transcribe"} onClick={() => void startTranscription()}>
-                {busy === "decode" || busy === "transcribe" ? <LuLoaderCircle className="animate-spin motion-reduce:animate-none" /> : <LuCpu />}
+                {busy === "decode" || busy === "transcribe" ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : <Cpu />}
                 {transcript ? t("retryTranscribe") : t("startTranscribe")}
               </Button>
             </div>
@@ -382,15 +382,15 @@ export default function TranscriptPage() {
             </div>
             {(busy === "decode" || busy === "transcribe") && <div className="mt-4" role="status" aria-live="polite"><div className="mb-1.5 flex items-center justify-between text-xs"><span>{progressLabel}</span><span className="tabular-nums text-muted-foreground">{progress}%</span></div><div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-[width] duration-300" style={{ width: `${Math.max(3, progress)}%` }} /></div>{fallback && <p className="mt-2 text-xs text-amber-600 dark:text-amber-300">{t("fallbackWasm")}</p>}</div>}
             {selected.error && selected.status === "failed" && <p className="mt-3 text-xs text-destructive">{selected.error}</p>}
-          </> : <div className="flex min-h-80 flex-col items-center justify-center text-center"><LuFileVideo className="mb-3 h-8 w-8 text-muted-foreground" /><p className="text-sm font-medium">{t("noSource")}</p><p className="mt-1 text-xs text-muted-foreground">{t("noSourceHint")}</p></div>}
+          </> : <div className="flex min-h-80 flex-col items-center justify-center text-center"><FileVideo className="mb-3 h-8 w-8 text-muted-foreground" /><p className="text-sm font-medium">{t("noSource")}</p><p className="mt-1 text-xs text-muted-foreground">{t("noSourceHint")}</p></div>}
         </div>
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
         <div className="studio-surface p-4 shadow-none sm:p-5">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-            <div><h2 className="flex items-center gap-2 font-semibold"><LuScissors className="text-primary" />{t("editorTitle")}</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">{transcript ? t("editorHint") : t("needTranscript")}</p></div>
-            {transcript && <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">{t("selectedWords", { n: removedIds.length })}</span><Button variant="outline" size="sm" disabled={!removedIds.length} onClick={() => setRemovedIds([])}><LuRotateCcw />{t("reset")}</Button></div>}
+            <div><h2 className="flex items-center gap-2 font-semibold"><Scissors className="text-primary" />{t("editorTitle")}</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">{transcript ? t("editorHint") : t("needTranscript")}</p></div>
+            {transcript && <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">{t("selectedWords", { n: removedIds.length })}</span><Button variant="outline" size="sm" disabled={!removedIds.length} onClick={() => setRemovedIds([])}><RotateCcw />{t("reset")}</Button></div>}
           </div>
           {transcript ? <div className="max-h-[520px] overflow-y-auto rounded-xl border border-border/50 bg-background/30 p-3 leading-8 sm:p-4">
             {transcript.words.map((word) => {
@@ -407,7 +407,7 @@ export default function TranscriptPage() {
               disabled={!transcript}
               onChange={(event) => setRemoveSilence(event.target.checked)}
               className="rounded-xl border border-border/60 bg-card/70 p-3"
-              label={<span className="flex items-center gap-2"><LuVolume2 className="text-primary" aria-hidden="true" />{t("silence")}</span>}
+              label={<span className="flex items-center gap-2"><Volume2 className="text-primary" aria-hidden="true" />{t("silence")}</span>}
               description={t("silenceHint", { n: transcript?.silenceRanges.length ?? 0 })}
             />
             <Checkbox
@@ -415,7 +415,7 @@ export default function TranscriptPage() {
               disabled={!transcript}
               onChange={(event) => setBurnSubtitles(event.target.checked)}
               className="mt-3 rounded-xl border border-border/60 bg-card/70 p-3"
-              label={<span className="flex items-center gap-2"><LuCaptions className="text-primary" aria-hidden="true" />{t("subtitles")}</span>}
+              label={<span className="flex items-center gap-2"><Captions className="text-primary" aria-hidden="true" />{t("subtitles")}</span>}
               description={t("subtitlesHint")}
             />
 
@@ -425,7 +425,7 @@ export default function TranscriptPage() {
               <div className="rounded-lg bg-destructive/8 p-2"><p className="text-[10px] uppercase tracking-wide text-muted-foreground">{t("removed")}</p><p className="mt-1 text-sm font-semibold tabular-nums text-destructive">-{formatDuration(removedSeconds)}</p></div>
             </div>
             <Button className="mt-4 h-10 w-full" disabled={!transcript || editedSeconds < 0.5 || busy === "render" || activeRender} onClick={() => void renderEdit()}>
-              {busy === "render" || activeRender ? <LuLoaderCircle className="animate-spin motion-reduce:animate-none" /> : <LuScissors />}
+              {busy === "render" || activeRender ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : <Scissors />}
               {busy === "render" || activeRender ? t("rendering") : t("render")}
             </Button>
           </div>
@@ -433,9 +433,9 @@ export default function TranscriptPage() {
           <div className="studio-surface p-4 shadow-none sm:p-5">
             <h2 className="mb-3 font-semibold">{t("versions")}</h2>
             {selected?.edits.length ? <div className="space-y-2">{selected.edits.map((edit) => <div key={edit.id} className="rounded-xl border border-border/50 bg-background/30 p-3">
-              <div className="flex items-center justify-between gap-2"><span className="flex items-center gap-2 text-sm font-medium">{edit.status === "done" ? <LuCircleCheckBig className="text-emerald-500" /> : edit.status === "failed" ? <span className="h-2 w-2 rounded-full bg-destructive" /> : <LuLoaderCircle className="animate-spin text-primary motion-reduce:animate-none" />}{t("revision", { n: edit.revision })}</span><span className="text-[10px] uppercase text-muted-foreground">{edit.status === "done" ? t("done") : edit.status === "failed" ? t("failed") : t("rendering")}</span></div>
+              <div className="flex items-center justify-between gap-2"><span className="flex items-center gap-2 text-sm font-medium">{edit.status === "done" ? <CircleCheckBig className="text-emerald-500" /> : edit.status === "failed" ? <span className="h-2 w-2 rounded-full bg-destructive" /> : <LoaderCircle className="animate-spin text-primary motion-reduce:animate-none" />}{t("revision", { n: edit.revision })}</span><span className="text-[10px] uppercase text-muted-foreground">{edit.status === "done" ? t("done") : edit.status === "failed" ? t("failed") : t("rendering")}</span></div>
               {edit.error && <p className="mt-2 text-xs text-destructive">{edit.error}</p>}
-              {edit.composition?.status === "done" && edit.composition.outputUrl && <><video controls preload="metadata" src={edit.composition.outputUrl} className="mt-3 aspect-video w-full rounded-lg bg-black object-contain" /><div className="mt-2 flex gap-2"><a href={edit.composition.downloadUrl || edit.composition.outputUrl} className="inline-flex h-7 items-center gap-1 rounded-lg border border-border bg-background px-2.5 text-xs font-medium hover:bg-muted"><LuDownload />{t("download")}</a><Link href={`/project/${id}/export`} className="inline-flex h-7 items-center rounded-lg px-2.5 text-xs font-medium text-primary hover:bg-primary/10">{t("openExport")}</Link></div></>}
+              {edit.composition?.status === "done" && edit.composition.outputUrl && <><video controls preload="metadata" src={edit.composition.outputUrl} className="mt-3 aspect-video w-full rounded-lg bg-black object-contain" /><div className="mt-2 flex gap-2"><a href={edit.composition.downloadUrl || edit.composition.outputUrl} className="inline-flex h-7 items-center gap-1 rounded-lg border border-border bg-background px-2.5 text-xs font-medium hover:bg-muted"><Download />{t("download")}</a><Link href={`/project/${id}/export`} className="inline-flex h-7 items-center rounded-lg px-2.5 text-xs font-medium text-primary hover:bg-primary/10">{t("openExport")}</Link></div></>}
             </div>)}</div> : <p className="text-sm text-muted-foreground">{t("noVersions")}</p>}
           </div>
         </aside>

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, BadgeCheck, Check, ChevronDown, CircleAlert, Download, Music2, RefreshCw, Sparkles, Upload, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, BadgeCheck, Check, ChevronDown, CircleAlert, Download, Music2, RefreshCw, Upload, X } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -90,7 +90,7 @@ export function CopyStage({ draft, run, en, locked, saved, onChange, onBack, onA
       const selected = candidate.id ? candidate.id === copy.id : candidate.voiceover === copy.voiceover;
       return <label className={ui.copyCandidate} data-selected={selected || undefined} key={candidate.id ?? index}>
         <input type="radio" name="copy-direction" checked={selected} onChange={() => onChange(candidate)} />
-        <span className={ui.copyCandidateTop}><span>{candidate.strategyLabel || candidate.title}</span>{candidate.recommended ? <small><Sparkles size={13} />{tr("AI 推荐", "AI pick")}</small> : null}</span>
+        <span className={ui.copyCandidateTop}><span>{candidate.strategyLabel || candidate.title}</span>{candidate.recommended ? <small><BadgeCheck size={13} />{tr("系统推荐", "System pick")}</small> : null}</span>
         <strong>{candidate.hook}</strong><p>{candidate.rationale || candidate.angle}</p>
         <span className={ui.copyCandidateMatch}><Check size={14} />{candidate.visualMatch || tr("可由当前素材支撑", "Supported by this footage")}</span>
       </label>;
@@ -131,7 +131,7 @@ export function PlanStage({ plans, currentPlan, copyStrategy, style, en, locked,
       const clips = timeline(plan); const duration = clips.at(-1)?.outputEnd ?? 0;
       return <article className={ui.planCard} data-selected={selected === index || undefined} key={index}>
         <button className={ui.planSelectionButton} type="button" aria-pressed={selected === index} aria-label={`${selected === index ? tr("取消选择", "Deselect") : tr("选择", "Select")} ${tr("方案", "plan")} ${String(index + 1).padStart(2, "0")} · ${plan.title}`} onClick={() => setSelected(current => current === index ? -1 : index)} />
-        {index === recommended ? <span className={ui.planRecommendation}><BadgeCheck size={13} />{tr("AI 推荐", "AI pick")}</span> : null}
+        {index === recommended ? <span className={ui.planRecommendation}><BadgeCheck size={13} />{tr("系统推荐", "System pick")}</span> : null}
         <div className={ui.planSelect}><span className={ui.planRadio} aria-hidden="true" /><span><small>{tr("方案", "Plan")} {String(index + 1).padStart(2, "0")}</small><strong>{plan.title}</strong></span></div>
         <p>{plan.clips[0]?.reason || plan.explanation}</p><div className={ui.planStats}><span>{clips.length} {tr("个镜头", "shots")}</span><span>{duration.toFixed(1)}s</span><span>{tr("平均", "Avg.")} {(duration / Math.max(1, clips.length)).toFixed(1)}s</span></div>
         <div className={ui.timeline} aria-hidden="true">{clips.map((clip, i) => <span key={i} style={{ flexGrow: Math.max(.1, clip.outputEnd - clip.outputStart) }} />)}</div>

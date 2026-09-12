@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { LuArrowLeft, LuPlay, LuChevronDown, LuArrowRight, LuLoaderCircle } from "react-icons/lu";
+import { ArrowLeft, Play, ChevronDown, ArrowRight, LoaderCircle } from "lucide-react";
 import { useSettingsStore } from "@/lib/stores/settings-store";
 import { resolveTTSConfig, isPaidTTSReady, getTTSProviderMeta } from "@/lib/tts-presets";
 import Link from "next/link";
@@ -646,7 +646,7 @@ export default function VideoPage() {
             leaving an empty timeline with no explanation */}
         {loading && (
           <div className="flex items-center justify-center gap-2 py-20 text-sm text-muted-foreground">
-            <LuLoaderCircle className="h-4 w-4 animate-spin" />
+            <LoaderCircle className="h-4 w-4 animate-spin" />
             {t("stateLoading")}
           </div>
         )}
@@ -668,7 +668,7 @@ export default function VideoPage() {
               </div>
               <Link href={`/project/${id}/assets${auxiliaryCompose && productionMode === "local" ? "?workspace=ai" : ""}`}>
                 <Button variant="outline" size="sm" className="text-xs">
-                  <LuArrowLeft className="w-3.5 h-3.5 mr-1" />
+                  <ArrowLeft className="w-3.5 h-3.5 mr-1" />
                   {t("backToAssets")}
                 </Button>
               </Link>
@@ -686,7 +686,7 @@ export default function VideoPage() {
                           {/* 缩略图：有已生成的画面就直接预览，否则回退占位图 */}
                           <div className="w-20 h-14 bg-muted/30 rounded-md shrink-0 overflow-hidden border border-border/30 relative">
                             <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                              <LuPlay className="w-4 h-4 text-primary/60" />
+                              <Play className="w-4 h-4 text-primary/60" />
                             </div>
                             {thumbs[clip.shotId] &&
                               (isVideoPath(thumbs[clip.shotId]) ? (
@@ -747,7 +747,7 @@ export default function VideoPage() {
                     {index < clips.length - 1 && (
                       <div className="flex items-center justify-center py-1.5">
                         <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-muted/20 border border-border/30">
-                          <LuChevronDown className="w-3 h-3 text-muted-foreground" />
+                          <ChevronDown className="w-3 h-3 text-muted-foreground" />
                           <select
                             value={clip.transition}
                             onChange={(e) => updateTransition(clip.shotId, e.target.value)}
@@ -1117,14 +1117,14 @@ export default function VideoPage() {
               >
                 {isComposing ? (
                   <>
-                    <LuLoaderCircle className="animate-spin mr-2 h-4 w-4" />
+                    <LoaderCircle className="animate-spin mr-2 h-4 w-4" />
                     {t("composing")}
                   </>
                 ) : composeDone ? (
                   t("composeRedo")
                 ) : (
                   <>
-                    <LuPlay className="w-4 h-4 mr-1" />
+                    <Play className="w-4 h-4 mr-1" />
                     {t("composeStart")}
                   </>
                 )}
@@ -1138,7 +1138,7 @@ export default function VideoPage() {
                   <Link href={`/project/${id}/export`}>
                     <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
                       {t("nextExport")}
-                      <LuArrowRight className="w-4 h-4 ml-1" />
+                      <ArrowRight className="w-4 h-4 ml-1" />
                     </Button>
                   </Link>
                 </>
@@ -1226,7 +1226,7 @@ export default function VideoPage() {
                         >
                           {matrixRunning ? (
                             <>
-                              <LuLoaderCircle className="animate-spin mr-1 h-3 w-3" />
+                              <LoaderCircle className="animate-spin mr-1 h-3 w-3" />
                               {t("matrixRunning", {
                                 done: matrixResults.filter((r) => r.status !== "composing").length,
                                 total: matrixResults.length,
@@ -1242,7 +1242,7 @@ export default function VideoPage() {
                           {matrixResults.map((r) => (
                             <div key={r.label} className="flex items-center gap-2 truncate">
                               {r.status === "composing" ? (
-                                <LuLoaderCircle className="animate-spin h-3 w-3 shrink-0 text-muted-foreground" />
+                                <LoaderCircle className="animate-spin h-3 w-3 shrink-0 text-muted-foreground" />
                               ) : r.status === "done" ? (
                                 <span className="text-emerald-500 shrink-0">✓</span>
                               ) : (

@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/studio/page";
 import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Image as ImageIcon, LoaderCircle, Plus, X, Zap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -477,26 +478,7 @@ export default function ClonePage() {
                   >
                     {isAnalyzing ? (
                       <span className="flex items-center gap-2">
-                        {/* loading spinner */}
-                        <svg
-                          className="animate-spin h-4 w-4"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          />
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                          />
-                        </svg>
+                        <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
                         {t("analyzing")}
                       </span>
                     ) : (
@@ -616,28 +598,7 @@ export default function ClonePage() {
                     // empty state - upload prompt
                     <div className="flex flex-col items-center justify-center py-10 text-center">
                       <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted/50">
-                        <svg
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="text-muted-foreground"
-                        >
-                          <rect
-                            x="3"
-                            y="3"
-                            width="18"
-                            height="18"
-                            rx="2"
-                            ry="2"
-                          />
-                          <circle cx="8.5" cy="8.5" r="1.5" />
-                          <polyline points="21 15 16 10 5 21" />
-                        </svg>
+                        <ImageIcon size={24} strokeWidth={1.5} className="text-muted-foreground" aria-hidden="true" />
                       </div>
                       <p className="text-sm text-muted-foreground mb-1">
                         {t("uploadHint")}
@@ -670,39 +631,14 @@ export default function ClonePage() {
                                 removeImage(img.id);
                               }}
                             >
-                              <svg
-                                width="12"
-                                height="12"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="white"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <line x1="18" y1="6" x2="6" y2="18" />
-                                <line x1="6" y1="6" x2="18" y2="18" />
-                              </svg>
+                              <X size={12} color="white" aria-hidden="true" />
                             </button>
                           </div>
                         ))}
                         {/* add more button */}
                         {productImages.length < 5 && (
                           <div className="aspect-square rounded-lg border border-dashed border-border/60 flex items-center justify-center hover:border-primary/50 transition-colors">
-                            <svg
-                              width="20"
-                              height="20"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="text-muted-foreground"
-                            >
-                              <line x1="12" y1="5" x2="12" y2="19" />
-                              <line x1="5" y1="12" x2="19" y2="12" />
-                            </svg>
+                            <Plus size={20} className="text-muted-foreground" aria-hidden="true" />
                           </div>
                         )}
                       </div>
@@ -817,27 +753,12 @@ export default function ClonePage() {
           >
             {isGenerating ? (
               <>
-                <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
+                <LoaderCircle className="mr-2 size-5 animate-spin motion-reduce:animate-none" aria-hidden="true" />
                 {t("cloning")}
               </>
             ) : (
               <>
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="mr-2"
-                >
-                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                </svg>
+                <Zap size={20} className="mr-2" aria-hidden="true" />
                 {t("startClone")}
               </>
             )}

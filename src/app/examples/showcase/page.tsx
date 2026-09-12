@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LuPlus } from "react-icons/lu";
+import { Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -127,7 +127,7 @@ export default function ShowcasePage() {
         <div className="mt-12 flex justify-center">
           <Link href="/project/new">
             <Button size="lg" className="brand-gradient text-white px-10">
-              <LuPlus className="w-5 h-5 mr-2" />
+              <Plus className="w-5 h-5 mr-2" />
               {t("bottomCta")}
             </Button>
           </Link>

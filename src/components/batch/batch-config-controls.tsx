@@ -1,16 +1,16 @@
-import type { IconType } from "react-icons";
+import type { LucideIcon } from "lucide-react";
 import {
-  LuBadgeDollarSign,
-  LuCheck,
-  LuFilm,
-  LuShuffle,
-} from "react-icons/lu";
+  BadgeDollarSign,
+  Check,
+  Film,
+  Shuffle,
+} from "lucide-react";
 import styles from "./batch-config-controls.module.css";
 
 export interface BatchChoiceOption {
   value: string;
   label: string;
-  icon?: IconType;
+  icon?: LucideIcon;
 }
 
 interface BatchChoiceGroupProps {
@@ -53,7 +53,7 @@ export function BatchChoiceGroup({
               {Icon ? <Icon className={styles.choiceIcon} aria-hidden="true" /> : null}
               <span className={styles.choiceLabel}>{option.label}</span>
               <span className={styles.choiceCheck} aria-hidden="true">
-                <LuCheck />
+                <Check />
               </span>
             </button>
           );
@@ -105,7 +105,7 @@ export function BatchStrategyPanel({
       description: autoComposeDescription,
       checked: autoCompose,
       onChange: onAutoComposeChange,
-      icon: LuFilm,
+      icon: Film,
       disabled: false,
     },
     {
@@ -114,7 +114,7 @@ export function BatchStrategyPanel({
       description: productCardDescription,
       checked: productCard,
       onChange: onProductCardChange,
-      icon: LuBadgeDollarSign,
+      icon: BadgeDollarSign,
       disabled: !autoCompose,
     },
     {
@@ -123,7 +123,7 @@ export function BatchStrategyPanel({
       description: variationDescription,
       checked: variation,
       onChange: onVariationChange,
-      icon: LuShuffle,
+      icon: Shuffle,
       disabled: false,
     },
   ] as const;

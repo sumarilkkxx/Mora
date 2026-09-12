@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/studio/page";
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, ChevronRight, CircleDashed, CirclePlay, Clock3, LoaderCircle, RefreshCw, RotateCcw, Sparkles, Trash2 } from "lucide-react";
+import { CheckCircle2, ChevronRight, CircleDashed, CirclePlay, Clock3, Info, LoaderCircle, RefreshCw, RotateCcw, Trash2, TriangleAlert } from "lucide-react";
 import { useLocale, useT } from "@/lib/i18n";
 import { formatRelativeTime } from "@/lib/relative-time";
 import { EMPTY_TASK_FEED, taskHref, type TaskFeed, type TaskRow } from "@/lib/task-feed";
@@ -88,7 +88,7 @@ export default function TasksPage() {
   }, [refresh]);
 
   const renderTask = (task: TaskRow, tone: "active" | "attention" | "done") => {
-    const Icon = tone === "attention" ? AlertTriangle : tone === "done" ? CheckCircle2 : CircleDashed;
+    const Icon = tone === "attention" ? TriangleAlert : tone === "done" ? CheckCircle2 : CircleDashed;
     const ActionIcon = tone === "attention" ? RotateCcw : tone === "done" ? CirclePlay : Clock3;
     const metadata = [
       task.projectName || task.label,
@@ -157,7 +157,7 @@ export default function TasksPage() {
       } />
 
       <div className="mt-5 flex items-start gap-3 rounded-2xl border border-primary/15 bg-primary/[.04] px-4 py-3 text-xs leading-5 text-muted-foreground">
-        <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+        <Info className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
         <span>{t("backgroundNote")}</span>
       </div>
 

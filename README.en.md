@@ -122,7 +122,7 @@ flowchart TD
 
 - Designed for talking-head clips, shop visits, tutorials, interviews, and previously recorded vertical footage.
 - AI Smart Edit uses a vision model to understand scenes and visible evidence, then combines the product or service, audience, confirmed selling points, and intended action into three promotion-copy directions. Users approve each stage, edit copy sections, or optionally request a rewrite.
-- After copy approval, Mora creates three explainable shot plans, marks its AI recommendation, and shows each shot's output time, source range, copy, and visual evidence.
+- After copy approval, Mora creates three explainable shot plans, marks its system recommendation, and shows each shot's output time, source range, copy, and visual evidence.
 - The selected plan runs through voiceover, Chinese captions, local FFmpeg editing, and cloud visual review. Tasks, source footage, plans, and output versions remain traceable and recoverable.
 - Guided editing and transcript-based detailed cuts remain available.
 - Source footage, edit plans, and earlier versions stay intact for comparison and rollback.
@@ -197,7 +197,7 @@ pnpm build
 | **Scripts and storyboards** | Structured fields, text-model scripts, manual scripts, template structures, shot rhythm, script checks, visual descriptions, creative intent, and constraints |
 | **Visual media** | Local media plus Pexels, Pixabay, Openverse, Coverr, and other adapters; image generation, image-to-video, reference-to-video |
 | **Voice and captions** | Edge TTS, provider TTS, voice and speed, burned captions, karaoke timing, BGM, ducking, subtitle export |
-| **Editing and composition** | LLM-assisted smart editing, scene understanding, promotion copy and candidate plans, AI recommendations, structure cloning, transcript editing, camera/look presets, FFmpeg composition, poster extraction, versions |
+| **Editing and composition** | LLM-assisted smart editing, scene understanding, promotion copy and candidate plans, system recommendations, structure cloning, transcript editing, camera/look presets, FFmpeg composition, poster extraction, versions |
 | **Production management** | Persistent pipelines, resumable state, batches, task center, model preflight, production console, final-video QC |
 | **Export and publishing** | Platform presets, preview/download, publishing copy, media credits, AIGC labels, publishing checks |
 | **Developer surfaces** | Web UI, HTTP API, zero-dependency Node CLI, Electron shell, SQLite/Drizzle data layer |

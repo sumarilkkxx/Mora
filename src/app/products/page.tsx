@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/studio/page";
 
 import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import { LuPlus, LuTrash2, LuPencil, LuPackage, LuImage, LuX, LuVideo, LuCircleAlert, LuLink, LuLoader } from "react-icons/lu";
+import { Plus, Trash2, Pencil, Package, Image as ImageIcon, X, Video, CircleAlert, Link as LinkIcon, Loader } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -327,7 +327,7 @@ export default function ProductsPage() {
                   setImportError(null);
                 }}
               >
-                <LuLink className="w-4 h-4 mr-1.5" />
+                <LinkIcon className="w-4 h-4 mr-1.5" />
                 {t("importLink")}
               </Button>
               <Button
@@ -337,7 +337,7 @@ export default function ProductsPage() {
                   setIsFormOpen(true);
                 }}
               >
-                <LuPlus className="w-4 h-4 mr-1.5" />
+                <Plus className="w-4 h-4 mr-1.5" />
                 {t("addProduct")}
               </Button>
             </div>
@@ -355,7 +355,7 @@ export default function ProductsPage() {
                 className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-muted/50"
                 aria-label={t("cancel")}
               >
-                <LuX className="h-3 w-3" />
+                <X className="h-3 w-3" />
               </button>
             </div>} />
         )}
@@ -380,7 +380,7 @@ export default function ProductsPage() {
                 >
                   {importLoading ? (
                     <>
-                      <LuLoader className="w-4 h-4 mr-1.5 animate-spin" />
+                      <Loader className="w-4 h-4 mr-1.5 animate-spin" />
                       {t("importExtracting")}
                     </>
                   ) : (
@@ -390,7 +390,7 @@ export default function ProductsPage() {
               </div>
               {importError && (
                 <p className="text-sm text-destructive flex items-center gap-1.5">
-                  <LuCircleAlert className="w-4 h-4 shrink-0" />
+                  <CircleAlert className="w-4 h-4 shrink-0" />
                   {importError}
                   <button
                     type="button"
@@ -521,7 +521,7 @@ export default function ProductsPage() {
                     />
                     <div className="flex flex-col items-center gap-3">
                       <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted/50">
-                        <LuImage className="w-6 h-6 text-muted-foreground" />
+                        <ImageIcon className="w-6 h-6 text-muted-foreground" />
                       </div>
                       <div>
                         <p className="text-sm font-medium">
@@ -561,7 +561,7 @@ export default function ProductsPage() {
                           onClick={() => removeImage(img.id)}
                           className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-red-500"
                         >
-                          <LuX className="w-3 h-3" />
+                          <X className="w-3 h-3" />
                         </button>
                         {/* Hover overlay */}
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
@@ -613,7 +613,7 @@ export default function ProductsPage() {
               {/* Upload / save error message */}
               {saveError && (
                 <p className="text-sm text-destructive flex items-center gap-1.5">
-                  <LuCircleAlert className="w-4 h-4 shrink-0" />
+                  <CircleAlert className="w-4 h-4 shrink-0" />
                   {saveError}
                 </p>
               )}
@@ -642,7 +642,7 @@ export default function ProductsPage() {
           <Card className="glass-card">
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted/50">
-                <LuPackage className="w-7 h-7 text-muted-foreground" />
+                <Package className="w-7 h-7 text-muted-foreground" />
               </div>
               <p className="text-muted-foreground mb-4">
                 {t("emptyText")}
@@ -655,7 +655,7 @@ export default function ProductsPage() {
                     setIsFormOpen(true);
                   }}
                 >
-                  <LuPlus className="w-4 h-4 mr-1.5" />
+                  <Plus className="w-4 h-4 mr-1.5" />
                   {t("addProduct")}
                 </Button>
                 <Button variant="outline" onClick={importExamples}>
@@ -693,7 +693,7 @@ export default function ProductsPage() {
                           />
                         ) : (
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <LuImage className="w-8 h-8 text-muted-foreground/50" />
+                            <ImageIcon className="w-8 h-8 text-muted-foreground/50" />
                           </div>
                         )}
                         {/* Category badge */}
@@ -715,7 +715,7 @@ export default function ProductsPage() {
                             }}
                             className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white hover:bg-primary transition-colors"
                           >
-                            <LuPencil className="w-3.5 h-3.5" />
+                            <Pencil className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={(e) => {
@@ -724,7 +724,7 @@ export default function ProductsPage() {
                             }}
                             className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white hover:bg-red-500 transition-colors"
                           >
-                            <LuTrash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </div>
@@ -746,7 +746,7 @@ export default function ProductsPage() {
                         {/* Make video: beginner mode routes to the one-tap studio, director mode to the full advanced form — both pre-fill via productId */}
                         <Link href={`${uiMode === "pro" ? "/project/new" : "/start"}?productId=${product.id}`} className="block mt-3">
                           <Button size="sm" className="w-full brand-gradient text-white border-0">
-                            <LuVideo className="w-3.5 h-3.5 mr-1.5" />
+                            <Video className="w-3.5 h-3.5 mr-1.5" />
                             {t("makeVideo")}
                           </Button>
                         </Link>

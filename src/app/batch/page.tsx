@@ -6,15 +6,15 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
 import { waitForBatchComposition } from "@/lib/batch-compose";
 import {
-  LuCheck,
-  LuLoader,
-  LuPackage,
-  LuZap,
-  LuBox,
-  LuLayoutGrid,
-  LuEye,
-  LuVideo,
-} from "react-icons/lu";
+  Check,
+  Loader,
+  Package,
+  Zap,
+  Box,
+  LayoutGrid,
+  Eye,
+  Video,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,10 +29,10 @@ import { useT, useLocale } from "@/lib/i18n";
 
 // Video mode options (labelKey refers to a batch-namespace i18n key; resolved at render time)
 const videoModeOptions = [
-  { value: "product_closeup", labelKey: "modeProductCloseup", icon: LuBox },
-  { value: "graphic_montage", labelKey: "modeGraphicMontage", icon: LuLayoutGrid },
-  { value: "scene_demo", labelKey: "modeSceneDemo", icon: LuEye },
-  { value: "live_presenter", labelKey: "modeLivePresenter", icon: LuVideo },
+  { value: "product_closeup", labelKey: "modeProductCloseup", icon: Box },
+  { value: "graphic_montage", labelKey: "modeGraphicMontage", icon: LayoutGrid },
+  { value: "scene_demo", labelKey: "modeSceneDemo", icon: Eye },
+  { value: "live_presenter", labelKey: "modeLivePresenter", icon: Video },
 ];
 
 // Script style options (labelKey refers to a batch-namespace i18n key; resolved at render time)
@@ -631,7 +631,7 @@ export default function BatchPage() {
                 /* Empty product library hint */
                 <div className="flex flex-col items-center justify-center py-10 text-center">
                   <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted/50">
-                    <LuPackage className="w-6 h-6 text-muted-foreground" />
+                    <Package className="w-6 h-6 text-muted-foreground" />
                   </div>
                   <p className="text-sm text-muted-foreground mb-3">
                     {t("emptyHint")}
@@ -671,11 +671,11 @@ export default function BatchPage() {
                               : "border-border/80 bg-muted/30"
                           }`}
                         >
-                          {isSelected && <LuCheck className="w-3 h-3 text-white" />}
+                          {isSelected && <Check className="w-3 h-3 text-white" />}
                         </div>
                         {/* Product image placeholder */}
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted/30 border border-border/30">
-                          <LuPackage className="w-5 h-5 text-muted-foreground" />
+                          <Package className="w-5 h-5 text-muted-foreground" />
                         </div>
                         {/* Product info */}
                         <div className="min-w-0 flex-1">
@@ -793,7 +793,7 @@ export default function BatchPage() {
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-8 h-8 rounded bg-muted/30 flex items-center justify-center shrink-0">
-                          <LuPackage className="w-4 h-4 text-muted-foreground" />
+                          <Package className="w-4 h-4 text-muted-foreground" />
                         </div>
                         <div className="min-w-0">
                           <span className="text-sm block truncate">{task.productName}</span>
@@ -813,10 +813,10 @@ export default function BatchPage() {
                         )}
                         <Badge className={statusColors[task.status]}>
                           {task.status === "generating" && (
-                            <LuLoader className="w-3 h-3 mr-1 animate-spin" />
+                            <Loader className="w-3 h-3 mr-1 animate-spin" />
                           )}
                           {task.status === "done" && (
-                            <LuCheck className="w-3 h-3 mr-1" />
+                            <Check className="w-3 h-3 mr-1" />
                           )}
                           {t(statusLabelKeys[task.status])}
                         </Badge>
@@ -868,17 +868,17 @@ export default function BatchPage() {
             >
               {isGenerating ? (
                 <>
-                  <LuLoader className="w-5 h-5 mr-2 animate-spin" />
+                  <Loader className="w-5 h-5 mr-2 animate-spin" />
                   {t("ctaGenerating")}
                 </>
               ) : isComplete ? (
                 <>
-                  <LuCheck className="w-5 h-5 mr-2" />
+                  <Check className="w-5 h-5 mr-2" />
                   {t("ctaAgain")}
                 </>
               ) : (
                 <>
-                  <LuZap className="w-5 h-5 mr-2" />
+                  <Zap className="w-5 h-5 mr-2" />
                   {t("ctaStart")}
                 </>
               )}

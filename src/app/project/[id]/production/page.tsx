@@ -4,25 +4,25 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
-  LuActivity,
-  LuArrowLeft,
-  LuBadgeDollarSign,
-  LuBrainCircuit,
-  LuCheck,
-  LuCircleAlert,
-  LuClock3,
-  LuFilm,
-  LuGitBranch,
-  LuLoaderCircle,
-  LuRefreshCw,
-  LuRoute,
-  LuSave,
-  LuScissors,
-  LuShieldCheck,
-  LuSparkles,
-  LuTags,
-  LuWandSparkles,
-} from "react-icons/lu";
+  Activity,
+  ArrowLeft,
+  BadgeDollarSign,
+  BrainCircuit,
+  Check,
+  CircleAlert,
+  Clock3,
+  Film,
+  GitBranch,
+  LoaderCircle,
+  RefreshCw,
+  Route,
+  Save,
+  Scissors,
+  ShieldCheck,
+  Tags,
+  WandSparkles,
+  Wrench,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
 import { PageFrame, PageHeader } from "@/components/studio/page";
@@ -252,29 +252,29 @@ export default function ProductionPage() {
     finally { setBusy(null); }
   };
 
-  if (loading && !overview) return <main className="flex min-h-[60vh] items-center justify-center"><div role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><LuLoaderCircle className="h-4 w-4 animate-spin motion-reduce:animate-none" />{t("loading")}</div></main>;
+  if (loading && !overview) return <main className="flex min-h-[60vh] items-center justify-center"><div role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="h-4 w-4 animate-spin motion-reduce:animate-none" />{t("loading")}</div></main>;
   if (!overview) return <PageFrame width="content"><Notice tone="danger">{status || t("loadFailed")}</Notice></PageFrame>;
 
   return (
     <PageFrame width="full" className="max-w-7xl">
-      <PageHeader variant="compact" title={t("title")} description={t("subtitle")} context={<>          <Link href={`/project/${id}/assets`} className="inline-flex min-h-8 items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><LuArrowLeft className="h-4 w-4" />{t("back")}</Link><span aria-hidden="true">/</span><span>{overview.project.name}</span></>} actions={<div className="flex self-start gap-2 sm:self-auto">
-          <Link href={`/project/${id}/transcript`} className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/8 px-3 text-sm font-medium text-primary hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><LuScissors />{t("textEditor")}</Link>
+      <PageHeader variant="compact" title={t("title")} description={t("subtitle")} context={<>          <Link href={`/project/${id}/assets`} className="inline-flex min-h-8 items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ArrowLeft className="h-4 w-4" />{t("back")}</Link><span aria-hidden="true">/</span><span>{overview.project.name}</span></>} actions={<div className="flex self-start gap-2 sm:self-auto">
+          <Link href={`/project/${id}/transcript`} className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/8 px-3 text-sm font-medium text-primary hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><Scissors />{t("textEditor")}</Link>
           <Button variant="outline" className="h-10" disabled={busy === "snapshot"} onClick={() => patchProduction({ action: "snapshot" }, "snapshot")}>
-            {busy === "snapshot" ? <LuLoaderCircle className="animate-spin motion-reduce:animate-none" /> : <LuGitBranch />}{t("snapshot")}
+            {busy === "snapshot" ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : <GitBranch />}{t("snapshot")}
           </Button>
         </div>} />
 
       <div role="status" aria-live="polite" className="mb-4 min-h-5 text-sm text-primary">{status}</div>
 
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-primary/25 bg-primary/8 p-4"><div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><LuBadgeDollarSign className="h-4 w-4 text-primary" />{t("cost")}</div><div className="text-xl font-bold tabular-nums">{t("usdRange", { min: estimate.rangeUsd.min.toFixed(2), max: estimate.rangeUsd.max.toFixed(2) })}</div><p className="mt-1 text-[11px] text-muted-foreground">{estimate.unknownCalls ? t("unknownCalls", { n: estimate.unknownCalls }) : t("priceKnown")}</p></div>
-        <div className="studio-surface rounded-2xl p-4 shadow-none"><div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><LuClock3 className="h-4 w-4 text-primary" />{t("time")}</div><div className="text-xl font-bold tabular-nums">{t("minuteRange", { min: Math.max(1, Math.ceil(estimate.estimatedSeconds.min / 60)), max: Math.max(1, Math.ceil(estimate.estimatedSeconds.max / 60)) })}</div><p className="mt-1 text-[11px] text-muted-foreground">{t("shots", { n: overview.selectedScript?.shotCount || overview.counts.assets })}</p></div>
-        <div className="studio-surface rounded-2xl p-4 shadow-none"><div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><LuActivity className="h-4 w-4 text-primary" />{t("projectState")}</div><div className="text-xl font-bold">{overview.latestRun?.status ? t(`run_${overview.latestRun.status}`) : t("ready")}</div><p className="mt-1 text-[11px] text-muted-foreground">{t("outputCounts", { assets: overview.counts.assets, videos: overview.counts.compositions })}</p></div>
+        <div className="rounded-2xl border border-primary/25 bg-primary/8 p-4"><div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><BadgeDollarSign className="h-4 w-4 text-primary" />{t("cost")}</div><div className="text-xl font-bold tabular-nums">{t("usdRange", { min: estimate.rangeUsd.min.toFixed(2), max: estimate.rangeUsd.max.toFixed(2) })}</div><p className="mt-1 text-[11px] text-muted-foreground">{estimate.unknownCalls ? t("unknownCalls", { n: estimate.unknownCalls }) : t("priceKnown")}</p></div>
+        <div className="studio-surface rounded-2xl p-4 shadow-none"><div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><Clock3 className="h-4 w-4 text-primary" />{t("time")}</div><div className="text-xl font-bold tabular-nums">{t("minuteRange", { min: Math.max(1, Math.ceil(estimate.estimatedSeconds.min / 60)), max: Math.max(1, Math.ceil(estimate.estimatedSeconds.max / 60)) })}</div><p className="mt-1 text-[11px] text-muted-foreground">{t("shots", { n: overview.selectedScript?.shotCount || overview.counts.assets })}</p></div>
+        <div className="studio-surface rounded-2xl p-4 shadow-none"><div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><Activity className="h-4 w-4 text-primary" />{t("projectState")}</div><div className="text-xl font-bold">{overview.latestRun?.status ? t(`run_${overview.latestRun.status}`) : t("ready")}</div><p className="mt-1 text-[11px] text-muted-foreground">{t("outputCounts", { assets: overview.counts.assets, videos: overview.counts.compositions })}</p></div>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
         <div className="space-y-5">
-          <Section title={t("workflow")} hint={t("workflowHint")} icon={<LuRoute className="h-4 w-4" />}>
+          <Section title={t("workflow")} hint={t("workflowHint")} icon={<Route className="h-4 w-4" />}>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {workflow.map((stage) => {
                 const optional = OPTIONAL_STAGES.has(stage.id);
@@ -284,19 +284,19 @@ export default function ProductionPage() {
                 </button>;
               })}
             </div>
-            <Button className="mt-4 h-10" disabled={busy === "workflow"} onClick={() => patchProduction({ productionWorkflow: workflow }, "workflow")}><LuSave />{busy === "workflow" ? t("saving") : t("saveWorkflow")}</Button>
+            <Button className="mt-4 h-10" disabled={busy === "workflow"} onClick={() => patchProduction({ productionWorkflow: workflow }, "workflow")}><Save />{busy === "workflow" ? t("saving") : t("saveWorkflow")}</Button>
           </Section>
 
-          <Section title={t("memory")} hint={t("memoryHint")} icon={<LuBrainCircuit className="h-4 w-4" />}>
+          <Section title={t("memory")} hint={t("memoryHint")} icon={<BrainCircuit className="h-4 w-4" />}>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="text-xs font-medium text-muted-foreground sm:col-span-2">{t("subject")}<input value={intent.subject} onChange={(event) => setIntent((current) => ({ ...current, subject: event.target.value }))} className="mt-1.5 h-10 w-full rounded-lg border border-border bg-background/50 px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary" /></label>
               {(["action", "environment", "lighting", "camera"] as const).map((field) => <label key={field} className="text-xs font-medium text-muted-foreground">{t(field)}<input value={intent[field] ?? ""} onChange={(event) => setIntent((current) => ({ ...current, [field]: event.target.value }))} className="mt-1.5 h-10 w-full rounded-lg border border-border bg-background/50 px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary" /></label>)}
               {(["characterAnchors", "productAnchors", "wardrobeAnchors", "forbiddenChanges"] as const).map((field) => <label key={field} className="text-xs font-medium text-muted-foreground">{t(field)}<input value={bible[field].join(", ")} placeholder={t("commaHint")} onChange={(event) => setBible((current) => ({ ...current, [field]: splitList(event.target.value) }))} className="mt-1.5 h-10 w-full rounded-lg border border-border bg-background/50 px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary" /></label>)}
             </div>
-            <Button className="mt-4 h-10" disabled={busy === "memory"} onClick={() => patchProduction({ creativeIntent: intent, visualBible: bible }, "memory")}><LuSave />{busy === "memory" ? t("saving") : t("saveMemory")}</Button>
+            <Button className="mt-4 h-10" disabled={busy === "memory"} onClick={() => patchProduction({ creativeIntent: intent, visualBible: bible }, "memory")}><Save />{busy === "memory" ? t("saving") : t("saveMemory")}</Button>
           </Section>
 
-          <Section title={t("versions")} icon={<LuGitBranch className="h-4 w-4" />}>
+          <Section title={t("versions")} icon={<GitBranch className="h-4 w-4" />}>
             {!overview.versionTree.scripts.length && !overview.versionTree.generations.length && !overview.snapshots.length ? <p className="text-sm text-muted-foreground">{t("noVersions")}</p> : <div className="grid gap-4 md:grid-cols-2">
               <div><h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("snapshots")}</h3><div className="space-y-2">{overview.snapshots.slice(0, 5).map((item) => <div key={item.id} className="rounded-lg border border-border/50 bg-background/30 px-3 py-2"><p className="truncate text-sm font-medium">{item.label}</p><p className="mt-1 text-[11px] text-muted-foreground">{formatDate(item.createdAt, locale)} · {item.assetIds.length} {t("assetsUnit")}</p></div>)}</div></div>
               <div><h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("generations")}</h3><div className="space-y-2">{overview.versionTree.generations.slice(0, 6).map((item) => <div key={`${item.kind}-${item.id}`} className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-background/30 px-3 py-2"><div className="min-w-0"><p className="truncate text-sm font-medium">{item.label}</p><p className="text-[11px] text-muted-foreground">{item.kind}{item.shotId != null ? ` · #${item.shotId}` : ""}</p></div><span className="shrink-0 rounded-full border border-border/60 px-2 py-0.5 text-[10px]">{item.status}</span></div>)}</div></div>
@@ -305,29 +305,29 @@ export default function ProductionPage() {
         </div>
 
         <div className="space-y-5">
-          <Section title={t("router")} hint={t("routerHint")} icon={<LuWandSparkles className="h-4 w-4" />}>
+          <Section title={t("router")} hint={t("routerHint")} icon={<WandSparkles className="h-4 w-4" />}>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 xl:grid-cols-2">{(["balanced", "cost", "speed", "quality", "consistency"] as RoutingGoal[]).map((item) => <button key={item} type="button" aria-pressed={goal === item} onClick={() => setGoal(item)} className={`min-h-9 rounded-lg border px-2 text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary ${goal === item ? "border-primary/40 bg-primary/10 text-primary" : "border-border/60 text-muted-foreground hover:text-foreground"}`}>{t(`goal_${item}`)}</button>)}</div>
-            {routeDecision.selected ? <div className="mt-4 rounded-xl border border-primary/25 bg-primary/8 p-3"><p className="text-[11px] font-semibold uppercase tracking-wider text-primary">{t("recommended")}</p><p className="mt-1 break-words text-sm font-semibold">{routeDecision.selected.name}</p><p className="mt-1 text-[11px] text-muted-foreground">{priceOf(videoModels.find((model) => model.id === routeDecision.selected?.id)) == null ? t("priceUnknown") : t("perCall", { price: priceOf(videoModels.find((model) => model.id === routeDecision.selected?.id))!.toFixed(3) })}</p><Button className="mt-3 h-9 w-full" disabled={defaultVideoModel === routeDecision.selected.id} onClick={() => { setDefaultVideoModel(routeDecision.selected!.id); setStatus(t("modelApplied")); }}><LuCheck />{defaultVideoModel === routeDecision.selected.id ? t("applied") : t("applyModel")}</Button></div> : <p className="mt-4 text-sm text-muted-foreground">{t("noModel")}</p>}
+            {routeDecision.selected ? <div className="mt-4 rounded-xl border border-primary/25 bg-primary/8 p-3"><p className="text-[11px] font-semibold uppercase tracking-wider text-primary">{t("recommended")}</p><p className="mt-1 break-words text-sm font-semibold">{routeDecision.selected.name}</p><p className="mt-1 text-[11px] text-muted-foreground">{priceOf(videoModels.find((model) => model.id === routeDecision.selected?.id)) == null ? t("priceUnknown") : t("perCall", { price: priceOf(videoModels.find((model) => model.id === routeDecision.selected?.id))!.toFixed(3) })}</p><Button className="mt-3 h-9 w-full" disabled={defaultVideoModel === routeDecision.selected.id} onClick={() => { setDefaultVideoModel(routeDecision.selected!.id); setStatus(t("modelApplied")); }}><Check />{defaultVideoModel === routeDecision.selected.id ? t("applied") : t("applyModel")}</Button></div> : <p className="mt-4 text-sm text-muted-foreground">{t("noModel")}</p>}
           </Section>
 
-          <Section title={t("assets")} hint={t("assetCount", { n: overview.semanticAssets.length })} icon={<LuTags className="h-4 w-4" />}>
+          <Section title={t("assets")} hint={t("assetCount", { n: overview.semanticAssets.length })} icon={<Tags className="h-4 w-4" />}>
             {overview.semanticAssets.length ? <div className="space-y-3">{overview.semanticAssets.slice(0, 8).map((asset) => <div key={asset.id} className="rounded-xl border border-border/50 bg-background/30 p-3"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium">#{asset.shotId} · {asset.mediaType}</span><span className="text-[10px] text-muted-foreground">{asset.commercialStatus}</span></div><div className="mt-2 flex flex-wrap gap-1">{asset.tags.length ? asset.tags.slice(0, 6).map((tag) => <span key={tag} className="rounded-full bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground">{tag}</span>) : <span className="text-[11px] text-muted-foreground">{t("noTags")}</span>}</div></div>)}</div> : <p className="text-sm text-muted-foreground">{t("noTags")}</p>}
             {overview.mediaInsights.length > 0 && <div className="mt-4 border-t border-border/50 pt-3"><p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("mediaInsights")}</p>{overview.mediaInsights.slice(0, 3).map((insight) => <p key={insight.id} className="mb-2 line-clamp-2 text-xs leading-5 text-muted-foreground">{insight.summary}</p>)}</div>}
           </Section>
 
-          <Section title={t("diagnosis")} icon={<LuCircleAlert className="h-4 w-4" />}>
-            {diagnosis ? <div><p className="text-sm leading-6">{diagnosis.message[locale]}</p><p className="mt-3 text-xs font-medium text-muted-foreground">{t("recover")}</p><div className="mt-2 flex flex-wrap gap-1.5">{diagnosis.actions.map((action) => <span key={action} className="rounded-full border border-amber-500/25 bg-amber-500/8 px-2.5 py-1 text-[11px] text-amber-300">{t(`recovery_${action}`)}</span>)}</div></div> : <p className="flex items-center gap-2 text-sm text-muted-foreground"><LuShieldCheck className="h-4 w-4 text-emerald-400" />{t("noFailure")}</p>}
+          <Section title={t("diagnosis")} icon={<CircleAlert className="h-4 w-4" />}>
+            {diagnosis ? <div><p className="text-sm leading-6">{diagnosis.message[locale]}</p><p className="mt-3 text-xs font-medium text-muted-foreground">{t("recover")}</p><div className="mt-2 flex flex-wrap gap-1.5">{diagnosis.actions.map((action) => <span key={action} className="rounded-full border border-amber-500/25 bg-amber-500/8 px-2.5 py-1 text-[11px] text-amber-300">{t(`recovery_${action}`)}</span>)}</div></div> : <p className="flex items-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="h-4 w-4 text-emerald-400" />{t("noFailure")}</p>}
           </Section>
 
-          <Section title={t("preview")} hint={t("previewDesc")} icon={<LuFilm className="h-4 w-4" />}>
+          <Section title={t("preview")} hint={t("previewDesc")} icon={<Film className="h-4 w-4" />}>
             <div className="mb-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground"><span className="rounded-full border border-border/60 px-2 py-1">{previewPlan.resolution}</span><span className="rounded-full border border-border/60 px-2 py-1">{previewPlan.videoPreset}</span><span className="rounded-full border border-border/60 px-2 py-1">CRF {previewPlan.crf}</span></div>
-            <Link href={`/project/${id}/video?renderPreset=fast`} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 text-sm font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-primary"><LuFilm className="h-4 w-4" />{t("previewCta")}</Link>
+            <Link href={`/project/${id}/video?renderPreset=fast`} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 text-sm font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-primary"><Film className="h-4 w-4" />{t("previewCta")}</Link>
           </Section>
 
-          <Section title={t("repairs")} icon={<LuSparkles className="h-4 w-4" />}>
-            <Button className="h-10 w-full" disabled={overview.latestComposition?.status !== "done" || busy === "qc"} onClick={runQc}>{busy === "qc" ? <LuLoaderCircle className="animate-spin motion-reduce:animate-none" /> : <LuRefreshCw />}{busy === "qc" ? t("qcRunning") : t("runQc")}</Button>
+          <Section title={t("repairs")} icon={<Wrench className="size-4" />}>
+            <Button className="h-10 w-full" disabled={overview.latestComposition?.status !== "done" || busy === "qc"} onClick={runQc}>{busy === "qc" ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : <RefreshCw />}{busy === "qc" ? t("qcRunning") : t("runQc")}</Button>
             {!overview.latestComposition?.id && <p className="mt-2 text-xs text-muted-foreground">{t("noComposition")}</p>}
-            {repairs.length > 0 && <div className="mt-3 space-y-2">{repairs.map((repair) => <div key={repair.checkId} className="rounded-lg border border-border/50 bg-background/30 p-3"><div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold">{t(`stage_${repair.stage}`)}</span><span className="text-[10px] text-muted-foreground">{repair.automatic ? t("freeAutoFix") : t("manualReview")}</span></div><p className="mt-1 text-xs leading-5 text-muted-foreground">{repair.message[locale]}</p></div>)}{repairs.every((repair) => repair.automatic) && <Button variant="outline" className="h-10 w-full" disabled={busy === "repair"} onClick={applyAutomaticRepairs}>{busy === "repair" ? <LuLoaderCircle className="animate-spin motion-reduce:animate-none" /> : <LuSparkles />}{busy === "repair" ? t("repairStarting") : t("applyFreeRepairs")}</Button>}</div>}
+            {repairs.length > 0 && <div className="mt-3 space-y-2">{repairs.map((repair) => <div key={repair.checkId} className="rounded-lg border border-border/50 bg-background/30 p-3"><div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold">{t(`stage_${repair.stage}`)}</span><span className="text-[10px] text-muted-foreground">{repair.automatic ? t("freeAutoFix") : t("manualReview")}</span></div><p className="mt-1 text-xs leading-5 text-muted-foreground">{repair.message[locale]}</p></div>)}{repairs.every((repair) => repair.automatic) && <Button variant="outline" className="h-10 w-full" disabled={busy === "repair"} onClick={applyAutomaticRepairs}>{busy === "repair" ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : <Wrench />}{busy === "repair" ? t("repairStarting") : t("applyFreeRepairs")}</Button>}</div>}
           </Section>
         </div>
       </div>

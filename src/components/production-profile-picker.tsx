@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Check, ChevronDown, Clapperboard, Gauge, Sparkles, Zap } from "lucide-react";
+import { Check, ChevronDown, Clapperboard, Gauge, Scale, Zap } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { PRODUCTION_PROFILE_IDS, PRODUCTION_PROFILES, type ProductionProfileId } from "@/lib/production-profiles";
 import { useSettingsStore } from "@/lib/stores/settings-store";
@@ -10,7 +10,7 @@ import { TARGET_VIDEO_DURATIONS } from "@/lib/target-video-duration";
 
 const ICONS = {
   rapid: Zap,
-  balanced: Sparkles,
+  balanced: Scale,
   cinematic: Clapperboard,
 } satisfies Record<ProductionProfileId, typeof Zap>;
 

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Notice } from "@/components/ui/notice";
-import { LuArrowUpRight, LuClock3, LuDownload, LuFilm, LuFolderOpen, LuImage, LuLayers3, LuPlay, LuPlus, LuRotateCcw, LuSearch, LuSparkles, LuTrash2 } from "react-icons/lu";
+import { ArrowUpRight, Clock3, Download, Film, FolderOpen, Image as ImageIcon, Layers3, Play, Plus, RotateCcw, Search, Sparkles, Trash2 } from "lucide-react";
 import { useT, useLocale } from "@/lib/i18n";
 import { formatRelativeTime } from "@/lib/relative-time";
 import { PageFrame, PageHeader, SegmentedControl, SegmentedItem, Skeleton } from "@/components/studio/page";
@@ -158,8 +158,8 @@ export default function ProjectsPage() {
     : p.sourceType === "clone" ? t("sourceClone")
       : p.contentType === "topic" ? t("sourceTopic") : t("sourceGenerate");
 
-  const sourceIcon = (p: ProjectRow) => p.workflowType === "edit" ? LuFilm
-    : p.sourceType === "clone" ? LuLayers3 : LuSparkles;
+  const sourceIcon = (p: ProjectRow) => p.workflowType === "edit" ? Film
+    : p.sourceType === "clone" ? Layers3 : Sparkles;
 
   // Default delete is recoverable: move the project to trash without touching its files.
   const handleDelete = async (p: ProjectRow) => {
@@ -202,7 +202,7 @@ export default function ProjectsPage() {
           description={t("pageSubtitle")}
           actions={<Link href="/start">
             <Button>
-              <LuPlus className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
               <span className="ml-1.5">{t("newProject")}</span>
             </Button>
           </Link>}
@@ -221,11 +221,11 @@ export default function ProjectsPage() {
             </SegmentedControl>
             {view === "projects" && rows.length > 0 ? (
               <div className="relative ml-auto min-w-[220px] flex-1 sm:max-w-sm">
-                <LuSearch className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                 <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("searchPlaceholder")} className="h-9 pl-9 text-sm" />
               </div>
             ) : null}
-            {view === "trash" && trashRows.length > 0 ? <div className="ml-auto flex flex-wrap items-center gap-2"><Button size="sm" variant="outline" disabled={mutating || selectedTrash.size === 0} onClick={() => void mutateTrash("restore", [...selectedTrash])}><LuRotateCcw />{t("restoreSelected", { n: selectedTrash.size })}</Button><Button size="sm" variant="destructive" className={styles.deleteButton} disabled={mutating || selectedTrash.size === 0} onClick={() => void mutateTrash("delete", [...selectedTrash])}><LuTrash2 />{t("deleteSelected", { n: selectedTrash.size })}</Button></div> : null}
+            {view === "trash" && trashRows.length > 0 ? <div className="ml-auto flex flex-wrap items-center gap-2"><Button size="sm" variant="outline" disabled={mutating || selectedTrash.size === 0} onClick={() => void mutateTrash("restore", [...selectedTrash])}><RotateCcw />{t("restoreSelected", { n: selectedTrash.size })}</Button><Button size="sm" variant="destructive" className={styles.deleteButton} disabled={mutating || selectedTrash.size === 0} onClick={() => void mutateTrash("delete", [...selectedTrash])}><Trash2 />{t("deleteSelected", { n: selectedTrash.size })}</Button></div> : null}
           </div>
           {view === "projects" && rows.length > 0 ? (
             <div className="flex gap-1 overflow-x-auto px-3 py-2.5 sm:px-4" role="tablist" aria-label={t("sourceFilter")}>
@@ -261,19 +261,19 @@ export default function ProjectsPage() {
         ) : loadError ? (
           <Notice tone="danger">{loadError}</Notice>
         ) : view === "trash" ? (
-          trashRows.length === 0 ? <Card className="glass-card"><CardContent className="flex flex-col items-center gap-3 py-14 text-center"><LuTrash2 className="h-8 w-8 text-muted-foreground/60" /><div><p className="font-medium">{t("trashEmpty")}</p><p className="mt-1 text-sm text-muted-foreground">{t("trashEmptyDesc")}</p></div></CardContent></Card> : <>
+          trashRows.length === 0 ? <Card className="glass-card"><CardContent className="flex flex-col items-center gap-3 py-14 text-center"><Trash2 className="h-8 w-8 text-muted-foreground/60" /><div><p className="font-medium">{t("trashEmpty")}</p><p className="mt-1 text-sm text-muted-foreground">{t("trashEmptyDesc")}</p></div></CardContent></Card> : <>
             <label className="mb-3 inline-flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={selectedTrash.size === trashRows.length} onChange={(event) => setSelectedTrash(event.target.checked ? new Set(trashRows.map((p) => p.id)) : new Set())} />{t("selectAll")}</label>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{trashRows.map((p) => {
               const checked = selectedTrash.has(p.id);
               const poster = posterByProject.get(p.id) ?? p.thumbnailUrl ?? (p.productImages?.[0] || null);
-              return <Card key={p.id} className={`glass-card gap-0 overflow-hidden py-0 ${checked ? "ring-2 ring-primary/35" : ""}`}><CardContent className="p-0"><div className="relative aspect-video bg-muted/30">{poster ? <Image src={poster} alt="" width={640} height={360} unoptimized className="h-full w-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center"><LuImage className="h-7 w-7 text-muted-foreground/40" /></div>}<label className="absolute left-2 top-2 grid size-7 place-items-center rounded-lg bg-card/90 shadow-sm"><input type="checkbox" checked={checked} onChange={(event) => setSelectedTrash((current) => { const next = new Set(current); if (event.target.checked) next.add(p.id); else next.delete(p.id); return next; })} aria-label={t("selectProject", { name: p.name })} /></label></div><div className="p-4"><p className="truncate text-sm font-medium">{p.name || p.productName || t("untitled")}</p><p className="mt-1 text-xs text-muted-foreground">{sourceLabel(p)}</p><div className="mt-4 flex gap-2"><Button size="sm" variant="outline" className="flex-1" disabled={mutating} onClick={() => void mutateTrash("restore", [p.id])}><LuRotateCcw />{t("restore")}</Button><Button size="sm" variant="destructive" className={styles.deleteButton} disabled={mutating} onClick={() => void mutateTrash("delete", [p.id])}><LuTrash2 />{t("permanentDelete")}</Button></div></div></CardContent></Card>;
+              return <Card key={p.id} className={`glass-card gap-0 overflow-hidden py-0 ${checked ? "ring-2 ring-primary/35" : ""}`}><CardContent className="p-0"><div className="relative aspect-video bg-muted/30">{poster ? <Image src={poster} alt="" width={640} height={360} unoptimized className="h-full w-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center"><ImageIcon className="h-7 w-7 text-muted-foreground/40" /></div>}<label className="absolute left-2 top-2 grid size-7 place-items-center rounded-lg bg-card/90 shadow-sm"><input type="checkbox" checked={checked} onChange={(event) => setSelectedTrash((current) => { const next = new Set(current); if (event.target.checked) next.add(p.id); else next.delete(p.id); return next; })} aria-label={t("selectProject", { name: p.name })} /></label></div><div className="p-4"><p className="truncate text-sm font-medium">{p.name || p.productName || t("untitled")}</p><p className="mt-1 text-xs text-muted-foreground">{sourceLabel(p)}</p><div className="mt-4 flex gap-2"><Button size="sm" variant="outline" className="flex-1" disabled={mutating} onClick={() => void mutateTrash("restore", [p.id])}><RotateCcw />{t("restore")}</Button><Button size="sm" variant="destructive" className={styles.deleteButton} disabled={mutating} onClick={() => void mutateTrash("delete", [p.id])}><Trash2 />{t("permanentDelete")}</Button></div></div></CardContent></Card>;
             })}</div>
           </>
         ) : view === "works" ? (
           works.length === 0 ? (
             <Card className="glass-card">
               <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
-                <LuImage className="h-8 w-8 text-muted-foreground/60" />
+                <ImageIcon className="h-8 w-8 text-muted-foreground/60" />
                 <div>
                   <p className="font-medium">{t("worksEmpty")}</p>
                   <p className="mt-1 text-sm text-muted-foreground">{t("worksEmptyDesc")}</p>
@@ -297,7 +297,7 @@ export default function ProjectsPage() {
                               <img src={w.thumbnailUrl} alt="" width={480} height={640} loading="lazy" className="h-full w-full object-cover" />
                             ) : (
                               <div className="absolute inset-0 flex items-center justify-center">
-                                <LuPlay className="h-7 w-7 text-muted-foreground/50" />
+                                <Play className="h-7 w-7 text-muted-foreground/50" />
                               </div>
                             )}
                             {w.label && (
@@ -318,7 +318,7 @@ export default function ProjectsPage() {
                             aria-label={t("download")}
                             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
                           >
-                            <LuDownload className="h-3.5 w-3.5" />
+                            <Download className="h-3.5 w-3.5" />
                           </a>
                         </div>
                       </CardContent>
@@ -331,7 +331,7 @@ export default function ProjectsPage() {
         ) : rows.length === 0 ? (
           <Card className="glass-card">
             <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
-              <LuFolderOpen className="h-8 w-8 text-muted-foreground/60" />
+              <FolderOpen className="h-8 w-8 text-muted-foreground/60" />
               <div>
                 <p className="font-medium">{t("empty")}</p>
                 <p className="mt-1 text-sm text-muted-foreground">{t("emptyDesc")}</p>
@@ -362,7 +362,7 @@ export default function ProjectsPage() {
                           <img src={poster} alt="" width={640} height={400} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.035]" />
                         ) : (
                           <div className="absolute inset-0 grid place-items-center bg-[linear-gradient(145deg,color-mix(in_srgb,var(--primary)_7%,var(--card)),var(--muted))]">
-                            <span className="grid size-12 place-items-center rounded-2xl border border-border/65 bg-card/70 shadow-sm"><LuImage className="h-5 w-5 text-muted-foreground/50" /></span>
+                            <span className="grid size-12 place-items-center rounded-2xl border border-border/65 bg-card/70 shadow-sm"><ImageIcon className="h-5 w-5 text-muted-foreground/50" /></span>
                           </div>
                         )}
                         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/48 to-transparent" />
@@ -374,7 +374,7 @@ export default function ProjectsPage() {
                           {tc(statusKeyFor(effectiveStatus))}
                         </Badge>
                         <span className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-black/55 px-2 py-1 text-[10px] font-medium text-white backdrop-blur-md"><SourceIcon className="size-3" />{sourceLabel(p)}</span>
-                        <span className="absolute bottom-3 right-3 grid size-8 translate-y-1 place-items-center rounded-full bg-white text-slate-900 opacity-0 shadow-lg transition-[opacity,transform] group-hover:translate-y-0 group-hover:opacity-100" aria-hidden="true"><LuArrowUpRight className="size-4" /></span>
+                        <span className="absolute bottom-3 right-3 grid size-8 translate-y-1 place-items-center rounded-full bg-white text-slate-900 opacity-0 shadow-lg transition-[opacity,transform] group-hover:translate-y-0 group-hover:opacity-100" aria-hidden="true"><ArrowUpRight className="size-4" /></span>
                       </div>
                       <div className="px-4 pb-3 pt-4">
                         <p className="min-w-0 truncate text-[15px] font-semibold tracking-[-.015em] text-foreground">
@@ -384,7 +384,7 @@ export default function ProjectsPage() {
                       </div>
                     </Link>
                     <div className="flex items-center border-t border-border/55 px-4 py-2.5">
-                      <span className="inline-flex min-w-0 items-center gap-1.5 truncate text-[11px] text-muted-foreground"><LuClock3 className="size-3.5 shrink-0" />{rel || t("updatedNow")}</span>
+                      <span className="inline-flex min-w-0 items-center gap-1.5 truncate text-[11px] text-muted-foreground"><Clock3 className="size-3.5 shrink-0" />{rel || t("updatedNow")}</span>
                       <button
                         type="button"
                         onClick={() => handleDelete(p)}
@@ -392,7 +392,7 @@ export default function ProjectsPage() {
                         aria-label={t("moveToTrash")}
                         className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground/65 opacity-100 transition-[background-color,color,opacity] hover:bg-destructive/10 hover:text-destructive md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
                       >
-                        <LuTrash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   </CardContent>

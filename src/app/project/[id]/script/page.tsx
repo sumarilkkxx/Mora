@@ -4,7 +4,7 @@ import { notifyTaskSubmitted } from "@/lib/task-events";
 
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { LuWand, LuClock, LuImage, LuArrowRight, LuBookmarkPlus, LuLoaderCircle, LuTriangleAlert, LuCircleCheck, LuCircleX, LuPencil } from "react-icons/lu";
+import { Wand, Clock, Image as ImageIcon, ArrowRight, BookmarkPlus, LoaderCircle, TriangleAlert, CircleCheck, CircleX, Pencil } from "lucide-react";
 import { checkScriptCompliance } from "@/lib/ad-compliance";
 import { checkPublishReadiness } from "@/lib/publish-readiness";
 import Link from "next/link";
@@ -826,7 +826,7 @@ export default function ScriptPage() {
         {headerBar}
         <div className="mx-auto max-w-md flex flex-col items-center justify-center py-28 px-6 text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/40 mb-5">
-            <LuWand className="w-8 h-8 text-muted-foreground" />
+            <Wand className="w-8 h-8 text-muted-foreground" />
           </div>
           <h2 className="text-lg font-semibold mb-2">{t("emptyTitle")}</h2>
           <p className="text-sm text-muted-foreground mb-6">
@@ -845,12 +845,12 @@ export default function ScriptPage() {
             <Button onClick={handleGenerate} disabled={isGenerating} className="brand-gradient text-white">
               {isGenerating ? (
                 <>
-                  <LuLoaderCircle className="w-4 h-4 mr-2 animate-spin" />
+                  <LoaderCircle className="w-4 h-4 mr-2 animate-spin" />
                   {tc("generating")}
                 </>
               ) : (
                 <>
-                  <LuWand className="w-4 h-4 mr-2" />
+                  <Wand className="w-4 h-4 mr-2" />
                   {t("generateScript")}
                 </>
               )}
@@ -945,10 +945,7 @@ export default function ScriptPage() {
         {headerBar}
         <main className="mx-auto flex max-w-lg flex-col items-center px-6 py-24 text-center">
           <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl brand-gradient">
-            <svg className="h-6 w-6 animate-spin text-white" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-90" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.4 0 0 5.4 0 12h4z" />
-            </svg>
+            <LoaderCircle className="size-6 animate-spin text-white motion-reduce:animate-none" aria-hidden="true" />
           </div>
           <h2 className="text-xl font-bold">{t("autoModeTitle")}</h2>
           <p className="mt-2 text-sm text-primary">
@@ -994,7 +991,7 @@ export default function ScriptPage() {
         {hasDurationMismatch && currentScript && projectMeta && (
           <div className="mx-auto mb-5 flex max-w-3xl flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
             <div className="flex min-w-0 items-start gap-2.5">
-              <LuTriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
               <div>
                 <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
                   {t("durationMismatchTitle")}
@@ -1055,7 +1052,7 @@ export default function ScriptPage() {
                   disabled={autoFinishing || aiFilming || !currentScript || hasDurationMismatch}
                 >
                   {t(genPref === "ai" ? "nextAiAssets" : "nextLocalAssets")}
-                  <LuArrowRight className="ml-1 h-4 w-4" />
+                  <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
               </Link>
               {genPref === "ai" ? (
@@ -1097,11 +1094,11 @@ export default function ScriptPage() {
                   <span className="text-xs text-green-400 animate-in fade-in">{t("savedAsTemplate")}</span>
                 )}
                 <Button variant="outline" size="sm" className="text-xs" onClick={handleSaveAsTemplate}>
-                  <LuBookmarkPlus className="w-3.5 h-3.5 mr-1" />
+                  <BookmarkPlus className="w-3.5 h-3.5 mr-1" />
                   {t("saveAsTemplate")}
                 </Button>
                 <Button variant="outline" size="sm" disabled={isGenerating} className="text-xs" onClick={() => setRegenConfirmOpen(true)}>
-                  <LuWand className="w-3.5 h-3.5 mr-1" />
+                  <Wand className="w-3.5 h-3.5 mr-1" />
                   {t("regenerate")}
                 </Button>
               </div>
@@ -1168,7 +1165,7 @@ export default function ScriptPage() {
                   >
                     {judging ? (
                       <>
-                        <LuLoaderCircle className="w-4 h-4 mr-1 animate-spin" />
+                        <LoaderCircle className="w-4 h-4 mr-1 animate-spin" />
                         {t("judging")}
                       </>
                     ) : (
@@ -1184,12 +1181,12 @@ export default function ScriptPage() {
                   >
                     {autoFinishing ? (
                       <>
-                        <LuLoaderCircle className="w-4 h-4 mr-1 animate-spin" />
+                        <LoaderCircle className="w-4 h-4 mr-1 animate-spin" />
                         {autoFinishStage || t("autoFinish")}
                       </>
                     ) : (
                       <>
-                        <LuWand className="w-4 h-4 mr-1" />
+                        <Wand className="w-4 h-4 mr-1" />
                         {t(genPref === "ai" ? "localQuickCut" : "autoFinish")}
                       </>
                     )}
@@ -1203,7 +1200,7 @@ export default function ScriptPage() {
                   >
                     <Button className="brand-gradient text-white text-sm" disabled={autoFinishing || hasDurationMismatch}>
                       {t(isLocalProduction ? "nextLocalAssets" : "nextAiAssets")}
-                      <LuArrowRight className="w-4 h-4 ml-1" />
+                      <ArrowRight className="w-4 h-4 ml-1" />
                     </Button>
                   </Link>
                 </div>
@@ -1341,11 +1338,11 @@ export default function ScriptPage() {
                           {readiness.items.map((it) => (
                             <li key={it.key} className="flex items-start gap-2 text-xs">
                               {it.status === "pass" ? (
-                                <LuCircleCheck className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0" />
+                                <CircleCheck className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0" />
                               ) : it.status === "fail" ? (
-                                <LuCircleX className="w-3.5 h-3.5 text-red-500 mt-0.5 shrink-0" />
+                                <CircleX className="w-3.5 h-3.5 text-red-500 mt-0.5 shrink-0" />
                               ) : (
-                                <LuTriangleAlert className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
+                                <TriangleAlert className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
                               )}
                               <span
                                 className={
@@ -1368,7 +1365,7 @@ export default function ScriptPage() {
                     <Card className="border-amber-500/40 bg-amber-500/5">
                       <CardContent className="p-4">
                         <div className="flex items-center gap-2 mb-1">
-                          <LuTriangleAlert className="w-4 h-4 text-amber-500" />
+                          <TriangleAlert className="w-4 h-4 text-amber-500" />
                           <span className="text-sm font-semibold">{t("adComplianceTitle", { n: adViolations.length })}</span>
                         </div>
                         <p className="text-xs text-muted-foreground mb-2.5">{t("adComplianceHint")}</p>
@@ -1415,7 +1412,7 @@ export default function ScriptPage() {
                                   <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                                     {!isLocalProduction && (
                                       <span className="flex items-center gap-1">
-                                        <LuClock className="w-3 h-3" />
+                                        <Clock className="w-3 h-3" />
                                         {shot.camera}
                                       </span>
                                     )}
@@ -1436,7 +1433,7 @@ export default function ScriptPage() {
                                         className="flex items-center gap-1 text-primary hover:underline"
                                         onClick={() => startEditShot(shot)}
                                       >
-                                        <LuPencil className="w-3 h-3" />
+                                        <Pencil className="w-3 h-3" />
                                         {t("editShot")}
                                       </button>
                                     )}
@@ -1454,7 +1451,7 @@ export default function ScriptPage() {
                                   ) : (isLocalProduction || shot.visualSource === "product_image") ? (
                                     <span className="text-[10px] text-muted-foreground">{t("productImageShort")}</span>
                                   ) : (
-                                    <LuImage className="w-4 h-4 text-muted-foreground/40" />
+                                    <ImageIcon className="w-4 h-4 text-muted-foreground/40" />
                                   )}
                                 </div>
                               </div>
@@ -1558,7 +1555,7 @@ export default function ScriptPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-                <LuTriangleAlert className="size-4 shrink-0 text-amber-500" aria-hidden="true" />
+                <TriangleAlert className="size-4 shrink-0 text-amber-500" aria-hidden="true" />
                 {t("regenConfirmTitle")}
             </DialogTitle>
             <DialogDescription>{t("regenConfirmDesc")}</DialogDescription>

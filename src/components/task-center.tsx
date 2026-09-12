@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { BellRing } from "lucide-react";
 import { useT } from "@/lib/i18n";
+import { ICON_STROKE_WIDTH, navigationIcons } from "@/lib/iconography";
 import { useSettingsStore } from "@/lib/stores/settings-store";
 import { EMPTY_TASK_FEED, type TaskFeed, type TaskRow } from "@/lib/task-feed";
 import { TASKS_SEEN_STORAGE_KEY, taskTimestamp, unreadCompletedCount } from "@/lib/task-notifications";
@@ -153,6 +155,7 @@ export function TaskCenter({ collapsed = false, enableRecovery = false }: { coll
   }, [markTasksSeen, pathname, unreadCount]);
 
   const stateClass = hasAttention ? "is-attention" : hasRunning ? "is-running" : unreadCount > 0 ? "has-new" : "";
+  const TaskIcon = hasAttention ? BellRing : navigationIcons.tasks;
   const stateLabel = hasAttention
     ? t("taskCenterNeedsAttention", { n: feed.attention.length })
     : hasRunning
@@ -173,10 +176,7 @@ export function TaskCenter({ collapsed = false, enableRecovery = false }: { coll
         }`}
       >
         <span className="task-center-icon relative shrink-0">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-            <path d="M13.7 21a2 2 0 0 1-3.4 0" />
-          </svg>
+          <TaskIcon size={16} strokeWidth={ICON_STROKE_WIDTH} aria-hidden="true" />
           {(badgeCount > 0 || unreadCount > 0) && (
             <span
               className={`task-center-badge absolute -right-2 -top-2 flex h-[17px] min-w-[17px] items-center justify-center rounded-full px-1 text-[9px] font-bold text-white ${

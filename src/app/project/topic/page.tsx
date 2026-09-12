@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/studio/page";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LuCircleAlert, LuLoaderCircle, LuWandSparkles } from "react-icons/lu";
+import { CircleAlert, LoaderCircle, WandSparkles } from "lucide-react";
 import { useSettingsStore } from "@/lib/stores/settings-store";
 import { useT } from "@/lib/i18n";
 import { Card, CardContent } from "@/components/ui/card";
@@ -188,7 +188,7 @@ export default function TopicProjectPage() {
             {/* error message */}
             {error && (
               <div className="flex items-start gap-2 rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
-                <LuCircleAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                <CircleAlert className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>{error}</span>
               </div>
             )}
@@ -202,12 +202,12 @@ export default function TopicProjectPage() {
             >
               {isSubmitting ? (
                 <>
-                  <LuLoaderCircle className="w-4 h-4 animate-spin" />
+                  <LoaderCircle className="w-4 h-4 animate-spin" />
                   <span className="ml-1.5">{t("generatingScript")}</span>
                 </>
               ) : (
                 <>
-                  <LuWandSparkles className="w-4 h-4" />
+                  <WandSparkles className="w-4 h-4" />
                   <span className="ml-1.5">{t("ctaGenerate")}</span>
                 </>
               )}

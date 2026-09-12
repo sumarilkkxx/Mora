@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
-import { LuZap, LuCheck, LuCircleX, LuImage, LuArrowLeft, LuArrowRight, LuLoaderCircle, LuTriangleAlert, LuUpload, LuScissors } from "react-icons/lu";
+import { Zap, Check, CircleX, Image as ImageIcon, ArrowLeft, ArrowRight, LoaderCircle, TriangleAlert, Upload, Scissors } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1020,13 +1020,13 @@ export default function AssetsPage() {
             {productionMode === "local" && !auxiliaryAiWorkspace && (
               <Link href={`/project/${id}/assets?workspace=ai`}>
                 <Button variant="outline" size="sm" className="text-xs border-primary/50 text-primary hover:bg-primary/10">
-                  <LuZap className="w-3.5 h-3.5 mr-1" />
+                  <Zap className="w-3.5 h-3.5 mr-1" />
                   {t("openAiHelper")}
                 </Button>
               </Link>
             )}
             <Link href={`/project/${id}/transcript`} title={t("textEditorTip")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-primary/35 bg-primary/8 px-2.5 text-xs font-medium text-primary transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-              <LuScissors className="h-3.5 w-3.5" />{t("textEditor")}
+              <Scissors className="h-3.5 w-3.5" />{t("textEditor")}
             </Link>
             {offerStockFill && (
               <Button
@@ -1039,12 +1039,12 @@ export default function AssetsPage() {
               >
                 {isFillingStock ? (
                   <>
-                    <LuLoaderCircle className="animate-spin w-3.5 h-3.5 mr-1" />
+                    <LoaderCircle className="animate-spin w-3.5 h-3.5 mr-1" />
                     {t("stockFilling")}
                   </>
                 ) : (
                   <>
-                    <LuImage className="w-3.5 h-3.5 mr-1" />
+                    <ImageIcon className="w-3.5 h-3.5 mr-1" />
                     {t("stockFill")}
                   </>
                 )}
@@ -1068,7 +1068,7 @@ export default function AssetsPage() {
                   >
                     {isGridGenerating ? (
                       <>
-                        <LuLoaderCircle className="animate-spin mr-1.5 h-3.5 w-3.5" />
+                        <LoaderCircle className="animate-spin mr-1.5 h-3.5 w-3.5" />
                         {t("gridRunning")}
                       </>
                     ) : (
@@ -1086,14 +1086,14 @@ export default function AssetsPage() {
             >
               {isBatchGenerating ? (
                 <>
-                  <LuLoaderCircle className="animate-spin mr-1.5 h-3.5 w-3.5" />
+                  <LoaderCircle className="animate-spin mr-1.5 h-3.5 w-3.5" />
                   {t("generatingAll")}
                 </>
               ) : allDone ? (
                 t("allDone")
               ) : (
                 <>
-                  <LuZap className="w-3.5 h-3.5 mr-1" />
+                  <Zap className="w-3.5 h-3.5 mr-1" />
                   {t("generateAll")}
                 </>
               )}
@@ -1301,7 +1301,7 @@ export default function AssetsPage() {
         {billingNotice && (
           <div className="mb-4 rounded-xl border border-amber-500/35 bg-amber-500/10 p-4">
             <div className="flex items-start gap-3">
-              <LuTriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
+              <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-amber-200">
                   {t("balanceInsufficientTitle", { provider: billingNotice.providerLabel })}
@@ -1334,7 +1334,7 @@ export default function AssetsPage() {
             and must stay visible even when the stock-fill offer itself is hidden. */}
         {(offerStockFill || stockMsg) && (
           <div className="mb-4 flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/15 px-3 py-2 text-xs text-muted-foreground">
-            <LuImage className="w-3.5 h-3.5 text-primary/70 shrink-0" />
+            <ImageIcon className="w-3.5 h-3.5 text-primary/70 shrink-0" />
             <span>{stockMsg ?? t("stockFillTip")}</span>
           </div>
         )}
@@ -1345,7 +1345,7 @@ export default function AssetsPage() {
           <div className="mb-6 rounded-2xl border border-amber-500/35 bg-amber-500/[.09] p-4 shadow-[0_10px_30px_rgba(180,112,20,.08)]">
             <div className="flex items-start gap-3">
               <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300">
-                <LuLoaderCircle className="h-4 w-4 animate-spin motion-reduce:animate-none" />
+                <LoaderCircle className="h-4 w-4 animate-spin motion-reduce:animate-none" />
               </span>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-amber-950 dark:text-amber-100">
@@ -1368,7 +1368,7 @@ export default function AssetsPage() {
                         >
                           {resumingTasks.has(task.id) ? (
                             <>
-                              <LuLoaderCircle className="animate-spin w-3 h-3 mr-1" />
+                              <LoaderCircle className="animate-spin w-3 h-3 mr-1" />
                               {t("btnResumingTask")}
                             </>
                           ) : (
@@ -1398,7 +1398,7 @@ export default function AssetsPage() {
         {/* no image model configured warning (only shown when there are still AI shots pending generation) */}
         {showModelWarning && (
           <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
-            <LuTriangleAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <TriangleAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-medium text-amber-200">{t("noModelTitle")}</p>
               <p className="text-xs text-amber-300/80 mt-0.5">
@@ -1412,12 +1412,12 @@ export default function AssetsPage() {
         {/* loading state / empty state */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-            <LuLoaderCircle className="w-6 h-6 animate-spin mb-3" />
+            <LoaderCircle className="w-6 h-6 animate-spin mb-3" />
             <p className="text-sm">{t("loadingShots")}</p>
           </div>
         ) : loadError ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <LuImage className="w-10 h-10 text-muted-foreground/40 mb-3" />
+            <ImageIcon className="w-10 h-10 text-muted-foreground/40 mb-3" />
             <p className="text-sm text-muted-foreground mb-4">{loadError}</p>
             <Link href={`/project/${id}/script`}>
               <Button variant="outline" size="sm">{t("backToScriptStep")}</Button>
@@ -1493,7 +1493,7 @@ export default function AssetsPage() {
                               Edits persist into the script and apply on the next motion generation */}
                           {uiMode === "pro" && (
                           <div className="flex items-center gap-1.5 mb-2 text-xs min-w-0">
-                            <LuImage className="mt-0.5 size-3.5 shrink-0 text-muted-foreground/70" aria-hidden="true" />
+                            <ImageIcon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground/70" aria-hidden="true" />
                             {editingCameraShot === asset.shotId ? (
                               <input
                                 autoFocus
@@ -1521,7 +1521,7 @@ export default function AssetsPage() {
                               </button>
                             )}
                             {savingCameraShot === asset.shotId ? (
-                              <LuLoaderCircle className="w-3 h-3 animate-spin shrink-0 text-muted-foreground" />
+                              <LoaderCircle className="w-3 h-3 animate-spin shrink-0 text-muted-foreground" />
                             ) : (
                               <select
                                 value=""
@@ -1615,14 +1615,14 @@ export default function AssetsPage() {
                               )
                             ) : asset.status === "done" ? (
                               <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                                <LuCheck className="w-5 h-5 text-primary" />
+                                <Check className="w-5 h-5 text-primary" />
                               </div>
                             ) : asset.status === "generating" ? (
-                              <LuLoaderCircle className="animate-spin h-5 w-5 text-primary" />
+                              <LoaderCircle className="animate-spin h-5 w-5 text-primary" />
                             ) : asset.status === "failed" ? (
-                              <LuCircleX className="w-5 h-5 text-destructive" />
+                              <CircleX className="w-5 h-5 text-destructive" />
                             ) : (
-                              <LuImage className="w-4 h-4 text-muted-foreground/40" />
+                              <ImageIcon className="w-4 h-4 text-muted-foreground/40" />
                             )}
                           </div>
 
@@ -1654,9 +1654,9 @@ export default function AssetsPage() {
                               onClick={() => openUploadFor(asset.shotId)}
                             >
                               {uploadingShot === asset.shotId ? (
-                                <LuLoaderCircle className="animate-spin h-3.5 w-3.5" />
+                                <LoaderCircle className="animate-spin h-3.5 w-3.5" />
                               ) : (
-                                <><LuUpload className="w-3 h-3 mr-1" />{asset.status === "done" ? t("btnReplaceUpload") : t("btnUpload")}</>
+                                <><Upload className="w-3 h-3 mr-1" />{asset.status === "done" ? t("btnReplaceUpload") : t("btnUpload")}</>
                               )}
                             </Button>
                           )}
@@ -1732,7 +1732,7 @@ export default function AssetsPage() {
               {!auxiliaryAiWorkspace && (
                 <Link href={aiVideoStage ? `/project/${id}/assets` : `/project/${id}/script`}>
                   <Button variant="outline" className="text-sm">
-                    <LuArrowLeft className="mr-1 h-4 w-4" />
+                    <ArrowLeft className="mr-1 h-4 w-4" />
                     {t(aiVideoStage ? "backToAssetsStep" : "backToScript")}
                   </Button>
                 </Link>
@@ -1742,7 +1742,7 @@ export default function AssetsPage() {
                 <Link href={allDone ? `/project/${id}/ai-video` : "#"}>
                   <Button className="brand-gradient text-white text-sm" disabled={!allDone}>
                     {t("nextAiVideo")}
-                    <LuArrowRight className="w-4 h-4 ml-1" />
+                    <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
                 </Link>
               ) : productionMode === "ai" ? (
@@ -1759,9 +1759,9 @@ export default function AssetsPage() {
                     title={filmReason}
                   >
                     {isFilmGenerating ? (
-                      <><LuLoaderCircle className="mr-1.5 h-4 w-4 animate-spin motion-reduce:animate-none" />{t("filmRunning")}</>
+                      <><LoaderCircle className="mr-1.5 h-4 w-4 animate-spin motion-reduce:animate-none" />{t("filmRunning")}</>
                     ) : (
-                      <>{t("filmButton")}<LuArrowRight className="ml-1 h-4 w-4" /></>
+                      <>{t("filmButton")}<ArrowRight className="ml-1 h-4 w-4" /></>
                     )}
                   </Button>
                 </>
@@ -1769,14 +1769,14 @@ export default function AssetsPage() {
                 <Link href={`/project/${id}/assets`}>
                   <Button className="brand-gradient text-white text-sm">
                     {t("backWithAiResults")}
-                    <LuArrowRight className="w-4 h-4 ml-1" />
+                    <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
                 </Link>
               ) : (
                 <Link href={allDone ? `/project/${id}/compose` : "#"}>
                   <Button className="brand-gradient text-white text-sm" disabled={!allDone}>
                     {t("nextCompose")}
-                    <LuArrowRight className="w-4 h-4 ml-1" />
+                    <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
                 </Link>
               )}
