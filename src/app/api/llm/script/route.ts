@@ -1,3 +1,4 @@
+import { withBatchExecution } from "@/lib/batch-execution";
 import { NextRequest, NextResponse } from "next/server";
 import { generateScript, analyzeProduct, type LLMConfig } from "@/lib/script-engine/generator";
 import { bindProductImageToLocalShots } from "@/lib/local-production";
@@ -101,6 +102,10 @@ async function loadInsights(category: string): Promise<{ hint: string; topStyle:
 
 // Generate commerce script
 export async function POST(req: NextRequest) {
+  return withBatchExecution(req, "script", () => handlePost(req));
+}
+
+async function handlePost(req: NextRequest) {
   const body = await req.json();
   const {
     productImages,

@@ -95,7 +95,7 @@ export default function TasksPage() {
       task.provider,
       task.model,
       task.taskId ? `${t("taskId")} ${task.taskId}` : task.stage,
-      formatRelativeTime(task.createdAt ?? null, locale),
+      formatRelativeTime(task.completedAt ?? task.createdAt ?? null, locale),
     ].filter(Boolean).join(" · ");
     const action = tone === "attention" ? t("handleTask") : tone === "done" ? t("openResult") : t("openTask");
 

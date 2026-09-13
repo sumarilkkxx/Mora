@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import { taskTimestamp, unreadCompletedCount } from "@/lib/task-notifications";
 
 describe("task notifications", () => {
+  it("notifies when a previously viewed running task finishes", () => {
+    const task = { kind: "done", id: "long-task", createdAt: "2026-08-29T07:00:00Z", completedAt: "2026-08-29T09:00:00Z" };
+    expect(unreadCompletedCount([task], taskTimestamp("2026-08-29T08:00:00Z"))).toBe(1);
+    expect(unreadCompletedCount([task], taskTimestamp("2026-08-29T09:00:00Z"))).toBe(0);
+  });
   it("counts only completed items newer than the last visit", () => {
     const lastSeenAt = taskTimestamp("2026-08-29T08:00:00Z");
     expect(unreadCompletedCount([

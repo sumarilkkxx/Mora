@@ -130,8 +130,8 @@ export async function GET() {
     const recentRows = await db
       .select()
       .from(compositions)
-      .where(and(eq(compositions.status, "done"), gt(compositions.createdAt, dayAgo)))
-      .orderBy(desc(compositions.createdAt))
+      .where(and(eq(compositions.status, "done"), gt(compositions.completedAt, dayAgo)))
+      .orderBy(desc(compositions.completedAt))
       .limit(8);
     const recent = recentRows.filter((c) => activeProjectIds.has(c.projectId)).map((c) => ({
       kind: "done",
@@ -140,6 +140,7 @@ export async function GET() {
       projectName: projectName.get(c.projectId) ?? "",
       label: c.label,
       createdAt: c.createdAt,
+      completedAt: c.completedAt,
     }));
 
     return NextResponse.json({ active, attention, recent });

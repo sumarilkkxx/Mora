@@ -168,6 +168,11 @@ export default function BatchPage() {
   const [isComplete, setIsComplete] = useState(false);
   // Used to abort the generation pipeline
   const abortRef = useRef(false);
+  const detachedRef = useRef(false);
+  useEffect(() => {
+    detachedRef.current = false;
+    return () => { detachedRef.current = true; abortRef.current = true; };
+  }, []);
 
   // Toggle product selection
   const toggleProduct = useCallback((productId: string) => {
@@ -208,7 +213,7 @@ export default function BatchPage() {
     (async () => {
       try {
         const d = await fetch("/api/batch?active=1").then((r) => r.json());
-        // a "running" job on a freshly loaded page means the previous executor died with it
+        // Running does not imply interrupted: the server claim determines availability.
         if (!cancelled && d?.job && Array.isArray(d.items)) setResumableJob(d as ResumableJob);
       } catch {
         /* resume is opportunistic */
@@ -226,6 +231,7 @@ export default function BatchPage() {
     autoCompose: boolean;
     productCard: boolean;
     jobId?: string;
+    owner?: string;
     itemIdByProduct: Map<string, string>;
     writes?: Map<string, Promise<void>>;
     hasFailures?: boolean;
@@ -240,13 +246,24 @@ export default function BatchPage() {
       const response = await fetch("/api/batch", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemId, patch }),
+        body: JSON.stringify({ itemId, owner: ctx.owner, patch }),
       });
       if (!response.ok) throw new Error("Batch progress could not be saved");
-    }).catch(() => { ctx.hasFailures = true; });
+    }).catch(() => { ctx.hasFailures = true; abortRef.current = true; });
     writes.set(itemId, pending);
     return pending;
   };
+
+  const batchControl = async (jobId: string, owner: string, action: string) => {
+    const response = await fetch("/api/batch", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jobId, owner, action }) });
+    if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || "批次执行权不可用，请稍后恢复 / Batch execution unavailable");
+  };
+
+  const batchHeaders = (ctx: BatchCtx, productId: string) => ({
+    "Content-Type": "application/json",
+    "x-mora-batch-owner": ctx.owner!,
+    "x-mora-batch-item": ctx.itemIdByProduct.get(productId)!,
+  });
 
   /** Visual-fill + free-TTS render on an existing project (the compose sub-chain). */
   const composeSubChain = async (
@@ -260,9 +277,10 @@ export default function BatchPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ source: "all", mediaType: "auto" }),
     }).catch(() => {}); // visual-fill failure is non-fatal (product images/assets may already exist)
+    if (abortRef.current) return;
     const composeRes = await fetch(`/api/project/${projectId}/compose`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: batchHeaders(ctx, product.id),
       body: JSON.stringify({
         freeTts: { enabled: true, ...(slot?.voice ? { voice: slot.voice } : {}) },
         ...(ctx.productCard && { productCard: true }),
@@ -310,7 +328,7 @@ export default function BatchPage() {
       if (!projectId) {
         const projRes = await fetch("/api/project", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: batchHeaders(ctx, product.id),
           body: JSON.stringify({
             name: t("projectNameSuffix", { name: product.name }),
             productName: product.name,
@@ -325,10 +343,12 @@ export default function BatchPage() {
         reportItem(ctx, product.id, { projectId });
       }
 
+      if (abortRef.current) return;
+
       // 2) Generate script
       const scriptRes = await fetch("/api/llm/script", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: batchHeaders(ctx, product.id),
         body: JSON.stringify({
           projectId,
           productName: product.name,
@@ -412,46 +432,55 @@ export default function BatchPage() {
     workItems: Array<{ product: (typeof products)[number]; slot?: ReturnType<typeof buildVariationPlan>[number]; resume?: BatchJobItemRow }>,
     ctx: BatchCtx
   ) => {
-    // Concurrency pool: run at most 3 tasks simultaneously to speed up batch rendering
-    const CONCURRENCY = 3;
-    let cursor = 0;
-    const worker = async () => {
-      while (!abortRef.current) {
-        const idx = cursor++;
-        if (idx >= workItems.length) break;
-        await processOne(workItems[idx].product, workItems[idx].slot, ctx, workItems[idx].resume);
-      }
-    };
-    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, workItems.length) }, worker));
-    await Promise.all(ctx.writes?.values() ?? []);
+    const heartbeat = setInterval(() => {
+      void batchControl(ctx.jobId!, ctx.owner!, "renew").catch(() => { ctx.hasFailures = true; abortRef.current = true; });
+    }, 10_000);
+    try {
+      // Concurrency pool: run at most 3 tasks simultaneously to speed up batch rendering
+      const CONCURRENCY = 3;
+      let cursor = 0;
+      const worker = async () => {
+        while (!abortRef.current) {
+          const idx = cursor++;
+          if (idx >= workItems.length) break;
+          await processOne(workItems[idx].product, workItems[idx].slot, ctx, workItems[idx].resume);
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(CONCURRENCY, workItems.length) }, worker));
+      await Promise.all(ctx.writes?.values() ?? []);
 
-    if (ctx.jobId) {
-      await fetch("/api/batch", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId: ctx.jobId, status: abortRef.current ? "cancelled" : ctx.hasFailures ? "running" : "done" }),
-      }).catch(() => {});
-      if (ctx.hasFailures && !abortRef.current) {
-        try {
-          const response = await fetch(`/api/batch?jobId=${encodeURIComponent(ctx.jobId)}`);
-          if (response.ok) setResumableJob(await response.json());
-        } catch { /* The running job remains available after a refresh. */ }
-      }
-    }
-    if (!abortRef.current) {
-      setIsComplete(!ctx.hasFailures);
-      // template self-check across the freshly generated projects (needs ≥2 to compare)
-      if (workItems.length >= 2) {
-        try {
-          const r = await fetch(`/api/insights/homogeneity?limit=${Math.min(20, workItems.length)}`);
-          const d = await r.json();
-          if (r.ok && d?.message) setHomogeneity({ verdict: d.verdict, message: d.message });
-        } catch {
-          /* self-check is advisory — never block the batch result */
+      if (ctx.jobId) {
+        const settlement = await fetch("/api/batch", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jobId: ctx.jobId, owner: ctx.owner, status: detachedRef.current || ctx.hasFailures ? "running" : abortRef.current ? "cancelled" : "done" }),
+        }).catch(() => null);
+        if (!settlement?.ok) ctx.hasFailures = true;
+        if (ctx.hasFailures && !detachedRef.current) {
+          try {
+            const response = await fetch(`/api/batch?jobId=${encodeURIComponent(ctx.jobId)}`);
+            if (response.ok) setResumableJob(await response.json());
+          } catch { /* The running job remains available after a refresh. */ }
         }
       }
+      if (!abortRef.current) {
+        setIsComplete(!ctx.hasFailures);
+        // template self-check across the freshly generated projects (needs ≥2 to compare)
+        if (workItems.length >= 2) {
+          try {
+            const r = await fetch(`/api/insights/homogeneity?limit=${Math.min(20, workItems.length)}`);
+            const d = await r.json();
+            if (r.ok && d?.message) setHomogeneity({ verdict: d.verdict, message: d.message });
+          } catch {
+            /* self-check is advisory — never block the batch result */
+          }
+        }
+      }
+    } finally {
+      clearInterval(heartbeat);
+      await batchControl(ctx.jobId!, ctx.owner!, "release").catch(() => {});
+      setIsGenerating(false);
     }
-    setIsGenerating(false);
   };
 
   // Start batch generation (real: create project + generate script per item, reusing the single-product flow)
@@ -463,7 +492,7 @@ export default function BatchPage() {
     }
     setConfigError("");
 
-    abortRef.current = false;
+    abortRef.current = detachedRef.current;
     setIsGenerating(true);
     setIsComplete(false);
     setResumableJob(null);
@@ -505,8 +534,13 @@ export default function BatchPage() {
         ctx.jobId = jobData.jobId;
         for (const row of jobData.items ?? []) ctx.itemIdByProduct.set(row.productId, row.id);
       }
-    } catch {
-      /* persistence is an upgrade, not a dependency — the run proceeds in-memory */
+      if (!ctx.jobId) throw new Error(jobData.error || "批次创建失败 / Failed to create batch");
+      ctx.owner = crypto.randomUUID();
+      await batchControl(ctx.jobId, ctx.owner, "claim");
+    } catch (error) {
+      setConfigError(error instanceof Error ? error.message : "批次启动失败 / Failed to start batch");
+      setIsGenerating(false);
+      return;
     }
 
     await executeBatch(selected.map((p, i) => ({ product: p, slot: plan[i] })), ctx);
@@ -522,12 +556,26 @@ export default function BatchPage() {
       return;
     }
     setConfigError("");
-    const { job, items } = resumableJob;
+    const owner = crypto.randomUUID();
+    let snapshot = resumableJob;
+    setIsGenerating(true);
+    try {
+      await batchControl(snapshot.job.id, owner, "claim");
+      const response = await fetch(`/api/batch?jobId=${encodeURIComponent(snapshot.job.id)}`);
+      if (!response.ok) throw new Error("无法读取批次进度 / Failed to read batch");
+      snapshot = await response.json();
+    } catch (error) {
+      await batchControl(resumableJob.job.id, owner, "release").catch(() => {});
+      setConfigError(error instanceof Error ? error.message : "恢复失败 / Resume failed");
+      setIsGenerating(false);
+      return;
+    }
+    const { job, items } = snapshot;
     const cfg = (job.config ?? {}) as {
       videoMode?: string; scriptStyle?: string; duration?: string; autoCompose?: boolean;
       productCard?: boolean; plan?: ReturnType<typeof buildVariationPlan>;
     };
-    abortRef.current = false;
+    abortRef.current = detachedRef.current;
     setIsGenerating(true);
     setIsComplete(false);
     setResumableJob(null);
@@ -540,6 +588,7 @@ export default function BatchPage() {
       autoCompose: cfg.autoCompose ?? true,
       productCard: cfg.productCard ?? true,
       jobId: job.id,
+      owner,
       itemIdByProduct: new Map(items.map((i) => [i.productId, i.id])),
     };
     const plan = Array.isArray(cfg.plan) ? cfg.plan : [];
@@ -559,6 +608,7 @@ export default function BatchPage() {
       if (it.status === "done") continue;
       const product = byId.get(it.productId);
       if (!product) {
+        ctx.hasFailures = true;
         // the product left the library since the job started — surface, don't silently skip
         reportItem(ctx, it.productId, { status: "failed", error: t("resumeProductMissing") });
         setBatchTasks((prev) => prev.map((tk) => (tk.id === it.productId ? { ...tk, status: "failed", error: t("resumeProductMissing") } : tk)));
@@ -570,14 +620,19 @@ export default function BatchPage() {
   };
 
   /** Discard the interrupted job (persisted as cancelled) and start clean. */
-  const handleDiscardResumable = () => {
-    if (!resumableJob) return;
-    void fetch("/api/batch", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jobId: resumableJob.job.id, status: "cancelled" }),
-    }).catch(() => {});
-    setResumableJob(null);
+  const handleDiscardResumable = async () => {
+    if (!resumableJob || isGenerating) return;
+    const jobId = resumableJob.job.id, owner = crypto.randomUUID();
+    try {
+      await batchControl(jobId, owner, "claim");
+      const response = await fetch("/api/batch", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId, owner, status: "cancelled" }),
+      });
+      if (!response.ok) throw new Error("取消失败 / Failed to cancel batch");
+      setResumableJob(null);
+    } catch (error) { setConfigError(error instanceof Error ? error.message : "取消失败 / Cancel failed"); }
+    finally { await batchControl(jobId, owner, "release").catch(() => {}); }
   };
 
   /** Abort a running batch: stop the pool and settle the job as cancelled. */

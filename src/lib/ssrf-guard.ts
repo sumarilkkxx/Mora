@@ -7,6 +7,23 @@
  */
 import { lookup } from "dns/promises";
 import net from "net";
+import { Agent } from "undici";
+
+// Validate the DNS answers used by the socket itself, not just a preflight lookup.
+// Keeping the hostname intact also preserves HTTPS certificate/SNI and Host checks.
+const publicAgent = new Agent({ connect: {
+  lookup(hostname, options, callback) {
+    lookup(hostname, { all: true, family: options.family, hints: options.hints }).then(records => {
+      if (!records.length || records.some(record => isBlockedIp(record.address))) {
+        callback(new Error("目标地址被拒绝（内网或无法解析）"), []);
+      } else if (options.all) {
+        callback(null, records);
+      } else {
+        callback(null, records[0].address, records[0].family);
+      }
+    }, error => callback(error, []));
+  },
+} });
 
 /** Returns true if an IP falls within a blocked private/loopback/link-local/reserved range (IPv4 + IPv6). Pure function, unit-testable. */
 export function isBlockedIp(ip: string): boolean {
@@ -80,10 +97,11 @@ export async function safeFetch(url: string, init: RequestInit = {}, maxRedirect
   for (let hop = 0; hop <= maxRedirects; hop++) {
     await assertPublicUrl(current);
     // Apply a 15 s timeout per hop (unless the caller already provides a signal) to prevent slow or malicious servers from stalling the request indefinitely
-    const res = await fetch(current, { ...currentInit, redirect: "manual", signal: currentInit.signal ?? AbortSignal.timeout(15000) });
+    const res = await fetch(current, { ...currentInit, dispatcher: publicAgent, redirect: "manual", signal: currentInit.signal ?? AbortSignal.timeout(15000) } as RequestInit);
     if (res.status >= 300 && res.status < 400) {
       const loc = res.headers.get("location");
       if (!loc) return res;
+      await res.body?.cancel();
       const next = new URL(loc, current);
       // A signed provider endpoint may redirect to object storage. Never forward credentials to
       // a different origin when following redirects manually.

@@ -1,3 +1,4 @@
+import { withBatchExecution } from "@/lib/batch-execution";
 import { NextRequest, NextResponse } from "next/server";
 import { getDataDir, fileNameOf } from "@/lib/paths";
 import { ffprobeBin, ffmpegBin } from "@/lib/ffmpeg-path";
@@ -99,7 +100,11 @@ function defaultMotion(shot: Shot): string {
 }
 
 // 合成视频：读取已选脚本分镜 + 已生成素材，用 FFmpeg 合成带运镜与中文字幕的成片
-export async function POST(
+export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  return withBatchExecution(req, "compose", () => handlePost(req, context));
+}
+
+async function handlePost(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {

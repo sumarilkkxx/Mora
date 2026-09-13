@@ -122,7 +122,7 @@ export function TaskCenter({ collapsed = false, enableRecovery = false }: { coll
   const hasRunning = feed.active.length > 0;
 
   const markTasksSeen = useCallback(() => {
-    const newest = feed.recent.reduce((latest, task) => Math.max(latest, taskTimestamp(task.createdAt)), Date.now());
+    const newest = feed.recent.reduce((latest, task) => Math.max(latest, taskTimestamp(task.completedAt ?? task.createdAt)), Date.now());
     window.localStorage.setItem(TASKS_SEEN_STORAGE_KEY, String(newest));
     setLastSeenAt(newest);
     window.dispatchEvent(new CustomEvent("mora:tasks-seen", { detail: newest }));

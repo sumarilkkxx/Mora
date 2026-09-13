@@ -40,6 +40,12 @@ beforeEach(async () => {
 afterEach(async () => { sqlite.close(); vi.unstubAllEnvs(); await rm(directory, { recursive: true, force: true }); });
 
 describe("recovery with migrated SQLite", () => {
+  it("lists a long-running render by completion time, not its old creation time", async () => {
+    db.insert(schema.compositions).values({ id: "long-render", projectId: "p", createdAt: new Date("2020-01-01"), status: "done" }).run();
+    const feed = await (await GET()).json();
+    expect(feed.recent.map((row: { id: string }) => row.id)).toContain("long-render");
+    expect(new Date(feed.recent[0].completedAt).getTime()).toBeGreaterThan(Date.now() - 10_000);
+  });
   it("blocks a priced Atlas request above the default cap before paid submission", async () => {
     const response = await videoPost(new NextRequest("http://localhost/api/ai/video", {
       method: "POST",

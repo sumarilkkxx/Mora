@@ -1,3 +1,4 @@
+import { withBatchExecution } from "@/lib/batch-execution";
 import { NextRequest, NextResponse } from "next/server";
 import { fileNameOf } from "@/lib/paths";
 import { getDb } from "@/lib/db";
@@ -51,6 +52,10 @@ export async function GET(req: NextRequest) {
 
 // create a new project
 export async function POST(req: NextRequest) {
+  return withBatchExecution(req, "project", () => handlePost(req));
+}
+
+async function handlePost(req: NextRequest) {
   try {
     const body = await req.json();
     const db = getDb();
