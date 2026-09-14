@@ -5,7 +5,7 @@ import { useLocale } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { LuChartNoAxesColumn, LuCheck } from "react-icons/lu";
+import { ChartNoAxesColumn, Check } from "lucide-react";
 import type { StyleInsight, HookInsight } from "@/lib/performance-insights";
 
 // style key → display name (aggregation returns the styleType key)
@@ -92,7 +92,7 @@ export function PerformanceFeedback({ projectId }: { projectId: string }) {
     <Card className="glass-card">
       <CardContent className="p-5">
         <div className="flex items-center gap-2 mb-1">
-          <LuChartNoAxesColumn className="w-4 h-4 text-primary" />
+          <ChartNoAxesColumn className="w-4 h-4 text-primary" />
           <h3 className="text-sm font-semibold">{en ? "Publishing results" : "发布数据"}</h3>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
@@ -147,7 +147,7 @@ export function PerformanceFeedback({ projectId }: { projectId: string }) {
             </label>
           ))}
           <Button onClick={submit} disabled={!canSave || saving} size="sm" className="brand-gradient text-white h-9">
-            {saved ? <LuCheck className="w-4 h-4 mr-1" /> : null}
+            {saved ? <Check className="w-4 h-4 mr-1" /> : null}
             {saving ? (en ? "Saving…" : "保存中…") : saved ? (en ? "Saved" : "已保存") : en ? "Save" : "保存"}
           </Button>
         </div>

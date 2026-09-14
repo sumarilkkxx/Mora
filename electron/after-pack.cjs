@@ -33,6 +33,17 @@ exports.default = async function afterPack(context) {
     execSync(`cp -R "${src}/." "${dest}/"`);
   }
 
+  const { verifyPayload, reportPayload } = require("../scripts/desktop-payload.cjs");
+  const targetArch = { 0: "ia32", 1: "x64", 3: "arm64" }[context.arch];
+  if (!targetArch) throw new Error(`Unsupported desktop architecture: ${context.arch}`);
+  verifyPayload(dest, electronPlatformName, targetArch);
+  reportPayload(dest);
+  for (const name of ["ffmpeg-static", "@ffprobe-installer"]) {
+    if (fs.existsSync(path.join(resourcesDir, "app.asar.unpacked", "node_modules", name))) {
+      throw new Error(`Duplicate media payload in app.asar.unpacked: ${name}`);
+    }
+  }
+
   const ok = fs.existsSync(path.join(dest, "node_modules", "next", "package.json"));
   console.log(`[afterPack] standalone 已拷入 ${dest}（next 模块就位:${ok}）`);
   if (!ok) throw new Error("[afterPack] 拷贝后未见 node_modules/next，打包中止");

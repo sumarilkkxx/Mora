@@ -3,7 +3,9 @@
 import { useEffect, useState, type ComponentType } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Boxes, ChevronLeft, Clapperboard, FolderKanban, ImagePlus, Library, Menu, Plus, Scissors, Settings2, Sparkles, UserRound, WandSparkles, Workflow } from "lucide-react";
+import { Menu, Plus } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide";
+import { MorphIcon } from "morphicons/react";
 
 import { LanguageToggle } from "@/components/language-toggle";
 import { StudioUtilities } from "@/components/studio-utilities";
@@ -11,6 +13,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { TaskCenter } from "@/components/task-center";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useT } from "@/lib/i18n";
+import { ICON_STROKE_WIDTH, navigationIcons } from "@/lib/iconography";
 import { cn } from "@/lib/utils";
 
 /* eslint-disable @next/next/no-img-element -- local vector mark does not benefit from optimization */
@@ -21,31 +24,28 @@ interface NavItem {
   icon: ComponentType<{ className?: string; strokeWidth?: number }>;
 }
 
-const NAV_SECTIONS: { labelKey: string; icon: ComponentType<{ className?: string }>; items: NavItem[] }[] = [
+const NAV_SECTIONS: { labelKey: string; items: NavItem[] }[] = [
   {
     labelKey: "navSectionCreate",
-    icon: Sparkles,
     items: [
-      { key: "navHome", href: "/start", icon: WandSparkles },
-      { key: "navProjects", href: "/projects", icon: FolderKanban },
+      { key: "navHome", href: "/start", icon: navigationIcons.create },
+      { key: "navProjects", href: "/projects", icon: navigationIcons.projects },
     ],
   },
   {
     labelKey: "navSectionLibrary",
-    icon: Library,
     items: [
-      { key: "navProducts", href: "/products", icon: Boxes },
-      { key: "navPresenters", href: "/presenters", icon: UserRound },
-      { key: "navMediaLab", href: "/media-lab", icon: ImagePlus },
+      { key: "navProducts", href: "/products", icon: navigationIcons.products },
+      { key: "navPresenters", href: "/presenters", icon: navigationIcons.presenters },
+      { key: "navMediaLab", href: "/media-lab", icon: navigationIcons.mediaLab },
     ],
   },
   {
     labelKey: "navSectionAutomation",
-    icon: Workflow,
     items: [
-      { key: "navGuidedEdit", href: "/project/edit/new", icon: Scissors },
-      { key: "navClone", href: "/project/clone", icon: Clapperboard },
-      { key: "navBatch", href: "/batch", icon: Workflow },
+      { key: "navGuidedEdit", href: "/project/edit/new", icon: navigationIcons.edit },
+      { key: "navClone", href: "/project/clone", icon: navigationIcons.clone },
+      { key: "navBatch", href: "/batch", icon: navigationIcons.batch },
     ],
   },
 ];
@@ -93,7 +93,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
           <div className="studio-sidebar-actions">
             <button type="button" onClick={toggleCollapsed} className="studio-icon-button hidden md:inline-flex" aria-label={t(collapsed ? "navExpand" : "navCollapse")} title={t(collapsed ? "navExpand" : "navCollapse")}> 
-              <ChevronLeft className={cn("size-4 transition-transform", collapsed && "rotate-180")} />
+              <MorphIcon icon={collapsed ? PanelLeftOpen : PanelLeftClose} size={16} strokeWidth={ICON_STROKE_WIDTH} spring="smooth" reducedMotion="user" />
             </button>
           </div>
         </div>
@@ -112,7 +112,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 const selected = activeHref === item.href;
                 return (
                   <Link key={item.href} href={item.href} aria-current={selected ? "page" : undefined} title={collapsed ? t(item.key) : undefined} className={cn("studio-nav-item", selected && "is-active")}>
-                    <Icon className="size-[18px]" strokeWidth={1.8} />
+                    <Icon className="size-[18px]" strokeWidth={ICON_STROKE_WIDTH} />
                     {!collapsed && <span>{t(item.key)}</span>}
                   </Link>
                 );
@@ -128,7 +128,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 const selected = activeHref === item.href;
                 return (
                   <Link key={item.href} href={item.href} aria-current={selected ? "page" : undefined} title={collapsed ? t(item.key) : undefined} className={cn("studio-nav-item", selected && "is-active")}>
-                    <Icon className="size-[18px]" strokeWidth={1.8} />
+                    <Icon className="size-[18px]" strokeWidth={ICON_STROKE_WIDTH} />
                     {!collapsed && <span>{t(item.key)}</span>}
                   </Link>
                 );
@@ -139,7 +139,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="studio-sidebar-footer">
           <Link href="/settings" aria-current={pathname?.startsWith("/settings") ? "page" : undefined} title={collapsed ? t("settings") : undefined} className={cn("studio-nav-item", pathname?.startsWith("/settings") && "is-active")}>
-            <Settings2 className="size-[18px]" strokeWidth={1.8} />
+            <navigationIcons.settings className="size-[18px]" strokeWidth={ICON_STROKE_WIDTH} />
             {!collapsed && <span>{t("settings")}</span>}
           </Link>
         </div>

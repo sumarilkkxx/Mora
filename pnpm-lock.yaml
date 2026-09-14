@@ -10,6 +10,7 @@ overrides:
   nanoid: 3.3.18
   postcss: 8.5.23
   sharp: 0.35.0
+  onnxruntime-node: 1.23.2
 
 importers:
 
@@ -47,16 +48,22 @@ importers:
         version: 2.1.3
       geist:
         specifier: ^1.7.2
-        version: 1.7.2(next@16.2.11(@babel/core@7.29.6)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))
+        version: 1.7.2(next@16.2.11(@babel/core@7.29.6)(@playwright/test@1.63.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))
+      lucide:
+        specifier: 0.577.0
+        version: 0.577.0
       lucide-react:
         specifier: ^0.577.0
         version: 0.577.0(react@19.2.4)
+      morphicons:
+        specifier: 1.7.1
+        version: 1.7.1(react@19.2.4)
       motion:
         specifier: ^12.38.0
         version: 12.38.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       next:
         specifier: 16.2.11
-        version: 16.2.11(@babel/core@7.29.6)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 16.2.11(@babel/core@7.29.6)(@playwright/test@1.63.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       openai:
         specifier: ^6.32.0
         version: 6.32.0(zod@4.3.6)
@@ -69,15 +76,15 @@ importers:
       react-dom:
         specifier: 19.2.4
         version: 19.2.4(react@19.2.4)
-      react-icons:
-        specifier: ^5.5.0
-        version: 5.5.0(react@19.2.4)
       tailwind-merge:
         specifier: ^3.5.0
         version: 3.5.0
       tw-animate-css:
         specifier: ^1.4.0
         version: 1.4.0
+      undici:
+        specifier: 6.27.0
+        version: 6.27.0
       zustand:
         specifier: ^5.0.12
         version: 5.0.12(@types/react@19.2.14)(immer@11.1.18)(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4))
@@ -85,6 +92,9 @@ importers:
       '@electron/rebuild':
         specifier: ^4.0.4
         version: 4.0.4
+      '@playwright/test':
+        specifier: ^1.63.0
+        version: 1.63.0
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.2.2
@@ -1293,6 +1303,11 @@ packages:
     resolution: {integrity: sha512-ODOov0sGMJMf3jPonOkgGqPknTsu+DdQ7kD++gz8aI+aFMOMHFbWAA2taqXXVTdP+OTOQR/znGvSpmkeI0WTYQ==}
     engines: {node: '>=14.18.0'}
 
+  '@playwright/test@1.63.0':
+    resolution: {integrity: sha512-oxMK4vllB9RK5NQ2l1pq1IfOf2AvnEuj/vYGDj0H2nMtmtZpKtCwt/l00GEO6xjGfpBNAvjovvYdCm50dRQkpQ==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   '@protobufjs/aspromise@1.1.2':
     resolution: {integrity: sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ==}
 
@@ -1789,6 +1804,7 @@ packages:
   '@xmldom/xmldom@0.8.13':
     resolution: {integrity: sha512-KRYzxepc14G/CEpEGc3Yn+JKaAeT63smlDr+vjB8jRfgTBBI9wRj/nkQEO+ucV8p8I9bfKLWp37uHgFrbntPvw==}
     engines: {node: '>=10.0.0'}
+    deprecated: this version has critical issues, please update to the latest version
 
   abbrev@4.0.0:
     resolution: {integrity: sha512-a1wflyaL0tHtJSmLSOVybYhy22vRih4eduhhrkcjgrWGnRfrZtovJ2FRjxuTtkkj47O/baf0R86QU5OuYpz8fA==}
@@ -3247,6 +3263,9 @@ packages:
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
+  lucide@0.577.0:
+    resolution: {integrity: sha512-PpC/m5eOItp/WU/GlQPFBXDOhq6HibL73KzYP37OX3LM7VmzWQF8voEj8QRWUFvy9FIKfeDQkWYoyS1D/MdWFA==}
+
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
@@ -3322,6 +3341,26 @@ packages:
   mkdirp@0.5.6:
     resolution: {integrity: sha512-FP+p8RB8OWpF3YZBCrP5gtADmtXApB5AMLn+vdyA+PyxCjrCs00mjyUozssO33cwDeT3wNGdLxJ5M//YqtHAJw==}
     hasBin: true
+
+  morphicons@1.7.1:
+    resolution: {integrity: sha512-q5ylxy5/d7vBg0OAzanlooXf05PekovMYDuuQVpr6vAQZxl99lrJbaIi+jJ32PXQf9WEEaDO2pbNBsx1ZhEnFQ==}
+    peerDependencies:
+      react: '>=18'
+      react-native: '>=0.71'
+      react-native-svg: '>=14'
+      svelte: '>=5'
+      vue: '>=3.3'
+    peerDependenciesMeta:
+      react:
+        optional: true
+      react-native:
+        optional: true
+      react-native-svg:
+        optional: true
+      svelte:
+        optional: true
+      vue:
+        optional: true
 
   motion-dom@12.38.0:
     resolution: {integrity: sha512-pdkHLD8QYRp8VfiNLb8xIBJis1byQ9gPT3Jnh2jqfFtAsWUA3dEepDlsWe/xMpO8McV+VdpKVcp+E+TGJEtOoA==}
@@ -3470,14 +3509,14 @@ packages:
   once@1.4.0:
     resolution: {integrity: sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==}
 
+  onnxruntime-common@1.23.2:
+    resolution: {integrity: sha512-5LFsC9Dukzp2WV6kNHYLNzp8sT6V02IubLCbzw2Xd6X5GOlr65gAX6xiJwyi2URJol/s71gaQLC5F2C25AAR2w==}
+
   onnxruntime-common@1.24.0-dev.20251116-b39e144322:
     resolution: {integrity: sha512-BOoomdHYmNRL5r4iQ4bMvsl2t0/hzVQ3OM3PHD0gxeXu1PmggqBv3puZicEUVOA3AtHHYmqZtjMj9FOfGrATTw==}
 
-  onnxruntime-common@1.24.3:
-    resolution: {integrity: sha512-GeuPZO6U/LBJXvwdaqHbuUmoXiEdeCjWi/EG7Y1HNnDwJYuk6WUbNXpF6luSUY8yASul3cmUlLGrCCL1ZgVXqA==}
-
-  onnxruntime-node@1.24.3:
-    resolution: {integrity: sha512-JH7+czbc8ALA819vlTgcV+Q214/+VjGeBHDjX81+ZCD0PCVCIFGFNtT0V4sXG/1JXypKPgScQcB3ij/hk3YnTg==}
+  onnxruntime-node@1.23.2:
+    resolution: {integrity: sha512-OBTsG0W8ddBVOeVVVychpVBS87A9YV5sa2hJ6lc025T97Le+J4v++PwSC4XFs1C62SWyNdof0Mh4KvnZgtt4aw==}
     os: [win32, darwin, linux]
 
   onnxruntime-web@1.26.0-dev.20260416-b7804b056c:
@@ -3583,6 +3622,16 @@ packages:
   platform@1.3.6:
     resolution: {integrity: sha512-fnWVljUchTro6RiCFvCXBbNhJc2NijN7oIQxbwsyL0buWJPG85v81ehlHI9fXrJsMNgTofEoWIQeClKpgxFLrg==}
 
+  playwright-core@1.63.0:
+    resolution: {integrity: sha512-rYCsBF/M5HjUch52bbtVONEFjv6Xu8sm8h72dNlR5bzIE1fvC/bxgspzkjSfU+MweEMmPM8KJebG6nnyxo5mCg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  playwright@1.63.0:
+    resolution: {integrity: sha512-+7ziBLidS4NaNCdt57SUDT+wYmmd5fmiQejUic/kb+YsYSCPyOOE9sebzMjNmQrsnNpDJqd4WHvV/8lfKfUDUg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   plist@3.1.0:
     resolution: {integrity: sha512-uysumyrvkUX0rX/dEVqt8gC3sTBzd4zoWfLeS29nb53imdaXVvLINYXTI2GNqzaMuvacNx4uJQ8+b3zXR0pkgQ==}
     engines: {node: '>=10.4.0'}
@@ -3673,11 +3722,6 @@ packages:
     resolution: {integrity: sha512-AXJdLo8kgMbimY95O2aKQqsz2iWi9jMgKJhRBAxECE4IFxfcazB2LmzloIoibJI3C12IlY20+KFaLv+71bUJeQ==}
     peerDependencies:
       react: ^19.2.4
-
-  react-icons@5.5.0:
-    resolution: {integrity: sha512-MEFcXdkP3dLo8uumGI5xN3lDFNsRtrjbOEKDLD7yv76v4wpnEq2Lt2qeHaQOr34I/wPN3s3+N08WkQ+CW37Xiw==}
-    peerDependencies:
-      react: '*'
 
   react-is@16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
@@ -5109,7 +5153,7 @@ snapshots:
     dependencies:
       '@huggingface/jinja': 0.5.9
       '@huggingface/tokenizers': 0.1.3
-      onnxruntime-node: 1.24.3
+      onnxruntime-node: 1.23.2
       onnxruntime-web: 1.26.0-dev.20260416-b7804b056c
       sharp: 0.35.0
 
@@ -5319,7 +5363,7 @@ snapshots:
   '@napi-rs/wasm-runtime@1.1.1':
     dependencies:
       '@emnapi/core': 1.9.1
-      '@emnapi/runtime': 1.9.1
+      '@emnapi/runtime': 1.11.3
       '@tybys/wasm-util': 0.10.1
     optional: true
 
@@ -5406,6 +5450,10 @@ snapshots:
       '@peculiar/utils': 2.0.3
       tslib: 2.8.1
       webcrypto-core: 1.9.2
+
+  '@playwright/test@1.63.0':
+    dependencies:
+      playwright: 1.63.0
 
   '@protobufjs/aspromise@1.1.2': {}
 
@@ -6995,9 +7043,9 @@ snapshots:
 
   functions-have-names@1.2.3: {}
 
-  geist@1.7.2(next@16.2.11(@babel/core@7.29.6)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)):
+  geist@1.7.2(next@16.2.11(@babel/core@7.29.6)(@playwright/test@1.63.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)):
     dependencies:
-      next: 16.2.11(@babel/core@7.29.6)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      next: 16.2.11(@babel/core@7.29.6)(@playwright/test@1.63.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
 
   generator-function@2.0.1: {}
 
@@ -7062,7 +7110,7 @@ snapshots:
       es6-error: 4.1.1
       matcher: 3.0.0
       roarr: 2.15.4
-      semver: 7.7.4
+      semver: 7.8.5
       serialize-error: 7.0.1
 
   globals@14.0.0: {}
@@ -7522,6 +7570,8 @@ snapshots:
     dependencies:
       react: 19.2.4
 
+  lucide@0.577.0: {}
+
   magic-string@0.30.21:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
@@ -7583,6 +7633,10 @@ snapshots:
     dependencies:
       minimist: 1.2.8
 
+  morphicons@1.7.1(react@19.2.4):
+    optionalDependencies:
+      react: 19.2.4
+
   motion-dom@12.38.0:
     dependencies:
       motion-utils: 12.36.0
@@ -7637,7 +7691,7 @@ snapshots:
 
   natural-compare@1.4.0: {}
 
-  next@16.2.11(@babel/core@7.29.6)(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
+  next@16.2.11(@babel/core@7.29.6)(@playwright/test@1.63.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
     dependencies:
       '@next/env': 16.2.11
       '@swc/helpers': 0.5.15
@@ -7656,6 +7710,7 @@ snapshots:
       '@next/swc-linux-x64-musl': 16.2.11
       '@next/swc-win32-arm64-msvc': 16.2.11
       '@next/swc-win32-x64-msvc': 16.2.11
+      '@playwright/test': 1.63.0
       sharp: 0.35.0
     transitivePeerDependencies:
       - '@babel/core'
@@ -7751,15 +7806,15 @@ snapshots:
     dependencies:
       wrappy: 1.0.2
 
+  onnxruntime-common@1.23.2: {}
+
   onnxruntime-common@1.24.0-dev.20251116-b39e144322: {}
 
-  onnxruntime-common@1.24.3: {}
-
-  onnxruntime-node@1.24.3:
+  onnxruntime-node@1.23.2:
     dependencies:
       adm-zip: 0.6.0
       global-agent: 3.0.0
-      onnxruntime-common: 1.24.3
+      onnxruntime-common: 1.23.2
 
   onnxruntime-web@1.26.0-dev.20260416-b7804b056c:
     dependencies:
@@ -7853,6 +7908,12 @@ snapshots:
       tslib: 2.8.1
 
   platform@1.3.6: {}
+
+  playwright-core@1.63.0: {}
+
+  playwright@1.63.0:
+    dependencies:
+      playwright-core: 1.63.0
 
   plist@3.1.0:
     dependencies:
@@ -7963,10 +8024,6 @@ snapshots:
     dependencies:
       react: 19.2.4
       scheduler: 0.27.0
-
-  react-icons@5.5.0(react@19.2.4):
-    dependencies:
-      react: 19.2.4
 
   react-is@16.13.1: {}
 

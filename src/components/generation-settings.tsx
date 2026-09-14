@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { LuPlus, LuTrash2 } from "react-icons/lu";
+import { Plus, Trash2 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { useSettingsStore } from "@/lib/stores/settings-store";
 import {
@@ -175,7 +175,7 @@ export function GenerationSettings({ selectedVideoProvider }: { selectedVideoPro
               />
             ) : <span />}
             <Button variant="outline" size="sm" onClick={handleAdd} disabled={!canAdd} className="text-xs">
-              <LuPlus className="size-3.5 mr-1" /> {t("addModel")}
+              <Plus className="size-3.5 mr-1" /> {t("addModel")}
             </Button>
           </div>
 
@@ -192,7 +192,7 @@ export function GenerationSettings({ selectedVideoProvider }: { selectedVideoPro
                     </p>
                   </div>
                   <button type="button" onClick={() => removeCustomModel(m.id)} className="shrink-0 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:ring-2 focus-visible:ring-destructive/30" title={t("delete")} aria-label={t("delete")}>
-                    <LuTrash2 className="size-4" />
+                    <Trash2 className="size-4" />
                   </button>
                 </div>
               ))}

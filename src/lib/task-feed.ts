@@ -14,6 +14,7 @@ export interface TaskRow {
   done?: number;
   failed?: number;
   createdAt?: string | null;
+  completedAt?: string | null;
 }
 
 export interface TaskFeed {

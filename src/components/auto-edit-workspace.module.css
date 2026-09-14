@@ -2,7 +2,7 @@
 .page { --page-row-gap: 24px; display: grid; gap: var(--page-row-gap); color: var(--foreground); }
 :global(.studio-content-column):has(.page) { background: var(--background); }
 .page :global(.studio-page-actions) { flex-wrap: wrap; }
-.page :where(button, a, summary, input, select, textarea):focus-visible { outline: 3px solid var(--ring); outline-offset: 3px; }
+.page :where(button, a, summary):focus-visible { outline: 2px solid color-mix(in srgb, var(--ring) 68%, white); outline-offset: 2px; }
 .page :where(button, a, summary) { touch-action: manipulation; }
 .page :where(h2, h3, p) { margin: 0; }
 .stepTrack { position: relative; isolation: isolate; padding: 4px; border: 1px solid var(--border); border-radius: 14px; background: color-mix(in srgb, var(--secondary) 80%, transparent); backdrop-filter: blur(12px); }
@@ -65,7 +65,7 @@
 .promotionField > input { height: 44px; }
 .promotionField > textarea { min-height: 72px; resize: vertical; line-height: 1.6; }
 .promotionField > :where(input, textarea):hover:not(:disabled) { background: color-mix(in srgb, var(--muted) 34%, var(--card)); border-color: var(--input); }
-.promotionField > :where(input, textarea):focus-visible { background: var(--card); border-color: var(--ring); outline: 2px solid color-mix(in srgb, var(--ring) 58%, transparent); outline-offset: 1px; box-shadow: 0 0 0 4px color-mix(in srgb, var(--ring) 10%, transparent); }
+.promotionField > :where(input, textarea):focus-visible { background: var(--card); border-color: color-mix(in srgb, var(--ring) 52%, var(--input)); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 10%, transparent); }
 .promotionFieldWide { grid-column: 1 / -1; }
 @media (max-width: 640px) { .promotionGrid { grid-template-columns: 1fr; } .promotionFieldWide { grid-column: auto; } .promotionField > :where(input, textarea) { font-size: 1rem; } }
 @media (prefers-reduced-motion: reduce) { .promotionField > :where(input, textarea) { transition: none; } }

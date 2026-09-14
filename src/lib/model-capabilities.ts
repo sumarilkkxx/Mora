@@ -113,7 +113,7 @@ export function getVideoModelCapabilities(modelId: string, supportsAudio?: boole
       lastFrame: mode ? mode === "image-to-video" : true,
       nativeAudio: supportsAudio ?? true,
       durationValues: Array.from({ length: version === "2.5" ? 27 : 12 }, (_, index) => index + 4),
-      resolutionValues: full20 ? ["720p", "1080p"] : ["720p"],
+      resolutionValues: full20 || version === "2.5" ? ["720p", "1080p"] : ["720p"],
       aspectRatioValues: ["9:16", "16:9", "1:1"],
       maxReferenceImages: !mode || mode === "reference-to-video" ? (version === "2.5" ? 30 : 9) : undefined,
     };

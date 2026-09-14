@@ -3,6 +3,7 @@ import { desc, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { batchJobItems, batchJobs } from "@/lib/db/schema";
 import { apiError } from "@/lib/api-error";
+import { batchBusy, batchOperationActive, claimBatch, releaseBatch, renewBatch } from "@/lib/batch-execution";
 
 /**
  * Batch job persistence (batch_jobs / batch_job_items).
@@ -13,7 +14,8 @@ import { apiError } from "@/lib/api-error";
  * it left off, skipping the N items already done".
  *
  * POST  { config, items: [{ productId, productName, variation? }] } → { jobId, itemIds }
- * PATCH { jobId, status } | { itemId, patch: { status?, projectId?, compositionId?, error? } }
+ * PATCH { jobId, owner, action: "claim" | "renew" | "release" }
+ * PATCH { jobId, owner, status } | { itemId, owner, patch: { status?, projectId?, compositionId?, error? } }
  * GET   ?active=1 → latest running job + items; ?jobId=xxx → that job + items
  */
 export async function POST(req: NextRequest) {
@@ -28,24 +30,30 @@ export async function POST(req: NextRequest) {
     if (items.length === 0) return apiError(req, "缺少批量条目", "Missing batch items");
 
     const db = getDb();
-    // one live job at a time: starting a new batch settles any stale running job
-    await db.update(batchJobs).set({ status: "cancelled", updatedAt: new Date() }).where(eq(batchJobs.status, "running"));
-    const [job] = await db
-      .insert(batchJobs)
-      .values({ status: "running", total: items.length, config: body.config ?? {} })
-      .returning();
-    const rows = await db
-      .insert(batchJobItems)
-      .values(
-        items.map((i) => ({
-          jobId: job.id,
-          productId: i.productId as string,
-          productName: i.productName as string,
-          variation: typeof i.variation === "string" ? i.variation : null,
-        }))
-      )
-      .returning({ id: batchJobItems.id, productId: batchJobItems.productId });
-    return NextResponse.json({ jobId: job.id, items: rows }, { status: 201 });
+    const result = db.transaction(tx => {
+      const running = tx.select().from(batchJobs).where(eq(batchJobs.status, "running")).all();
+      if (running.some(job => (job.executionUntil ?? 0) > Date.now() || batchOperationActive(job.id))) return null;
+      // one live job at a time: starting a new batch settles any stale running job
+      tx.update(batchJobs).set({ status: "cancelled", updatedAt: new Date() }).where(eq(batchJobs.status, "running")).run();
+      const job = tx
+        .insert(batchJobs)
+        .values({ status: "running", total: items.length, config: body.config ?? {} })
+        .returning().get()!;
+      const rows = tx
+        .insert(batchJobItems)
+        .values(
+          items.map((i) => ({
+            jobId: job.id,
+            productId: i.productId as string,
+            productName: i.productName as string,
+            variation: typeof i.variation === "string" ? i.variation : null,
+          }))
+        )
+        .returning({ id: batchJobItems.id, productId: batchJobItems.productId }).all();
+      return { jobId: job.id, items: rows };
+    });
+    if (!result) return batchBusy();
+    return NextResponse.json(result, { status: 201 });
   } catch (error) {
     console.error("创建批量任务失败:", error);
     return NextResponse.json(
@@ -62,13 +70,25 @@ export async function PATCH(req: NextRequest) {
       status?: unknown;
       itemId?: unknown;
       patch?: { status?: unknown; projectId?: unknown; compositionId?: unknown; error?: unknown };
+      action?: unknown;
+      owner?: unknown;
     };
     const db = getDb();
+    const owner = typeof body.owner === "string" && body.owner.length <= 100 ? body.owner : "";
+    if (!owner) return batchBusy();
+    if (typeof body.jobId === "string" && body.action) {
+      const ok = body.action === "claim" ? claimBatch(body.jobId, owner)
+        : body.action === "renew" ? renewBatch(body.jobId, owner)
+        : body.action === "release" ? releaseBatch(body.jobId, owner) : false;
+      return ok ? NextResponse.json({ ok: true }) : batchBusy();
+    }
 
     if (typeof body.itemId === "string") {
+      const item = db.select().from(batchJobItems).where(eq(batchJobItems.id, body.itemId)).get();
+      if (!item || !renewBatch(item.jobId, owner)) return batchBusy();
       const p = body.patch ?? {};
       const ITEM_STATUSES = ["pending", "generating", "composing", "done", "failed"];
-      await db
+      db
         .update(batchJobItems)
         .set({
           ...(typeof p.status === "string" && ITEM_STATUSES.includes(p.status)
@@ -79,15 +99,18 @@ export async function PATCH(req: NextRequest) {
           ...(typeof p.error === "string" ? { error: p.error.slice(0, 500) } : {}),
           updatedAt: new Date(),
         })
-        .where(eq(batchJobItems.id, body.itemId));
+        .where(eq(batchJobItems.id, body.itemId)).run();
       return NextResponse.json({ ok: true });
     }
 
     if (typeof body.jobId === "string" && typeof body.status === "string" && ["running", "done", "cancelled"].includes(body.status)) {
-      await db
+      if (batchOperationActive(body.jobId) || !renewBatch(body.jobId, owner)) return batchBusy();
+      const items = db.select().from(batchJobItems).where(eq(batchJobItems.jobId, body.jobId)).all();
+      if (body.status === "done" && items.some(item => item.status !== "done")) return apiError(req, "批次仍有未完成条目", "Batch has unfinished items", 409);
+      db
         .update(batchJobs)
         .set({ status: body.status as "running" | "done" | "cancelled", updatedAt: new Date() })
-        .where(eq(batchJobs.id, body.jobId));
+        .where(eq(batchJobs.id, body.jobId)).run();
       return NextResponse.json({ ok: true });
     }
 

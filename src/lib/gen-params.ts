@@ -67,7 +67,7 @@ export const DEFAULT_IMAGE_PARAMS: ImageGenParams = {
 
 export const DEFAULT_VIDEO_PARAMS: VideoGenParams = {
   aspectRatio: "9:16",
-  resolution: "1080p",
+  resolution: "720p",
   duration: 5,
 };
 

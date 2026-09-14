@@ -16,6 +16,7 @@
  */
 
 import { BaseProvider, ProviderError } from './base'
+import { safeFetch, readResponseBuffer } from '../ssrf-guard'
 import type {
   ProviderConfig,
   ImageOptions,
@@ -38,6 +39,8 @@ interface OpenAIImageResponse {
   [key: string]: unknown
 }
 
+const MAX_REFERENCE_BYTES = 20 * 1024 * 1024
+
 // ==================== Provider 实现 ====================
 
 export class OpenAIProvider extends BaseProvider {
@@ -56,7 +59,7 @@ export class OpenAIProvider extends BaseProvider {
    * 有参考图 / image-to-image 走编辑接口，否则走文生图。
    */
   async generateImage(options: ImageOptions): Promise<ImageResult> {
-    if (options.mode === 'image-to-image' || options.referenceImageUrl) {
+    if (options.mode === 'image-to-image' || options.referenceImageUrl || options.referenceImageUrls?.length) {
       return this.editImage(options)
     }
     return this.textToImage(options)
@@ -144,12 +147,13 @@ export class OpenAIProvider extends BaseProvider {
     if (model.startsWith('dall-e-3')) {
       throw new ProviderError('DALL·E 3 不支持图生图（图片编辑），请改用 gpt-image-1', 'NOT_SUPPORTED', this.name)
     }
-    if (!options.referenceImageUrl) {
+    const references = [...new Set([...(options.referenceImageUrl ? [options.referenceImageUrl] : []), ...(options.referenceImageUrls ?? [])])]
+    if (!references.length) {
       throw new ProviderError('图生图缺少参考图', 'BAD_REFERENCE', this.name)
     }
 
     const isDalle2 = model.startsWith('dall-e-2')
-    const { blob, filename } = await this.fetchReferenceImage(options.referenceImageUrl)
+    if (isDalle2 && references.length !== 1) throw new ProviderError('DALL·E 2 仅支持一张参考图', 'BAD_REFERENCE', this.name)
 
     const form = new FormData()
     form.append('model', model)
@@ -157,7 +161,10 @@ export class OpenAIProvider extends BaseProvider {
     form.append('n', String(isDalle2 ? 1 : (options.count ?? 1)))
     form.append('size', this.pickSize(model, options.width, options.height))
     // gpt-image-* 用数组字段 image[]；dall-e-2 用单字段 image
-    form.append(isDalle2 ? 'image' : 'image[]', blob, filename)
+    for (const reference of references) {
+      const { blob, filename } = await this.fetchReferenceImage(reference)
+      form.append(isDalle2 ? 'image' : 'image[]', blob, filename)
+    }
     // 仅 dall-e-2 支持 response_format；gpt-image-* 恒返回 b64_json
     if (isDalle2) form.append('response_format', 'url')
 
@@ -190,13 +197,16 @@ export class OpenAIProvider extends BaseProvider {
       const comma = ref.indexOf(',')
       if (comma === -1) throw new ProviderError('参考图 data URI 解析失败', 'BAD_REFERENCE', this.name)
       const mime = ref.slice(5, comma).split(';')[0] || 'image/png'
+      if (ref.length - comma - 1 > Math.ceil(MAX_REFERENCE_BYTES / 3) * 4) throw new ProviderError('参考图超过 20MB 上限', 'BAD_REFERENCE', this.name)
       const buf = Buffer.from(ref.slice(comma + 1), 'base64')
+      if (buf.length > MAX_REFERENCE_BYTES) throw new ProviderError('参考图超过 20MB 上限', 'BAD_REFERENCE', this.name)
       return { blob: new Blob([new Uint8Array(buf)], { type: mime }), filename: `image.${this.extFromMime(mime)}` }
     }
-    const resp = await fetch(ref)
+    const resp = await safeFetch(ref)
     if (!resp.ok) throw new ProviderError(`参考图下载失败: ${resp.status}`, 'BAD_REFERENCE', this.name)
-    const blob = await resp.blob()
-    const mime = blob.type || resp.headers.get('content-type') || 'image/png'
+    const bytes = await readResponseBuffer(resp, MAX_REFERENCE_BYTES, '参考图')
+    const mime = resp.headers.get('content-type') || 'image/png'
+    const blob = new Blob([new Uint8Array(bytes)], { type: mime })
     return { blob, filename: `image.${this.extFromMime(mime)}` }
   }
 

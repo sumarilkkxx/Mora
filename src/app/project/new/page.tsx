@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/studio/page";
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { LuUpload, LuX, LuCircleAlert, LuZap, LuUser, LuUserX, LuBox, LuLayoutGrid, LuEye, LuVideo, LuBookmark, LuLink2, LuLoader } from "react-icons/lu";
+import { Upload, X, CircleAlert, Zap, User, UserX, Box, CheckCircle2, ChevronDown, LayoutGrid, Eye, Video, Bookmark, Link2, Loader, LoaderCircle } from "lucide-react";
 import { useCharacterStore } from "@/lib/stores/project-store";
 import { useTemplateStore } from "@/lib/stores/template-store";
 import { useProductLibraryStore, type ProductItem } from "@/lib/stores/product-library-store";
@@ -52,10 +52,10 @@ const durationOptions = [
 
 // video mode options — the step-3 cards use value+label+icon; the recipe editor reuses value+label
 const videoModeOptions = [
-  { value: "product_closeup", labelKey: "modeCloseupLabel", descKey: "modeCloseupDesc", icon: LuBox },
-  { value: "graphic_montage", labelKey: "modeMontageLabel", descKey: "modeMontageDesc", icon: LuLayoutGrid },
-  { value: "scene_demo", labelKey: "modeSceneLabel", descKey: "modeSceneDesc", icon: LuEye },
-  { value: "live_presenter", labelKey: "modePresenterLabel", descKey: "modePresenterDesc", icon: LuVideo },
+  { value: "product_closeup", labelKey: "modeCloseupLabel", descKey: "modeCloseupDesc", icon: Box },
+  { value: "graphic_montage", labelKey: "modeMontageLabel", descKey: "modeMontageDesc", icon: LayoutGrid },
+  { value: "scene_demo", labelKey: "modeSceneLabel", descKey: "modeSceneDesc", icon: Eye },
+  { value: "live_presenter", labelKey: "modePresenterLabel", descKey: "modePresenterDesc", icon: Video },
 ];
 
 // recipe-editor display labels for compose enums (bilingual data like the preset libraries, not i18n keys)
@@ -708,7 +708,7 @@ export default function NewProjectPage() {
                   />
                   <div className="flex flex-col items-center gap-3">
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted/50">
-                      <LuUpload className="w-6 h-6 text-muted-foreground" />
+                      <Upload className="w-6 h-6 text-muted-foreground" />
                     </div>
                     <div>
                       <p className="text-sm font-medium">
@@ -742,7 +742,7 @@ export default function NewProjectPage() {
                         onClick={() => removeImage(img.id)}
                         className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
                       >
-                        <LuX className="w-3 h-3" />
+                        <X className="w-3 h-3" />
                       </button>
                       {/* hover overlay */}
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
@@ -754,7 +754,7 @@ export default function NewProjectPage() {
               {/* alternative source: paste a product URL (auto-grabs title / price / images and creates the project) */}
               <div className="mt-4 pt-4 border-t border-border/40">
                 <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
-                  <LuLink2 className="w-3.5 h-3.5" />
+                  <Link2 className="w-3.5 h-3.5" />
                   {t("sourceIngestLead")}
                 </p>
                 <div className="flex gap-2">
@@ -768,7 +768,7 @@ export default function NewProjectPage() {
                     disabled={ingesting}
                   />
                   <Button type="button" onClick={handleIngest} disabled={ingesting || !ingestUrl.trim()} className="shrink-0">
-                    {ingesting ? <LuLoader className="w-4 h-4 animate-spin" /> : t("ingestBtn")}
+                    {ingesting ? <Loader className="w-4 h-4 animate-spin" /> : t("ingestBtn")}
                   </Button>
                 </div>
                 {ingestError && <p className="text-xs text-destructive mt-2">{ingestError}</p>}
@@ -836,9 +836,7 @@ export default function NewProjectPage() {
               <details className="group pt-1">
                 <summary className="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden text-sm text-muted-foreground hover:text-foreground transition-colors">
                   <span>{t("moreInfoSummary")}</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 transition-transform group-open:rotate-180">
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
+                  <ChevronDown className="size-4 shrink-0 transition-transform group-open:rotate-180" aria-hidden="true" />
                 </summary>
                 <div className="mt-4 space-y-5">
                   <p className="text-xs text-muted-foreground">{t("moreInfoHint")}</p>
@@ -1058,7 +1056,7 @@ export default function NewProjectPage() {
                           : "border-border/50 bg-muted/20 hover:border-primary/40"
                       }`}
                     >
-                      <LuUserX className="w-5 h-5 text-muted-foreground shrink-0" />
+                      <UserX className="w-5 h-5 text-muted-foreground shrink-0" />
                       <div>
                         <span className="text-sm font-medium block">{t("characterNone")}</span>
                         <span className="text-[11px] text-muted-foreground">{t("characterNoneDesc")}</span>
@@ -1077,7 +1075,7 @@ export default function NewProjectPage() {
                         }`}
                       >
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                          <LuUser className="w-4 h-4 text-primary" />
+                          <User className="w-4 h-4 text-primary" />
                         </div>
                         <div className="min-w-0">
                           <span className="text-sm font-medium block truncate">{char.name}</span>
@@ -1125,10 +1123,7 @@ export default function NewProjectPage() {
                     {/* selected indicator */}
                     {scriptStyle === opt.value && (
                       <div className="absolute top-2.5 right-2.5">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-primary">
-                          <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.15" />
-                          <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
+                        <CheckCircle2 size={16} className="text-primary" aria-hidden="true" />
                       </div>
                     )}
                   </button>
@@ -1145,7 +1140,7 @@ export default function NewProjectPage() {
                 <summary className="flex items-center justify-between gap-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
                   <div className="min-w-0">
                     <span className="text-sm font-medium flex items-center gap-1.5">
-                      <LuZap className="w-4 h-4 text-primary" />
+                      <Zap className="w-4 h-4 text-primary" />
                       {t("templatesSummary")}
                       {pickedTemplateNames && (
                         <Badge variant="secondary" className="text-[10px] max-w-48 truncate">{pickedTemplateNames}</Badge>
@@ -1153,9 +1148,7 @@ export default function NewProjectPage() {
                     </span>
                     <p className="text-xs text-muted-foreground mt-1">{t("templatesSummaryDesc")}</p>
                   </div>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-muted-foreground transition-transform group-open:rotate-180">
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
+                  <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
                 </summary>
                 <div className="mt-5 space-y-6">
 
@@ -1164,7 +1157,7 @@ export default function NewProjectPage() {
             <div>
                 <div className="mb-3">
                   <Label className="text-sm font-medium flex items-center gap-1.5">
-                    <LuBookmark className="w-4 h-4 text-primary" />
+                    <Bookmark className="w-4 h-4 text-primary" />
                     {t("templateTitle")}
                   </Label>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -1214,7 +1207,7 @@ export default function NewProjectPage() {
           <div>
               <div className="mb-3">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
-                  <LuZap className="w-4 h-4 text-primary" />
+                  <Zap className="w-4 h-4 text-primary" />
                   {t("adTemplateTitle")}
                 </Label>
                 <p className="text-xs text-muted-foreground mt-1">{t("adTemplateDesc")}</p>
@@ -1672,7 +1665,7 @@ export default function NewProjectPage() {
             {error && (
               <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
                 <p className="text-sm text-destructive flex items-center gap-2">
-                  <LuCircleAlert className="w-4 h-4 shrink-0" />
+                  <CircleAlert className="w-4 h-4 shrink-0" />
                   {error}
                 </p>
               </div>
@@ -1700,15 +1693,12 @@ export default function NewProjectPage() {
             >
               {isSubmitting ? (
                 <>
-                  <svg className="animate-spin mr-2 h-5 w-5" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
+                  <LoaderCircle className="mr-2 size-5 animate-spin motion-reduce:animate-none" aria-hidden="true" />
                   {progress?.message || t("submitProcessing")}
                 </>
               ) : (
                 <>
-                  <LuZap className="w-5 h-5 mr-2" />
+                  <Zap className="w-5 h-5 mr-2" />
                   {t("submitGenerate")}
                 </>
               )}

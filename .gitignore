@@ -40,6 +40,14 @@ next-env.d.ts
 /playwright-report/
 /junit.xml
 
+# Local system evaluation: sources, harness, manifests and reports
+/evals/
+/docs/evaluation/
+/playwright.config.ts
+/e2e/auto-edit.spec.ts
+/e2e/helpers/provider.ts
+/e2e/server.mjs
+
 # Local runtime data and generated media
 /data/
 /uploads/
@@ -94,6 +102,7 @@ Desktop.ini
 *~
 
 # Local agent and assistant context
+/.scratch/
 /docs/agents/*.md
 /AGENTS.md
 /CLAUDE.md

@@ -1,8 +1,10 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide";
+import { MorphIcon } from "morphicons/react";
 import { useT } from "@/lib/i18n";
+import { ICON_STROKE_WIDTH } from "@/lib/iconography";
 
 const THEME_KEY = "mora_theme";
 const THEME_EVENT = "mora-theme-change";
@@ -44,9 +46,9 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
   return (
     <button type="button" onClick={toggle} className={`apple-theme-toggle${compact ? " is-compact" : ""}`} aria-label={nextLabel} title={nextLabel}>
       <span className="apple-theme-toggle-track" aria-hidden="true">
-        <Sun className="size-3.5" />
-        <Moon className="size-3.5" />
-        <span className={`apple-theme-toggle-thumb ${theme === "dark" ? "is-dark" : ""}`} />
+        <span className={`apple-theme-toggle-thumb ${theme === "dark" ? "is-dark" : ""}`}>
+          <MorphIcon icon={theme === "dark" ? Moon : Sun} size={13} strokeWidth={ICON_STROKE_WIDTH} spring="smooth" reducedMotion="user" />
+        </span>
       </span>
       {!compact && <span>{t("themeAppearance")} · {t(theme === "dark" ? "themeDark" : "themeLight")}</span>}
     </button>

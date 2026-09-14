@@ -9,5 +9,5 @@ export function taskTimestamp(value?: string | null): number {
 
 export function unreadCompletedCount(tasks: TaskRow[], lastSeenAt: number | null): number {
   if (lastSeenAt == null) return 0;
-  return tasks.reduce((count, task) => count + (taskTimestamp(task.createdAt) > lastSeenAt ? 1 : 0), 0);
+  return tasks.reduce((count, task) => count + (taskTimestamp(task.completedAt ?? task.createdAt) > lastSeenAt ? 1 : 0), 0);
 }

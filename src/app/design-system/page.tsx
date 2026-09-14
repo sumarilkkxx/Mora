@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Check, Film, ImagePlus, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Film, ImagePlus, SquarePen } from "lucide-react";
 
 import { PageFrame, SegmentedControl, SegmentedItem, Surface } from "@/components/studio/page";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -110,12 +110,12 @@ export default function DesignSystemPage() {
               <p>创作台负责开始，项目负责继续，素材库负责复用，批量制作负责规模化，设置负责连接与默认值。</p>
               <div className="mt-8 grid gap-3 sm:grid-cols-4">
                 {[
-                  [Sparkles, "创作台", "选择起点"],
+                  [SquarePen, "创作台", "选择起点"],
                   [Film, "项目", "推进制作"],
                   [ImagePlus, "素材库", "整理复用"],
                   [Check, "交付", "检查导出"],
                 ].map(([Icon, title, detail]) => {
-                  const Glyph = Icon as typeof Sparkles;
+                  const Glyph = Icon as typeof SquarePen;
                   return <Surface key={String(title)} className="p-5 shadow-none"><Glyph className="size-5 text-primary" /><div className="mt-5 font-semibold">{String(title)}</div><div className="mt-1 text-xs text-muted-foreground">{String(detail)}</div></Surface>;
                 })}
               </div>

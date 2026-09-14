@@ -30,16 +30,11 @@ for (const [from, to] of copies) {
   console.log(`✓ ${from} → ${to}`);
 }
 
-// Belt-and-braces installer diet: even with outputFileTracingExcludes in next.config, any future
-// trace regression must not silently ship the local data dir (user uploads/outputs), the docs site
-// or repo metadata inside the desktop package again (this once inflated the dmg to 330MB).
-for (const junk of [".git", ".github", "data", "docs", "tasks", "release", "integrations", "e2e", "remotion", "tsconfig.tsbuildinfo", "pnpm-lock.yaml"]) {
-  const p = join(standalone, junk);
-  if (existsSync(p)) {
-    rmSync(p, { recursive: true, force: true });
-    console.log(`✓ 瘦身移除 standalone/${junk}`);
-  }
-}
+// Prune the staged copy only, retaining the complete ASR engine for this target.
+require("./stage-media.cjs").stageMedia(root, standalone);
+const { prunePayload, reportPayload } = require("./desktop-payload.cjs");
+prunePayload(standalone);
+reportPayload(standalone);
 
 // Note: node-linker=hoisted (.npmrc) makes standalone/node_modules a flat, symlink-free tree of real files.
 // This is deliberate: the pnpm symlink layout, when reproduced in the standalone, breaks on Windows packaging

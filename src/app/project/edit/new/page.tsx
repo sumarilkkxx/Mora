@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LuArrowLeft, LuBrainCircuit, LuCheck, LuFileVideo, LuLoaderCircle, LuScissors, LuSlidersHorizontal, LuUpload } from "react-icons/lu";
+import { ArrowLeft, BrainCircuit, Check, FileVideo, LoaderCircle, Scissors, SlidersHorizontal, Upload } from "lucide-react";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,7 +77,7 @@ export default function NewGuidedEditPage() {
       <PageHeader
         title={t("createTitle")}
         description={t("createDescription")}
-        actions={<Link href="/start" className={buttonVariants({ variant: "ghost" })}><LuArrowLeft />{t("backProjects")}</Link>}
+        actions={<Link href="/start" className={buttonVariants({ variant: "ghost" })}><ArrowLeft />{t("backProjects")}</Link>}
       />
       <section className={styles.creator} aria-labelledby="workflow-choice-title">
         <div className={styles.sectionHeading}>
@@ -88,7 +88,7 @@ export default function NewGuidedEditPage() {
           {[true, false].map((isAi) => {
             const selected = aiEdit === isAi;
             const prefix = isAi ? "workflowAi" : "workflowLocal";
-            const Icon = isAi ? LuBrainCircuit : LuSlidersHorizontal;
+            const Icon = isAi ? BrainCircuit : SlidersHorizontal;
             return (
               <button
                 key={prefix}
@@ -120,7 +120,7 @@ export default function NewGuidedEditPage() {
         </div>
         <div id="workflow-panel" role="tabpanel" tabIndex={0} aria-labelledby={aiEdit ? "workflow-tab-ai" : "workflow-tab-local"} className={styles.form}>
         <div className={styles.formHeading}>
-          <span className={styles.currentWorkflow}><LuCheck aria-hidden="true" />{t("selectedWorkflow", { name: aiEdit ? t("workflowAiTitle") : t("workflowLocalTitle") })}</span>
+          <span className={styles.currentWorkflow}><Check aria-hidden="true" />{t("selectedWorkflow", { name: aiEdit ? t("workflowAiTitle") : t("workflowLocalTitle") })}</span>
           <span>{aiEdit ? t("workflowAiLimit") : t("workflowLocalLimit")}</span>
         </div>
         <p className={styles.workflowDescription}>{aiEdit ? t("workflowAiDescription") : t("workflowLocalDescription")}</p>
@@ -136,7 +136,7 @@ export default function NewGuidedEditPage() {
             className={styles.upload}
           >
             <span className={styles.uploadIcon}>
-              {file ? <LuFileVideo className="size-5" /> : <LuUpload className="size-5" />}
+              {file ? <FileVideo className="size-5" /> : <Upload className="size-5" />}
             </span>
             <span className={styles.uploadCopy}>
               <span className={styles.uploadTitle}>{file?.name || t("chooseVideo")}</span>
@@ -159,7 +159,7 @@ export default function NewGuidedEditPage() {
         {error ? <Notice tone="danger" className="mt-5">{error}</Notice> : null}
         <div className={styles.footer}>
           <Button size="lg" className={styles.submit} disabled={!file || busy} onClick={() => void createProject()}>
-            {busy ? <LuLoaderCircle className="animate-spin motion-reduce:animate-none" /> : <LuScissors />}
+            {busy ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : <Scissors />}
             {busy ? t("creatingProject") : aiEdit ? t("createAiProject") : t("createLocalProject")}
           </Button>
         </div>

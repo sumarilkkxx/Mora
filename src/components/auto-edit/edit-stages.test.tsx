@@ -40,7 +40,7 @@ describe("AI edit decisions and recovery", () => {
   });
   it("opens shot details in a dialog without expanding a plan card", async () => {
     await render(<PlanStage plans={[{ ...plan, recommended: true }]} en={false} locked={false} onBack={vi.fn()} onChoose={vi.fn()} />);
-    expect(host.textContent).toContain("AI 推荐");
+    expect(host.textContent).toContain("系统推荐");
     expect(host.querySelector("details")).toBeNull();
     await click(button("查看镜头详情"));
     expect(host.querySelector('button[aria-label*="Plan A"]')?.getAttribute("aria-pressed")).toBe("false");

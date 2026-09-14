@@ -1,4 +1,4 @@
-import { parsePlan, type Analysis, type EditBrief, type EditPlan, type PromotionCopy } from "./contract";
+import { parsePlan, validateSpeechCuts, type Analysis, type EditBrief, type EditPlan, type PromotionCopy } from "./contract";
 
 const STYLE_RECIPES = [
   { key: "story", zh: "过程叙事", en: "Process story", count: 5, anchors: [0.08, 0.28, 0.48, 0.68, 0.9] },
@@ -11,10 +11,47 @@ export function recommendedPlanIndex(strategy: PromotionCopy["strategy"], style:
 }
 
 function splitCopy(copy: PromotionCopy) {
-  const voiceover = copy.voiceover.split(/[。！？.!?；;]+/).map(value => value.trim()).filter(Boolean);
+  const voiceover = copy.voiceover.split(/[。！？.!?；;\n]+/).map(value => value.trim()).filter(Boolean);
   if (voiceover.length) return voiceover;
   const body = copy.body.split(/[。！？.!?；;]+/).map(value => value.trim()).filter(Boolean);
   return [copy.hook, ...body, copy.cta].filter(Boolean);
+}
+
+/** Keep all approved text within the clip count and per-clip text limits. */
+function groupCopy(lines: string[]): string[] {
+  const chunks = lines.flatMap(line => line.match(/[\s\S]{1,240}/g) ?? []);
+  while (chunks.length > 20) {
+    let shortest = -1;
+    for (let i = 0; i < chunks.length - 1; i++) {
+      const length = chunks[i].length + chunks[i + 1].length + 1;
+      if (length <= 300 && (shortest < 0 || length < chunks[shortest].length + chunks[shortest + 1].length + 1)) shortest = i;
+    }
+    if (shortest < 0) throw new Error("文案过长，请缩短文案 / Copy is too long");
+    chunks.splice(shortest, 2, `${chunks[shortest]}。${chunks[shortest + 1]}`);
+  }
+  return chunks;
+}
+
+function originalClips(sourceId: string, duration: number, brief: EditBrief, analysis: Analysis, offset: number): EditPlan["clips"] {
+  const boundaries = [...new Set([0, duration, ...Array.from({ length: Math.ceil(duration / brief.target) }, (_, i) => (i + 1) * brief.target), ...analysis.speech.flatMap(s => [s.start, s.end])])]
+    .filter(time => time >= 0 && time <= duration && !analysis.speech.some(s => time > s.start && time < s.end)).sort((a, b) => a - b);
+  const windows: Array<{ start: number; end: number }> = [];
+  for (let i = 0; i < boundaries.length - 1; i++) {
+    let j = i + 1;
+    while (j < boundaries.length && boundaries[j] - boundaries[i] < 0.4) j++;
+    if (j < boundaries.length) windows.push({ start: boundaries[i], end: boundaries[j] });
+  }
+  const clips: EditPlan["clips"] = [];
+  let remaining = brief.target as number;
+  for (let i = 0; i < windows.length && clips.length < 20; i++) {
+    const window = windows[(i + offset) % windows.length];
+    if (window.end - window.start > remaining + 1e-7) continue;
+    const speech = analysis.speech.filter(s => s.start >= window.start && s.end <= window.end).map(s => s.text).join(" ");
+    clips.push({ sourceId, ...window, speed: 1, fit: "cover", transition: "cut", text: speech, reason: "保留完整原声语句", evidence: analysis.summary });
+    remaining -= window.end - window.start;
+  }
+  if (!clips.length) throw new Error("原声语句超过目标时长，请增加时长或改用旁白 / No complete speech fits; increase duration or use voiceover");
+  return clips;
 }
 
 function clipWindow(duration: number, wanted: number, anchor: number) {
@@ -25,10 +62,15 @@ function clipWindow(duration: number, wanted: number, anchor: number) {
 
 /** Deterministic safety net: preserves approved commercial copy while guaranteeing valid, diverse timelines. */
 export function fallbackCandidatePlans(sourceId: string, sourceDuration: number, brief: EditBrief, analysis: Analysis, copy: PromotionCopy): EditPlan[] {
-  const lines = splitCopy(copy);
+  const lines = groupCopy(splitCopy(copy));
   const scenes = analysis.scenes.length ? analysis.scenes : [{ start: 0, end: sourceDuration, text: analysis.summary, uncertainty: "", evidence: [] }];
   const recommendedIndex = recommendedPlanIndex(copy.strategy, brief.style);
   return STYLE_RECIPES.map((recipe, recipeIndex) => {
+    if (brief.audio === "original") {
+      const plan = parsePlan({ version: 1, title: brief.locale === "zh" ? recipe.zh : recipe.en, explanation: "保留完整原声语句 / Preserve complete speech", clips: originalClips(sourceId, sourceDuration, brief, analysis, recipeIndex) }, sourceId, sourceDuration, brief);
+      validateSpeechCuts(plan, analysis.speech);
+      return { ...plan, recommended: recipeIndex === recommendedIndex };
+    }
     const minimumCount = Math.ceil(brief.target / Math.max(0.4, sourceDuration));
     const count = Math.min(20, Math.max(recipe.count, minimumCount, lines.length));
     const totalFrames = brief.target * 30;

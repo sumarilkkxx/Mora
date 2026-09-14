@@ -2,7 +2,7 @@
 
 import { useCallback, useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { LuCheck, LuCircleCheck, LuFilm, LuDownload, LuLink2, LuFileText, LuPlus, LuHouse, LuSmartphone, LuShuffle, LuLoaderCircle, LuSparkles, LuImage, LuLayoutGrid, LuQrCode, LuScanLine, LuLanguages, LuShieldCheck, LuTriangleAlert, LuCircleX, LuClipboardCheck } from "react-icons/lu";
+import { Check, ChevronDown, CircleCheck, Film, Download, Link2, FileText, Plus, House, Smartphone, Shuffle, LoaderCircle, Image as ImageIcon, LayoutGrid, QrCode, ScanLine, Languages, ShieldCheck, TriangleAlert, CircleX, ClipboardCheck } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -595,7 +595,7 @@ export default function ExportPage() {
       <div className="min-h-screen grid-bg legacy-studio-page">
         {headerBar}
         <div className="flex flex-col items-center justify-center py-32 text-muted-foreground">
-          <LuLoaderCircle className="w-8 h-8 animate-spin mb-3" />
+          <LoaderCircle className="w-8 h-8 animate-spin mb-3" />
           <p className="text-sm">{t("loadingComposition")}</p>
         </div>
       </div>
@@ -623,8 +623,8 @@ export default function ExportPage() {
             aria-hidden="true"
           >
             {needsAttention
-              ? <LuTriangleAlert className="h-8 w-8" />
-              : <LuLoaderCircle className="h-8 w-8 animate-spin motion-reduce:animate-none" />}
+              ? <TriangleAlert className="h-8 w-8" />
+              : <LoaderCircle className="h-8 w-8 animate-spin motion-reduce:animate-none" />}
           </div>
           <p className={`mt-6 text-xs font-semibold tracking-[.12em] ${isFailed ? "text-destructive" : needsAttention ? "text-amber-700 dark:text-amber-300" : "text-primary"}`}>
             {t(needsAttention ? "cloudTaskAttentionEyebrow" : "cloudTaskRunningEyebrow")}
@@ -672,7 +672,7 @@ export default function ExportPage() {
         {headerBar}
         <div className="mx-auto max-w-md flex flex-col items-center justify-center py-28 px-6 text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/40 mb-5">
-            <LuFilm className="w-8 h-8 text-muted-foreground" />
+            <Film className="w-8 h-8 text-muted-foreground" />
           </div>
           <h2 className="text-lg font-semibold mb-2">{t("emptyTitle")}</h2>
           <p className="text-sm text-muted-foreground mb-6">
@@ -697,7 +697,7 @@ export default function ExportPage() {
       {toast && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 text-white text-sm shadow-xl">
-            <LuCheck className="w-4 h-4" />
+            <Check className="w-4 h-4" />
             {toast}
           </div>
         </div>
@@ -709,7 +709,7 @@ export default function ExportPage() {
         {/* completion banner */}
         <div className="text-center mb-8">
           <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 mb-4">
-            <LuCircleCheck className="w-8 h-8 text-emerald-500" />
+            <CircleCheck className="w-8 h-8 text-emerald-500" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight mb-1">
             {t("doneTitleRest")}<span className="brand-gradient-text">{t("doneTitleAccent")}</span>
@@ -757,7 +757,7 @@ export default function ExportPage() {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 mb-8">
           <a href={`${composition.url}?download=1`} download={composition.fileName}>
             <Button className="brand-gradient text-white h-12 px-8 text-base font-semibold w-full">
-              <LuDownload className="w-[18px] h-[18px] mr-2" />
+              <Download className="w-[18px] h-[18px] mr-2" />
               {t("downloadVideo")}
             </Button>
           </a>
@@ -766,7 +766,7 @@ export default function ExportPage() {
             onClick={handleCopyLink}
             className="h-11 px-6 text-sm"
           >
-            <LuLink2 className="w-4 h-4 mr-2" />
+            <Link2 className="w-4 h-4 mr-2" />
             {t("copyShareLink")}
           </Button>
         </div>
@@ -806,7 +806,7 @@ export default function ExportPage() {
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <LuFileText className="w-4 h-4 text-primary" />
+                <FileText className="w-4 h-4 text-primary" />
                 <h3 className="text-sm font-semibold">{t("publishTitle")}</h3>
               </div>
               <Button size="sm" variant="outline" className="text-xs" disabled={publish.loading} onClick={generatePublish}>
@@ -899,7 +899,7 @@ export default function ExportPage() {
         <Card className="glass-card mb-6">
           <CardContent className="p-5">
             <div className="flex items-center gap-2 mb-4">
-              <LuSmartphone className="w-4 h-4 text-primary" />
+              <Smartphone className="w-4 h-4 text-primary" />
               <h3 className="text-sm font-semibold">{t("multiExportTitle")}</h3>
             </div>
             <p className="text-xs text-muted-foreground mb-4">{t("multiExportDesc")}</p>
@@ -923,7 +923,7 @@ export default function ExportPage() {
                       <>
                         <a href={`${ex.url}?download=1`} download>
                           <Button variant="outline" size="sm" className="w-full mt-2 text-xs text-emerald-600">
-                            <LuDownload className="w-3 h-3 mr-1" />
+                            <Download className="w-3 h-3 mr-1" />
                             {t("downloadPlatform", { platform: platformName })}
                           </Button>
                         </a>
@@ -959,7 +959,7 @@ export default function ExportPage() {
               <span className="block text-sm font-medium text-foreground">{t("advancedTitle")}</span>
               <span className="block text-xs text-muted-foreground mt-0.5">{t("advancedHint")}</span>
             </div>
-            <svg className="size-4 shrink-0 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6" /></svg>
+            <ChevronDown className="size-4 shrink-0 transition-transform group-open:rotate-180" aria-hidden="true" />
           </summary>
           <div className="px-4 pb-4 space-y-3">
             {/* performance feedback: backfill data after publishing → learn which style sells better */}
@@ -970,7 +970,7 @@ export default function ExportPage() {
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <LuShuffle className="w-4 h-4 text-primary" />
+                    <Shuffle className="w-4 h-4 text-primary" />
                     <h3 className="text-sm font-semibold">{t("abTitle")}</h3>
                   </div>
                   <Button size="sm" variant="outline" className="text-xs" disabled={abRunning || !composition?.url} onClick={generateAbVariants}>
@@ -983,7 +983,7 @@ export default function ExportPage() {
                     {abVariants.map((v) => (
                       <div key={v.key} className="flex items-center justify-between rounded-md border border-border/40 bg-muted/10 px-3 py-2">
                         <span className="text-xs">{t(v.labelKey)}</span>
-                        {v.status === "running" && <LuLoaderCircle className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
+                        {v.status === "running" && <LoaderCircle className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
                         {v.status === "done" && v.url && (
                           <a href={`${v.url}?download=1`} download>
                             <Button size="sm" variant="outline" className="text-xs h-7">{t("abDownload")}</Button>
@@ -1000,9 +1000,9 @@ export default function ExportPage() {
             {/* release gate: aggregated pre-publish verdict (script readiness + video QC + asset licenses) */}
             <div className="rounded-lg border border-border/50 bg-muted/10 p-3">
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2"><LuClipboardCheck className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("gateTitle")}</span></div>
+                <div className="flex items-center gap-2"><ClipboardCheck className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("gateTitle")}</span></div>
                 <Button size="sm" variant="outline" className="text-xs h-7" disabled={gate.loading} onClick={runGate}>
-                  {gate.loading ? <LuLoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("gateRun")}
+                  {gate.loading ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("gateRun")}
                 </Button>
               </div>
               <p className="text-[11px] text-muted-foreground">{t("gateHint")}</p>
@@ -1017,7 +1017,7 @@ export default function ExportPage() {
                   {gate.items.map((item) => (
                     <li key={item.id} className="text-[11px] text-muted-foreground">
                       <div className="flex items-start gap-1.5">
-                        {item.status === "pass" ? <LuCircleCheck className="w-3 h-3 mt-0.5 shrink-0 text-emerald-500" /> : item.status === "warn" ? <LuTriangleAlert className="w-3 h-3 mt-0.5 shrink-0 text-amber-500" /> : <LuCircleX className="w-3 h-3 mt-0.5 shrink-0 text-destructive" />}
+                        {item.status === "pass" ? <CircleCheck className="w-3 h-3 mt-0.5 shrink-0 text-emerald-500" /> : item.status === "warn" ? <TriangleAlert className="w-3 h-3 mt-0.5 shrink-0 text-amber-500" /> : <CircleX className="w-3 h-3 mt-0.5 shrink-0 text-destructive" />}
                         <span>{locale === "en" ? item.message.en : item.message.zh}</span>
                       </div>
                       {item.problems.length > 0 && (
@@ -1035,9 +1035,9 @@ export default function ExportPage() {
             {/* composed-video quality check */}
             <div className="rounded-lg border border-border/50 bg-muted/10 p-3">
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2"><LuShieldCheck className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("qcTitle")}</span></div>
+                <div className="flex items-center gap-2"><ShieldCheck className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("qcTitle")}</span></div>
                 <Button size="sm" variant="outline" className="text-xs h-7" disabled={qc.loading || !composition?.url} onClick={runQualityCheck}>
-                  {qc.loading ? <LuLoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("qcRun")}
+                  {qc.loading ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("qcRun")}
                 </Button>
               </div>
               <p className="text-[11px] text-muted-foreground">{t("qcHint")}</p>
@@ -1051,7 +1051,7 @@ export default function ExportPage() {
                 <ul className="mt-1.5 space-y-1">
                   {qc.checks.map((c) => (
                     <li key={c.id} className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
-                      {c.level === "ok" ? <LuCircleCheck className="w-3 h-3 mt-0.5 shrink-0 text-emerald-500" /> : c.level === "warn" ? <LuTriangleAlert className="w-3 h-3 mt-0.5 shrink-0 text-amber-500" /> : <LuCircleX className="w-3 h-3 mt-0.5 shrink-0 text-destructive" />}
+                      {c.level === "ok" ? <CircleCheck className="w-3 h-3 mt-0.5 shrink-0 text-emerald-500" /> : c.level === "warn" ? <TriangleAlert className="w-3 h-3 mt-0.5 shrink-0 text-amber-500" /> : <CircleX className="w-3 h-3 mt-0.5 shrink-0 text-destructive" />}
                       <span>{locale === "en" ? c.message.en : c.message.zh}</span>
                     </li>
                   ))}
@@ -1061,9 +1061,9 @@ export default function ExportPage() {
             {/* contact sheet: eyeball overview (filmstrip + waveform) */}
             <div className="rounded-lg border border-border/50 bg-muted/10 p-3">
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2"><LuFilm className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("sheetTitle")}</span></div>
+                <div className="flex items-center gap-2"><Film className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("sheetTitle")}</span></div>
                 <Button size="sm" variant="outline" className="text-xs h-7" disabled={sheet.loading || !composition?.url} onClick={runContactSheet}>
-                  {sheet.loading ? <LuLoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("sheetRun")}
+                  {sheet.loading ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("sheetRun")}
                 </Button>
               </div>
               <p className="text-[11px] text-muted-foreground">{t("sheetHint")}</p>
@@ -1087,9 +1087,9 @@ export default function ExportPage() {
             {/* asset license manifest */}
             <div className="rounded-lg border border-border/50 bg-muted/10 p-3">
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2"><LuFileText className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("creditsTitle")}</span></div>
+                <div className="flex items-center gap-2"><FileText className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("creditsTitle")}</span></div>
                 <Button size="sm" variant="outline" className="text-xs h-7" disabled={credits.loading} onClick={runCredits}>
-                  {credits.loading ? <LuLoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("creditsRun")}
+                  {credits.loading ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("creditsRun")}
                 </Button>
               </div>
               <p className="text-[11px] text-muted-foreground">{t("creditsHint")}</p>
@@ -1119,7 +1119,7 @@ export default function ExportPage() {
                     </div>
                   )}
                   <a href={`/api/project/${id}/credits?format=md&lang=${locale === "en" ? "en" : "zh"}`} download>
-                    <Button size="sm" variant="outline" className="text-xs h-7 mt-2"><LuDownload className="w-3 h-3 mr-1" />{t("creditsDownloadMd")}</Button>
+                    <Button size="sm" variant="outline" className="text-xs h-7 mt-2"><Download className="w-3 h-3 mr-1" />{t("creditsDownloadMd")}</Button>
                   </a>
                 </>
               )}
@@ -1127,7 +1127,7 @@ export default function ExportPage() {
             {/* native feel (hand-shot look) */}
             <div className="rounded-lg border border-border/50 bg-muted/10 p-3">
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2"><LuFilm className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("feelTitle")}</span></div>
+                <div className="flex items-center gap-2"><Film className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("feelTitle")}</span></div>
                 <div className="flex items-center gap-2">
                   <select className="rounded-md border border-border/50 bg-background/50 px-2 py-1 text-xs" value={feelStrength} onChange={(e) => setFeelStrength(e.target.value === "medium" || e.target.value === "strong" ? (e.target.value as "medium" | "strong") : "subtle")}>
                     <option value="subtle">{t("feelStrengthSubtle")}</option>
@@ -1137,7 +1137,7 @@ export default function ExportPage() {
                   <Checkbox checked={feelHalation} onChange={(e) => setFeelHalation(e.target.checked)} label={t("feelHalation")} />
                   <Checkbox checked={feelPhoneCompress} onChange={(e) => setFeelPhoneCompress(e.target.checked)} label={t("feelPhoneCompress")} />
                   <Button size="sm" variant="outline" className="text-xs h-7" disabled={more.feel?.loading || !composition?.url} onClick={genNativeFeel}>
-                    {more.feel?.loading ? <LuLoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("moreGenerate")}
+                    {more.feel?.loading ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("moreGenerate")}
                   </Button>
                 </div>
               </div>
@@ -1145,14 +1145,14 @@ export default function ExportPage() {
               {more.feel?.error && <p className="text-[11px] text-destructive mt-1">{more.feel.error}</p>}
               {more.feel?.video && (
                 <a href={`${more.feel.video}?download=1`} download>
-                  <Button size="sm" variant="outline" className="text-xs h-7 mt-1"><LuDownload className="w-3 h-3 mr-1" />{t("feelDownload")}</Button>
+                  <Button size="sm" variant="outline" className="text-xs h-7 mt-1"><Download className="w-3 h-3 mr-1" />{t("feelDownload")}</Button>
                 </a>
               )}
             </div>
             {/* multi-language dub */}
             <div className="rounded-lg border border-border/50 bg-muted/10 p-3">
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2"><LuLanguages className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("moreDub")}</span></div>
+                <div className="flex items-center gap-2"><Languages className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("moreDub")}</span></div>
                 <div className="flex items-center gap-2">
                   <select className="rounded-md border border-border/50 bg-background/50 px-2 py-1 text-xs" value={dubLang} onChange={(e) => setDubLang(e.target.value)}>
                     <option value="en">English</option>
@@ -1161,7 +1161,7 @@ export default function ExportPage() {
                     <option value="es">Español</option>
                   </select>
                   <Button size="sm" variant="outline" className="text-xs h-7" disabled={more.dub?.loading} onClick={genDub}>
-                    {more.dub?.loading ? <LuLoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("moreGenerate")}
+                    {more.dub?.loading ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("moreGenerate")}
                   </Button>
                 </div>
               </div>
@@ -1177,7 +1177,7 @@ export default function ExportPage() {
           <CardContent className="p-5">
             <div className="flex items-center justify-between gap-3 mb-1">
               <div className="flex items-center gap-2">
-                <LuSparkles className="w-4 h-4 text-primary" />
+                <LayoutGrid className="size-4 text-primary" aria-hidden="true" />
                 <h3 className="text-sm font-semibold">{t("moreTitle")}</h3>
               </div>
               <select aria-label={t("moreModeLabel")} className="rounded-md border border-border/50 bg-background/70 px-2 py-1.5 text-xs" value={derivedMode} onChange={(e) => setDerivedMode(e.target.value as typeof derivedMode)}>
@@ -1189,7 +1189,7 @@ export default function ExportPage() {
             {derivedMode === "ai" && <p className="-mt-2 mb-4 text-[11px] text-amber-600 dark:text-amber-400">{imageTarget ? t("moreAiBillingHint") : t("moreAiNotConfigured")}</p>}
             <div className="mb-4 rounded-xl border border-border/60 bg-muted/10 p-3">
               <div className="mb-2 flex items-start gap-2">
-                <LuLink2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
                 <div>
                   <p className="text-xs font-medium">{t("shopLinkTitle")}</p>
                   <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">{t("shopLinkDesc")}</p>
@@ -1219,7 +1219,7 @@ export default function ExportPage() {
                   disabled={shopUrlSaving || !shopUrlDraft.trim() || shopUrlDraft.trim() === (productMeta?.shopUrl ?? "")}
                   onClick={saveShopUrl}
                 >
-                  {shopUrlSaving ? <LuLoaderCircle className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+                  {shopUrlSaving ? <LoaderCircle className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
                   {t(shopUrlSaving ? "shopLinkSaving" : hasShopUrl ? "shopLinkUpdate" : "shopLinkSave")}
                 </Button>
               </div>
@@ -1233,7 +1233,7 @@ export default function ExportPage() {
               {/* cover */}
               <div className="rounded-lg border border-border/50 bg-muted/10 p-3">
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2"><LuImage className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("moreCover")}</span></div>
+                  <div className="flex items-center gap-2"><ImageIcon className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("moreCover")}</span></div>
                   <Badge variant="secondary" className="text-[10px] font-normal">{derivedMode === "ai" && imageTarget ? t("moreAiReady") : t("moreLocalReady")}</Badge>
                 </div>
                 <div className="flex gap-2">
@@ -1244,7 +1244,7 @@ export default function ExportPage() {
                     onChange={(e) => setCoverTitle(e.target.value)}
                   />
                   <Button size="sm" variant="outline" className="text-xs h-7 shrink-0" disabled={more.cover?.loading || !composition?.url} onClick={genCover}>
-                    {more.cover?.loading ? <LuLoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("moreGenerate")}
+                    {more.cover?.loading ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("moreGenerate")}
                   </Button>
                 </div>
                 <select aria-label={t("moreStyleLabel")} className="mt-2 w-full rounded-md border border-border/50 bg-background/70 px-2 py-1.5 text-xs" value={coverStyle} onChange={(e) => setCoverStyle(e.target.value as typeof coverStyle)}>
@@ -1265,9 +1265,9 @@ export default function ExportPage() {
               {/* xiaohongshu carousel */}
               <div className="rounded-lg border border-border/50 bg-muted/10 p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2"><LuLayoutGrid className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("moreCarousel")}</span></div>
+                  <div className="flex items-center gap-2"><LayoutGrid className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("moreCarousel")}</span></div>
                   <Button size="sm" variant="outline" className="text-xs h-7" disabled={more.carousel?.loading} onClick={genCarousel}>
-                    {more.carousel?.loading ? <LuLoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("moreGenerate")}
+                    {more.carousel?.loading ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("moreGenerate")}
                   </Button>
                 </div>
                 <div className="flex items-center gap-2 mb-2">
@@ -1295,9 +1295,9 @@ export default function ExportPage() {
               {/* shop QR */}
               <div className="rounded-lg border border-border/50 bg-muted/10 p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2"><LuQrCode className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("moreQr")}</span></div>
+                  <div className="flex items-center gap-2"><QrCode className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("moreQr")}</span></div>
                   <Button size="sm" variant="outline" className="text-xs h-7" disabled={more.qr?.loading || !hasShopUrl} onClick={genQr}>
-                    {more.qr?.loading ? <LuLoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("moreGenerate")}
+                    {more.qr?.loading ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("moreGenerate")}
                   </Button>
                 </div>
                 {!hasShopUrl && <p className="text-[11px] text-muted-foreground">{t("moreNeedShopUrl")}</p>}
@@ -1313,9 +1313,9 @@ export default function ExportPage() {
               {/* scan-to-buy end-card */}
               <div className="rounded-lg border border-border/50 bg-muted/10 p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2"><LuScanLine className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("moreEndCard")}</span></div>
+                  <div className="flex items-center gap-2"><ScanLine className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-medium">{t("moreEndCard")}</span></div>
                   <Button size="sm" variant="outline" className="text-xs h-7" disabled={more.endcard?.loading || !hasShopUrl || !composition?.url} onClick={genEndCard}>
-                    {more.endcard?.loading ? <LuLoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("moreGenerate")}
+                    {more.endcard?.loading ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" /> : t("moreGenerate")}
                   </Button>
                 </div>
                 {!hasShopUrl && <p className="text-[11px] text-muted-foreground">{t("moreNeedShopUrl")}</p>}
@@ -1323,7 +1323,7 @@ export default function ExportPage() {
                 {more.endcard?.warning && <p className="text-[11px] text-amber-600 dark:text-amber-400">{more.endcard.warning}</p>}
                 {more.endcard?.video && (
                   <a href={`${more.endcard.video}?download=1`} download>
-                    <Button size="sm" variant="outline" className="text-xs h-7 mt-1"><LuDownload className="w-3 h-3 mr-1" />{t("moreEndCardDownload")}</Button>
+                    <Button size="sm" variant="outline" className="text-xs h-7 mt-1"><Download className="w-3 h-3 mr-1" />{t("moreEndCardDownload")}</Button>
                   </a>
                 )}
               </div>
@@ -1364,13 +1364,13 @@ export default function ExportPage() {
         <div className="mt-8 flex items-center justify-center gap-4">
           <Link href="/project/new">
             <Button className="brand-gradient text-white">
-              <LuPlus className="w-4 h-4 mr-1.5" />
+              <Plus className="w-4 h-4 mr-1.5" />
               {t("makeAnother")}
             </Button>
           </Link>
           <Link href="/projects">
             <Button variant="outline">
-              <LuHouse className="w-4 h-4 mr-1.5" />
+              <House className="w-4 h-4 mr-1.5" />
               {t("backToProjects")}
             </Button>
           </Link>

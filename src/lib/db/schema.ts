@@ -178,6 +178,7 @@ export const compositions = sqliteTable("compositions", {
   // image/audio provenance: a local FFmpeg render made from AI images is still local_render.
   videoOrigin: text("video_origin", { enum: ["local_render", "cloud_ai"] }).notNull().default("local_render"),
   status: text("status", { enum: ["pending", "composing", "done", "failed"] }).notNull().default("pending"),
+  completedAt: integer("completed_at", { mode: "timestamp_ms" }),
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
@@ -290,6 +291,8 @@ export const pipelineRuns = sqliteTable("pipeline_runs", {
 export const batchJobs = sqliteTable("batch_jobs", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   status: text("status", { enum: ["running", "done", "cancelled"] }).notNull().default("running"),
+  executionOwner: text("execution_owner"),
+  executionUntil: integer("execution_until"),
   total: integer("total").notNull().default(0),
   // full run config: videoMode/scriptStyle/duration/toggles + the anti-homogenization plan,
   // so a resumed job re-runs remaining items with identical settings and variation slots
@@ -309,6 +312,7 @@ export const batchJobItems = sqliteTable("batch_job_items", {
   variation: text("variation"),
   projectId: text("project_id"),
   compositionId: text("composition_id"),
+  scriptId: text("script_id"),
   status: text("status", { enum: ["pending", "generating", "composing", "done", "failed"] }).notNull().default("pending"),
   error: text("error"),
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),

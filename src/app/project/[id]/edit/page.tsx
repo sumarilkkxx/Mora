@@ -4,10 +4,26 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  LuArrowLeft, LuArrowRight, LuCaptions, LuCheck, LuDownload, LuFilm, LuLoaderCircle,
-  LuFocus, LuMoveHorizontal, LuPlus, LuSave, LuScan, LuScissors, LuSparkles,
-  LuTrash2, LuUpload, LuVideo, LuZap,
-} from "react-icons/lu";
+  ArrowLeft,
+  ArrowRight,
+  AudioLines,
+  Captions,
+  Check,
+  Download,
+  Film,
+  LoaderCircle,
+  Focus,
+  MoveHorizontal,
+  Plus,
+  Save,
+  Scan,
+  Scissors,
+  Sparkles,
+  Trash2,
+  Upload,
+  Video,
+  Zap,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -79,12 +95,12 @@ function seconds(value: number): string {
 }
 
 const GUIDED_STYLE_OPTIONS = [
-  { value: "natural", icon: LuVideo },
-  { value: "slow_zoom", icon: LuScan },
-  { value: "dynamic_focus", icon: LuFocus },
-  { value: "product_pan", icon: LuMoveHorizontal },
-  { value: "handheld", icon: LuFilm },
-  { value: "impact", icon: LuZap },
+  { value: "natural", icon: Video },
+  { value: "slow_zoom", icon: Scan },
+  { value: "dynamic_focus", icon: Focus },
+  { value: "product_pan", icon: MoveHorizontal },
+  { value: "handheld", icon: Film },
+  { value: "impact", icon: Zap },
 ] as const;
 
 export default function GuidedEditWorkspace() {
@@ -388,7 +404,7 @@ export default function GuidedEditWorkspace() {
     finally { setBusy(null); }
   }
 
-  if (loading) return <PageFrame width="full"><div className="flex min-h-[60vh] items-center justify-center"><LuLoaderCircle className="size-7 animate-spin text-primary motion-reduce:animate-none" /></div></PageFrame>;
+  if (loading) return <PageFrame width="full"><div className="flex min-h-[60vh] items-center justify-center"><LoaderCircle className="size-7 animate-spin text-primary motion-reduce:animate-none" /></div></PageFrame>;
 
   const activeBeat = beats.find((beat) => beat.id === activeBeatId) ?? null;
   const output = latestPlan?.composition?.status === "done" ? latestPlan.composition : null;
@@ -430,10 +446,10 @@ export default function GuidedEditWorkspace() {
         context={projectName}
         title={t("workspaceEyebrow")}
         description={t("workspaceDescription")}
-        actions={<div className="flex flex-wrap gap-2"><Link href={`/project/${id}/auto-edit`}><Button variant="outline">{locale === "en" ? "AI automatic editing" : "AI 自动剪辑"}</Button></Link><Link href={backHref}><Button variant="ghost"><LuArrowLeft />{t(fromTaskCenter ? "backTasks" : "backProjects")}</Button></Link><Link href={exportHref}><Button variant="outline">{t("openExport")}</Button></Link></div>}
+        actions={<div className="flex flex-wrap gap-2"><Link href={`/project/${id}/auto-edit`}><Button variant="outline">{locale === "en" ? "AI automatic editing" : "AI 自动剪辑"}</Button></Link><Link href={backHref}><Button variant="ghost"><ArrowLeft />{t(fromTaskCenter ? "backTasks" : "backProjects")}</Button></Link><Link href={exportHref}><Button variant="outline">{t("openExport")}</Button></Link></div>}
       />
       {error ? <Notice tone="danger" className="mb-4">{error}</Notice> : null}
-      {message ? <Notice tone="success" className="mb-4"><LuCheck className="mr-2 inline size-4" />{message}</Notice> : null}
+      {message ? <Notice tone="success" className="mb-4"><Check className="mr-2 inline size-4" />{message}</Notice> : null}
 
       <Surface className="mb-5 border-primary/20 bg-primary/[.035] p-4 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -443,8 +459,8 @@ export default function GuidedEditWorkspace() {
               {currentOutput ? t("workflowDone") : rendering ? t("workflowRendering") : t(`workflowStep${workflowStep}Hint`)}
             </p>
           </div>
-          {currentOutput ? <Link href={exportHref}><Button variant="outline"><LuArrowRight />{t("openExport")}</Button></Link> : <Button size="lg" onClick={runWorkflowAction} disabled={workflowActionDisabled}>
-            {busy !== null || rendering ? <LuLoaderCircle className="animate-spin motion-reduce:animate-none" /> : workflowStep === 3 ? <LuScissors /> : <LuArrowRight />}
+          {currentOutput ? <Link href={exportHref}><Button variant="outline"><ArrowRight />{t("openExport")}</Button></Link> : <Button size="lg" onClick={runWorkflowAction} disabled={workflowActionDisabled}>
+            {busy !== null || rendering ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : workflowStep === 3 ? <Scissors /> : <ArrowRight />}
             {rendering ? t("rendering") : workflowActionLabel}
           </Button>}
         </div>
@@ -454,7 +470,7 @@ export default function GuidedEditWorkspace() {
             const complete = currentOutput ? true : step < workflowStep;
             const active = !currentOutput && step === workflowStep;
             return <li key={label} aria-current={active ? "step" : undefined} className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-semibold ${active ? "border-primary bg-card text-primary shadow-sm" : complete ? "border-emerald-500/25 bg-emerald-500/[.07] text-foreground" : "border-border/60 bg-card/55 text-muted-foreground"}`}>
-              <span className={`grid size-6 shrink-0 place-items-center rounded-full text-[11px] ${active ? "bg-primary text-primary-foreground" : complete ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground"}`}>{complete ? <LuCheck className="size-3.5" /> : step}</span>
+              <span className={`grid size-6 shrink-0 place-items-center rounded-full text-[11px] ${active ? "bg-primary text-primary-foreground" : complete ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground"}`}>{complete ? <Check className="size-3.5" /> : step}</span>
               {label}
             </li>;
           })}
@@ -466,18 +482,18 @@ export default function GuidedEditWorkspace() {
           <SectionHeader title={t("sourceTitle")} description={t("sourceDescription")} />
           <input ref={inputRef} hidden type="file" accept={ACCEPT} onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file); }} />
           <div className="mb-4 flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" disabled={busy === "upload"} onClick={() => inputRef.current?.click()}>{busy === "upload" ? <LuLoaderCircle className="animate-spin" /> : <LuUpload />}{t("uploadSource")}</Button>
-            <Button size="sm" disabled={!selectedSource || busy === "analyze"} onClick={() => void analyzeScenes()}>{busy === "analyze" ? <LuLoaderCircle className="animate-spin" /> : <LuFilm />}{busy === "analyze" ? t("analyzingScenes") : t("analyzeScenes")}</Button>
+            <Button variant="outline" size="sm" disabled={busy === "upload"} onClick={() => inputRef.current?.click()}>{busy === "upload" ? <LoaderCircle className="animate-spin" /> : <Upload />}{t("uploadSource")}</Button>
+            <Button size="sm" disabled={!selectedSource || busy === "analyze"} onClick={() => void analyzeScenes()}>{busy === "analyze" ? <LoaderCircle className="animate-spin" /> : <Film />}{busy === "analyze" ? t("analyzingScenes") : t("analyzeScenes")}</Button>
           </div>
           {sources.length > 1 ? <select className="mb-4 h-9 w-full rounded-[10px] border border-input bg-card px-3 text-sm" value={sourceId} onChange={(event) => { const next = sources.find((source) => source.id === event.target.value); setSourceId(event.target.value); setScenes(next?.scenes ?? []); }}>
             {sources.map((source) => <option key={source.id} value={source.id}>{source.originalName}</option>)}
           </select> : null}
-          {!selectedSource ? <div className="flex min-h-48 flex-col items-center justify-center rounded-xl border border-dashed border-border text-center"><LuUpload className="mb-3 size-7 text-muted-foreground" /><p className="text-sm font-medium">{t("noSource")}</p></div> : scenes.length === 0 ? <div className="relative flex min-h-48 overflow-hidden rounded-xl border border-border/70 bg-muted text-white shadow-sm">
+          {!selectedSource ? <div className="flex min-h-48 flex-col items-center justify-center rounded-xl border border-dashed border-border text-center"><Upload className="mb-3 size-7 text-muted-foreground" /><p className="text-sm font-medium">{t("noSource")}</p></div> : scenes.length === 0 ? <div className="relative flex min-h-48 overflow-hidden rounded-xl border border-border/70 bg-muted text-white shadow-sm">
             {selectedSource.posterUrl ? <>
               {/* eslint-disable-next-line @next/next/no-img-element -- persistent local first-frame poster */}
               <img src={selectedSource.posterUrl} alt={t("sourcePreviewAlt", { name: selectedSource.originalName })} className="absolute inset-0 h-full w-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-black/5" />
-            </> : <div className="absolute inset-0 grid place-items-center bg-muted"><LuFilm className="size-8 text-muted-foreground" /></div>}
+            </> : <div className="absolute inset-0 grid place-items-center bg-muted"><Film className="size-8 text-muted-foreground" /></div>}
             <div className={`relative mt-auto w-full px-4 pb-4 pt-16 ${selectedSource.posterUrl ? "" : "text-foreground"}`}>
               <p className="truncate text-sm font-semibold" title={selectedSource.originalName}>{selectedSource.originalName}</p>
               <p className={`mt-1 text-xs ${selectedSource.posterUrl ? "text-white/75" : "text-muted-foreground"}`}>{t("noScenes")}</p>
@@ -492,7 +508,7 @@ export default function GuidedEditWorkspace() {
                     {/* eslint-disable-next-line @next/next/no-img-element -- local extracted scene frame; next/image adds no caching value */}
                     {scene.thumbnailUrl ? <img src={scene.thumbnailUrl} alt="" className="h-full w-full object-cover" loading="lazy" /> : null}
                     <span className="absolute bottom-1 left-1 rounded bg-black/65 px-1.5 py-0.5 text-[10px] text-white">{seconds(scene.start)}–{seconds(scene.end)}s</span>
-                    {bound ? <span className="absolute right-1 top-1 grid size-5 place-items-center rounded-full bg-primary text-primary-foreground"><LuCheck className="size-3" /></span> : null}
+                    {bound ? <span className="absolute right-1 top-1 grid size-5 place-items-center rounded-full bg-primary text-primary-foreground"><Check className="size-3" /></span> : null}
                   </button>
                   <select value={scene.label} onChange={(event) => { setPlanNeedsUpdate(true); setScenes((current) => current.map((item) => item.id === scene.id ? { ...item, label: event.target.value as SceneLabel, selected: event.target.value !== "unused" } : item)); }} className="h-8 w-full border-0 bg-card px-2 text-[11px] outline-none">
                     {SCENE_LABELS.map((label) => <option key={label} value={label}>{t(`sceneLabel_${label}`)}</option>)}
@@ -517,12 +533,12 @@ export default function GuidedEditWorkspace() {
               </div></fieldset>
               <div className="rounded-xl border border-primary/15 bg-primary/[.035] px-3 py-2.5"><label className="flex items-center justify-between gap-3 text-xs"><span><strong className="text-foreground">{t("recommendedStructure")}</strong><span className="ml-1 text-muted-foreground">{t(`template_${brief.templateId}`)}</span></span><select aria-label={t("changeTemplate")} value={brief.templateId} onChange={(event) => patchScriptBrief({ templateId: event.target.value as GuidedTemplateId })} className="h-8 rounded-lg border border-input bg-card px-2 text-xs text-foreground">{GUIDED_EDIT_TEMPLATES.map((template) => <option key={template.id} value={template.id}>{t(`template_${template.id}`)}</option>)}</select></label></div>
               <div className="space-y-3 rounded-xl border border-border/70 bg-muted/15 p-3"><div><p className="text-xs font-semibold text-foreground">{t("coreFacts")} <span className="text-destructive">*</span></p><p className="mt-1 text-[11px] leading-4 text-muted-foreground">{t("coreFactsHint")}</p></div>
-                {brief.sellingPoints.map((point, index) => <div key={index} className="space-y-1.5 text-xs font-medium text-muted-foreground"><div className="flex items-center justify-between gap-3"><label htmlFor={`guided-core-fact-${index}`}>{t("coreFact", { n: index + 1 })}</label>{brief.sellingPoints.length > 1 ? <Button type="button" variant="ghost" size="icon-sm" aria-label={t("removeSellingPoint", { n: index + 1 })} title={t("removeSellingPoint", { n: index + 1 })} onClick={() => patchScriptBrief({ sellingPoints: brief.sellingPoints.filter((_, itemIndex) => itemIndex !== index) })}><LuTrash2 /></Button> : null}</div><Textarea id={`guided-core-fact-${index}`} value={point} onChange={(event) => patchScriptBrief({ sellingPoints: brief.sellingPoints.map((item, itemIndex) => itemIndex === index ? event.target.value : item) })} placeholder={t("sellingPointPlaceholder")} className="min-h-16" /></div>)}
-                {brief.sellingPoints.length < 6 ? <Button variant="ghost" size="sm" className="justify-self-start" onClick={() => patchScriptBrief({ sellingPoints: [...brief.sellingPoints, ""] })}><LuPlus />{t("addCoreFact")}</Button> : null}
+                {brief.sellingPoints.map((point, index) => <div key={index} className="space-y-1.5 text-xs font-medium text-muted-foreground"><div className="flex items-center justify-between gap-3"><label htmlFor={`guided-core-fact-${index}`}>{t("coreFact", { n: index + 1 })}</label>{brief.sellingPoints.length > 1 ? <Button type="button" variant="ghost" size="icon-sm" aria-label={t("removeSellingPoint", { n: index + 1 })} title={t("removeSellingPoint", { n: index + 1 })} onClick={() => patchScriptBrief({ sellingPoints: brief.sellingPoints.filter((_, itemIndex) => itemIndex !== index) })}><Trash2 /></Button> : null}</div><Textarea id={`guided-core-fact-${index}`} value={point} onChange={(event) => patchScriptBrief({ sellingPoints: brief.sellingPoints.map((item, itemIndex) => itemIndex === index ? event.target.value : item) })} placeholder={t("sellingPointPlaceholder")} className="min-h-16" /></div>)}
+                {brief.sellingPoints.length < 6 ? <Button variant="ghost" size="sm" className="justify-self-start" onClick={() => patchScriptBrief({ sellingPoints: [...brief.sellingPoints, ""] })}><Plus />{t("addCoreFact")}</Button> : null}
               </div>
               {brief.templateId === "local_store" ? <label className="space-y-1.5 text-xs font-medium text-muted-foreground"><span>{t("location")} <span className="text-destructive">*</span></span><Input value={brief.location} onChange={(event) => patchScriptBrief({ location: event.target.value })} placeholder={t("locationPlaceholder")} /></label> : null}
               {brief.templateId === "promotion_offer" ? <label className="space-y-1.5 text-xs font-medium text-muted-foreground"><span>{t("offer")} <span className="text-destructive">*</span></span><Textarea value={brief.offer} onChange={(event) => patchScriptBrief({ offer: event.target.value })} placeholder={t("offerPlaceholder")} className="min-h-16" /></label> : null}
-              <details className="group rounded-xl border border-border/70 bg-card"><summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/20"><span>{t("optionalDetails")}</span><span className="text-muted-foreground transition-transform group-open:rotate-45"><LuPlus /></span></summary><div className="grid gap-4 border-t border-border/60 p-3">
+              <details className="group rounded-xl border border-border/70 bg-card"><summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/20"><span>{t("optionalDetails")}</span><span className="text-muted-foreground transition-transform group-open:rotate-45"><Plus /></span></summary><div className="grid gap-4 border-t border-border/60 p-3">
                 <label className="space-y-1.5 text-xs font-medium text-muted-foreground"><span>{t("promotionGoal")}</span><Textarea value={brief.promotionGoal} onChange={(event) => patchBrief({ promotionGoal: event.target.value })} placeholder={t("promotionGoalPlaceholder")} className="min-h-16" /></label>
                 <label className="space-y-1.5 text-xs font-medium text-muted-foreground"><span>{t("hook")}</span><Textarea value={brief.hook} onChange={(event) => patchScriptBrief({ hook: event.target.value })} placeholder={t("hookPlaceholder")} className="min-h-16" /></label>
                 <label className="space-y-1.5 text-xs font-medium text-muted-foreground"><span>{t("introduction")}</span><Textarea value={brief.introduction} onChange={(event) => patchScriptBrief({ introduction: event.target.value })} placeholder={t("introductionPlaceholder")} className="min-h-16" /></label>
@@ -537,9 +553,9 @@ export default function GuidedEditWorkspace() {
             <div className={`rounded-xl border p-3 transition-[border-color,background-color,box-shadow] ${workflowStep === 1 ? "border-primary/45 bg-primary/[.055] ring-4 ring-primary/10" : "border-border/60 bg-muted/20"}`}>
               <div className="mb-2 flex items-center justify-between gap-3">
                 <span className={`text-[11px] font-semibold ${workflowStep === 1 ? "text-primary" : "text-muted-foreground"}`}>{workflowStep === 1 ? t("nextStep") : t("stepComplete")}</span>
-                {workflowStep > 1 ? <LuCheck className="size-4 text-emerald-600" /> : <LuArrowRight className="size-4 text-primary" />}
+                {workflowStep > 1 ? <Check className="size-4 text-emerald-600" /> : <ArrowRight className="size-4 text-primary" />}
               </div>
-              <Button className="w-full" onClick={draftBeats ? approveScriptDraft : prepareScriptDraft}>{draftBeats ? <LuCheck /> : <LuSparkles />}{t(draftBeats ? "confirmScript" : "generateDraft")}</Button>
+              <Button className="w-full" onClick={draftBeats ? approveScriptDraft : prepareScriptDraft}>{draftBeats ? <Check /> : <Sparkles />}{t(draftBeats ? "confirmScript" : "generateDraft")}</Button>
               <p className="mt-2 text-[11px] leading-4 text-muted-foreground">{workflowStep === 1 ? t(draftBeats ? "confirmScriptHint" : "generateDraftHint") : t("scriptReadyHint")}</p>
             </div>
           </div>
@@ -573,15 +589,15 @@ export default function GuidedEditWorkspace() {
               </div>
               <label className="block space-y-1.5 text-xs font-medium text-muted-foreground"><span>{t("aspectRatio")}</span><select value={brief.aspectRatio} onChange={(event) => patchBrief({ aspectRatio: event.target.value as GuidedEditBrief["aspectRatio"] })} className="h-10 w-full rounded-[10px] border border-input bg-card px-3 text-sm text-foreground"><option value="9:16">9:16</option><option value="16:9">16:9</option><option value="1:1">1:1</option></select></label>
               <label className="block space-y-1.5 text-xs font-medium text-muted-foreground"><span>{t("audioMode")}</span><select value={brief.audioMode} onChange={(event) => { const audioMode = event.target.value as GuidedEditBrief["audioMode"]; patchBrief({ audioMode, ...(audioMode === brief.audioMode ? {} : { voiceoverFile: undefined, voiceoverName: undefined }) }); }} className="h-10 w-full rounded-[10px] border border-input bg-card px-3 text-sm text-foreground"><option value="muted">{t("audioMuted")}</option><option value="original">{t("audioOriginal")}</option><option value="uploaded_voice">{t("audioUploadedVoice")}</option><option value="local_voice">{t("audioLocalVoice")}</option></select></label>
-              {brief.audioMode === "uploaded_voice" ? <div ref={voiceoverSectionRef} aria-current={workflowStep === 2 ? "step" : undefined} className={`scroll-mt-24 rounded-xl border p-3 transition-[border-color,background-color,box-shadow] ${workflowStep === 2 ? "border-primary/50 bg-primary/[.055] ring-4 ring-primary/10" : "border-border/70 bg-muted/25"}`}><div className="mb-2 flex items-center justify-between"><span className={`text-[11px] font-semibold ${workflowStep === 2 ? "text-primary" : "text-muted-foreground"}`}>{workflowStep === 2 ? t("nextStep") : voiceoverReady ? t("stepComplete") : t("workflowStepVoice")}</span>{voiceoverReady ? <LuCheck className="size-4 text-emerald-600" /> : null}</div><input ref={voiceoverRef} type="file" accept=".mp3,.wav,.m4a,.aac,.ogg,.flac,audio/*" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadVoiceover(file); }} /><Button type="button" variant={workflowStep === 2 ? "default" : "outline"} size="sm" className="w-full" disabled={busy === "voiceover" || !scriptReady} onClick={() => voiceoverRef.current?.click()}>{busy === "voiceover" ? <LuLoaderCircle className="animate-spin motion-reduce:animate-none" /> : <LuUpload />}{brief.voiceoverName || t("workflowStep2UploadAction")}</Button><p className="mt-2 text-[11px] leading-4 text-muted-foreground">{scriptReady ? t("voiceoverHint") : t("planRequired")}</p></div> : null}
-              {brief.audioMode === "local_voice" ? <div ref={voiceoverSectionRef} aria-current={workflowStep === 2 ? "step" : undefined} className={`scroll-mt-24 rounded-xl border p-3 transition-[border-color,background-color,box-shadow] ${workflowStep === 2 ? "border-primary/50 bg-primary/[.055] ring-4 ring-primary/10" : "border-border/70 bg-muted/25"}`}><div className="mb-2 flex items-center justify-between"><span className={`text-[11px] font-semibold ${workflowStep === 2 ? "text-primary" : "text-muted-foreground"}`}>{workflowStep === 2 ? t("nextStep") : voiceoverReady ? t("stepComplete") : t("workflowStepVoice")}</span>{voiceoverReady ? <LuCheck className="size-4 text-emerald-600" /> : null}</div><label className="mb-2 block space-y-1.5 text-[11px] font-medium text-muted-foreground"><span>{t("microsoftVoice")}</span><select value={brief.voiceoverVoice ?? DEFAULT_FREE_VOICE} onChange={(event) => patchBrief({ voiceoverVoice: event.target.value, voiceoverFile: undefined, voiceoverName: undefined })} className="h-9 w-full rounded-[9px] border border-input bg-card px-2 text-xs text-foreground">{FREE_TTS_VOICES.map((voice) => <option key={voice.value} value={voice.value}>{voice.label}</option>)}</select></label><Button type="button" variant={workflowStep === 2 ? "default" : "outline"} size="sm" className="w-full" disabled={busy === "voiceover" || !scriptReady} onClick={() => void synthesizeLocalVoice()}>{busy === "voiceover" ? <LuLoaderCircle className="animate-spin motion-reduce:animate-none" /> : <LuSparkles />}{brief.voiceoverFile ? t("regenerateLocalVoice") : t("workflowStep2Action")}</Button><p className="mt-2 text-[11px] leading-4 text-muted-foreground">{!scriptReady ? t("planRequired") : brief.voiceoverFile ? t("localVoiceReady") : t("localVoiceHint")}</p></div> : null}
-              <Checkbox checked={brief.burnSubtitles} onChange={(event) => patchBrief({ burnSubtitles: event.target.checked })} label={<span className="flex items-center gap-2"><LuCaptions className="text-primary" />{t("burnSubtitles")}</span>} description={t("burnSubtitlesHint")} />
+              {brief.audioMode === "uploaded_voice" ? <div ref={voiceoverSectionRef} aria-current={workflowStep === 2 ? "step" : undefined} className={`scroll-mt-24 rounded-xl border p-3 transition-[border-color,background-color,box-shadow] ${workflowStep === 2 ? "border-primary/50 bg-primary/[.055] ring-4 ring-primary/10" : "border-border/70 bg-muted/25"}`}><div className="mb-2 flex items-center justify-between"><span className={`text-[11px] font-semibold ${workflowStep === 2 ? "text-primary" : "text-muted-foreground"}`}>{workflowStep === 2 ? t("nextStep") : voiceoverReady ? t("stepComplete") : t("workflowStepVoice")}</span>{voiceoverReady ? <Check className="size-4 text-emerald-600" /> : null}</div><input ref={voiceoverRef} type="file" accept=".mp3,.wav,.m4a,.aac,.ogg,.flac,audio/*" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadVoiceover(file); }} /><Button type="button" variant={workflowStep === 2 ? "default" : "outline"} size="sm" className="w-full" disabled={busy === "voiceover" || !scriptReady} onClick={() => voiceoverRef.current?.click()}>{busy === "voiceover" ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : <Upload />}{brief.voiceoverName || t("workflowStep2UploadAction")}</Button><p className="mt-2 text-[11px] leading-4 text-muted-foreground">{scriptReady ? t("voiceoverHint") : t("planRequired")}</p></div> : null}
+              {brief.audioMode === "local_voice" ? <div ref={voiceoverSectionRef} aria-current={workflowStep === 2 ? "step" : undefined} className={`scroll-mt-24 rounded-xl border p-3 transition-[border-color,background-color,box-shadow] ${workflowStep === 2 ? "border-primary/50 bg-primary/[.055] ring-4 ring-primary/10" : "border-border/70 bg-muted/25"}`}><div className="mb-2 flex items-center justify-between"><span className={`text-[11px] font-semibold ${workflowStep === 2 ? "text-primary" : "text-muted-foreground"}`}>{workflowStep === 2 ? t("nextStep") : voiceoverReady ? t("stepComplete") : t("workflowStepVoice")}</span>{voiceoverReady ? <Check className="size-4 text-emerald-600" /> : null}</div><label className="mb-2 block space-y-1.5 text-[11px] font-medium text-muted-foreground"><span>{t("microsoftVoice")}</span><select value={brief.voiceoverVoice ?? DEFAULT_FREE_VOICE} onChange={(event) => patchBrief({ voiceoverVoice: event.target.value, voiceoverFile: undefined, voiceoverName: undefined })} className="h-9 w-full rounded-[9px] border border-input bg-card px-2 text-xs text-foreground">{FREE_TTS_VOICES.map((voice) => <option key={voice.value} value={voice.value}>{voice.label}</option>)}</select></label><Button type="button" variant={workflowStep === 2 ? "default" : "outline"} size="sm" className="w-full" disabled={busy === "voiceover" || !scriptReady} onClick={() => void synthesizeLocalVoice()}>{busy === "voiceover" ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : <AudioLines />}{brief.voiceoverFile ? t("regenerateLocalVoice") : t("workflowStep2Action")}</Button><p className="mt-2 text-[11px] leading-4 text-muted-foreground">{!scriptReady ? t("planRequired") : brief.voiceoverFile ? t("localVoiceReady") : t("localVoiceHint")}</p></div> : null}
+              <Checkbox checked={brief.burnSubtitles} onChange={(event) => patchBrief({ burnSubtitles: event.target.checked })} label={<span className="flex items-center gap-2"><Captions className="text-primary" />{t("burnSubtitles")}</span>} description={t("burnSubtitlesHint")} />
               {brief.burnSubtitles ? <div className="grid grid-cols-2 gap-3 rounded-xl border border-border/70 bg-muted/25 p-3"><label className="space-y-1.5 text-[11px] font-medium text-muted-foreground"><span>{t("captionLanguage")}</span><select value={brief.captionLanguage} onChange={(event) => patchBrief({ captionLanguage: event.target.value as GuidedEditBrief["captionLanguage"] })} className="h-9 w-full rounded-[9px] border border-input bg-card px-2 text-xs text-foreground"><option value="auto">{t("captionLanguageAuto")}</option><option value="zh">{t("captionLanguageZh")}</option><option value="en">{t("captionLanguageEn")}</option></select></label><label className="space-y-1.5 text-[11px] font-medium text-muted-foreground"><span>{t("captionSize")}</span><select value={brief.captionSize} onChange={(event) => patchBrief({ captionSize: event.target.value as GuidedEditBrief["captionSize"] })} className="h-9 w-full rounded-[9px] border border-input bg-card px-2 text-xs text-foreground"><option value="small">{t("captionSizeSmall")}</option><option value="medium">{t("captionSizeMedium")}</option><option value="large">{t("captionSizeLarge")}</option></select></label><p className="col-span-2 text-[11px] leading-4 text-muted-foreground">{t("captionFontHint")}</p></div> : null}
             </div>
             <div className={`mt-5 rounded-xl border p-3 ${durationTooLong ? "border-destructive/20 bg-destructive/8" : durationKind === "actual" ? "border-emerald-500/20 bg-emerald-500/[.06]" : "border-border/60 bg-muted/35"}`}><p className="text-sm font-semibold tabular-nums">{t(`outputDuration_${durationKind}`, { seconds: seconds(displayedDuration) })}</p><p className={`mt-1 text-xs leading-5 ${durationTooLong ? "text-destructive" : "text-muted-foreground"}`}>{durationTooLong ? t("durationTooLong", { seconds: Math.ceil(estimatedDuration), max: MAX_GUIDED_OUTPUT_SECONDS }) : t(`outputDuration_${durationKind}Hint`, { max: MAX_GUIDED_OUTPUT_SECONDS })}</p></div>
-            <div ref={renderSectionRef} aria-current={workflowStep === 3 && !currentOutput ? "step" : undefined} className={`mt-4 grid scroll-mt-24 gap-2 rounded-xl border p-3 transition-[border-color,background-color,box-shadow] ${workflowStep === 3 && !currentOutput ? "border-primary/50 bg-primary/[.055] ring-4 ring-primary/10" : "border-border/60 bg-muted/15"}`}><div className="flex items-center justify-between"><span className={`text-[11px] font-semibold ${workflowStep === 3 && !currentOutput ? "text-primary" : "text-muted-foreground"}`}>{currentOutput ? t("stepComplete") : workflowStep === 3 ? t("finalStep") : t("workflowStepRender")}</span>{currentOutput ? <LuCheck className="size-4 text-emerald-600" /> : null}</div><Button variant="outline" disabled={!scriptReady || durationTooLong || busy === "save" || rendering} onClick={() => void savePlan()}>{busy === "save" ? <LuLoaderCircle className="animate-spin motion-reduce:animate-none" /> : <LuSave />}{busy === "save" ? t("savingPlan") : t("savePlan")}</Button><Button size="lg" disabled={!renderReady || busy !== null || rendering} onClick={() => void render()}>{busy === "render" || rendering ? <LuLoaderCircle className="animate-spin motion-reduce:animate-none" /> : <LuScissors />}{busy === "render" || rendering ? t("rendering") : currentOutput ? t("rerender") : t("workflowStep3Action")}</Button>{!renderReady && !rendering ? <p className="text-center text-[11px] leading-4 text-muted-foreground">{!scriptReady ? t("planRequired") : !selectedSource ? t("sourceRequired") : !voiceoverReady ? t("voiceoverRequired") : t("durationTooLong", { seconds: Math.ceil(estimatedDuration), max: MAX_GUIDED_OUTPUT_SECONDS })}</p> : <p className="text-center text-[11px] leading-4 text-muted-foreground">{currentOutput ? t("renderCompleteHint") : t("renderActionHint")}</p>}</div>
+            <div ref={renderSectionRef} aria-current={workflowStep === 3 && !currentOutput ? "step" : undefined} className={`mt-4 grid scroll-mt-24 gap-2 rounded-xl border p-3 transition-[border-color,background-color,box-shadow] ${workflowStep === 3 && !currentOutput ? "border-primary/50 bg-primary/[.055] ring-4 ring-primary/10" : "border-border/60 bg-muted/15"}`}><div className="flex items-center justify-between"><span className={`text-[11px] font-semibold ${workflowStep === 3 && !currentOutput ? "text-primary" : "text-muted-foreground"}`}>{currentOutput ? t("stepComplete") : workflowStep === 3 ? t("finalStep") : t("workflowStepRender")}</span>{currentOutput ? <Check className="size-4 text-emerald-600" /> : null}</div><Button variant="outline" disabled={!scriptReady || durationTooLong || busy === "save" || rendering} onClick={() => void savePlan()}>{busy === "save" ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : <Save />}{busy === "save" ? t("savingPlan") : t("savePlan")}</Button><Button size="lg" disabled={!renderReady || busy !== null || rendering} onClick={() => void render()}>{busy === "render" || rendering ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : <Scissors />}{busy === "render" || rendering ? t("rendering") : currentOutput ? t("rerender") : t("workflowStep3Action")}</Button>{!renderReady && !rendering ? <p className="text-center text-[11px] leading-4 text-muted-foreground">{!scriptReady ? t("planRequired") : !selectedSource ? t("sourceRequired") : !voiceoverReady ? t("voiceoverRequired") : t("durationTooLong", { seconds: Math.ceil(estimatedDuration), max: MAX_GUIDED_OUTPUT_SECONDS })}</p> : <p className="text-center text-[11px] leading-4 text-muted-foreground">{currentOutput ? t("renderCompleteHint") : t("renderActionHint")}</p>}</div>
           </Surface>
-          {output?.outputUrl ? <Surface className="overflow-hidden p-3"><h2 className="mb-3 px-1 text-sm font-semibold">{t("latestVersion")}</h2><video controls preload="metadata" src={output.outputUrl} onLoadedMetadata={(event) => { const duration = event.currentTarget.duration; if (Number.isFinite(duration) && duration > 0) setActualOutputDuration(duration); }} className="aspect-video w-full rounded-xl bg-black object-contain" /><a href={output.downloadUrl || output.outputUrl} className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-[10px] border border-border bg-card text-sm font-semibold hover:bg-muted/60"><LuDownload />{t("download")}</a></Surface> : null}
+          {output?.outputUrl ? <Surface className="overflow-hidden p-3"><h2 className="mb-3 px-1 text-sm font-semibold">{t("latestVersion")}</h2><video controls preload="metadata" src={output.outputUrl} onLoadedMetadata={(event) => { const duration = event.currentTarget.duration; if (Number.isFinite(duration) && duration > 0) setActualOutputDuration(duration); }} className="aspect-video w-full rounded-xl bg-black object-contain" /><a href={output.downloadUrl || output.outputUrl} className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-[10px] border border-border bg-card text-sm font-semibold hover:bg-muted/60"><Download />{t("download")}</a></Surface> : null}
           {latestPlan?.error ? <Notice tone="danger">{latestPlan.error}</Notice> : null}
         </aside>
       </div>

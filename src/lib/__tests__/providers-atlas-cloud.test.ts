@@ -86,6 +86,24 @@ describe('AtlasCloudProvider', () => {
     expect(body).not.toHaveProperty('reference_images')
   })
 
+  it('submits Seedance 2.5 native 1080p without attaching an SR product', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ data: { id: 'pred-native-1080' } }), { status: 200 })
+    )
+    await provider().submitVideoTask({
+      modelId: 'bytedance/seedance-2.5/image-to-video',
+      mode: 'image-to-video',
+      prompt: 'animate product',
+      width: 1080,
+      height: 1920,
+      duration: 8,
+      firstFrameUrl: 'data:image/png;base64,AAAA',
+    })
+    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))
+    expect(body.resolution).toBe('1080p')
+    expect(body.resolution).not.toMatch(/-sr|-esr/i)
+  })
+
   it('maps resolution by model capability and blocks unsupported duration/mode before the paid POST', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
       new Response(JSON.stringify({ code: 200, data: { id: 'pred-map', status: 'processing' } }), { status: 200 })

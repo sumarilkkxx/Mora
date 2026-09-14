@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v0.1.2.0-087BDF?style=flat-square" alt="Version v0.1.2.0">
+  <img src="https://img.shields.io/badge/version-v0.2.0.0-087BDF?style=flat-square" alt="Version v0.2.0.0">
   <img src="https://img.shields.io/badge/license-AGPL--3.0--only-28526F?style=flat-square" alt="License AGPL-3.0-only">
   <img src="https://img.shields.io/badge/local--first-FFmpeg%20%2B%20SQLite-0D355A?style=flat-square" alt="Local-first with FFmpeg and SQLite">
   <img src="https://img.shields.io/badge/status-alpha-087BDF?style=flat-square" alt="Status alpha">
@@ -122,7 +122,7 @@ flowchart TD
 
 - 适合口播、探店、课程、访谈和已经拍好的竖屏素材。
 - “AI 智能成片”使用视觉大模型理解场景和可见依据，结合商品或服务、目标顾客、卖点和期望行动生成三种推广文案方向；用户可以逐步确认、分段修改或按选填要求重写。
-- 确认文案后生成三套可解释的镜头方案，标出 AI 推荐项，并可查看每个镜头的成片时间、原片区间、文案和画面依据。
+- 确认文案后生成三套可解释的镜头方案，标出系统推荐项，并可查看每个镜头的成片时间、原片区间、文案和画面依据。
 - 选定方案后自动完成旁白、中文字幕、FFmpeg 本地剪辑和云端视觉质检；任务、原片、方案与成片版本均可追踪和恢复。
 - 同时支持引导式剪辑与基于转写文本的精细删改。
 - 原片、编辑计划和历史版本持续保留，方便比较与回退。
@@ -197,7 +197,7 @@ pnpm build
 | **脚本与分镜** | 结构化字段、文本模型脚本、手动脚本、模板化结构、镜头节拍、脚本检查、分镜描述、创作意图与视觉约束 |
 | **画面与素材** | 本地素材、Pexels、Pixabay、Openverse、Coverr 等适配；图片生成、图生视频、参考生视频 |
 | **声音与字幕** | Edge TTS、平台 TTS、音色语速、字幕烧录、卡拉 OK、BGM、音量闪避、字幕导出 |
-| **编辑与合成** | LLM 智能剪辑、场景理解、推广文案与候选方案、AI 推荐、结构复刻、文字剪辑、运镜与 Look、FFmpeg 合成、封面抽帧、版本记录 |
+| **编辑与合成** | LLM 智能剪辑、场景理解、推广文案与候选方案、系统推荐、结构复刻、文字剪辑、运镜与 Look、FFmpeg 合成、封面抽帧、版本记录 |
 | **生产管理** | 持久化流水线、断点状态、批量制作、任务中心、模型预检、生产控制台、成片质检 |
 | **导出与发布** | 多平台规格、预览下载、发布文案包、素材来源记录、AIGC 标识与发布检查 |
 | **开发者入口** | Web UI、HTTP API、零依赖 Node CLI、Electron 桌面封装、SQLite/Drizzle 数据层 |
@@ -330,14 +330,14 @@ pnpm dist:win
 pnpm dist:mac
 ```
 
-GitHub Actions 已配置 Windows x64、macOS Apple Silicon 和 macOS Intel 构建任务，并对最终安装包执行校验和启动冒烟测试。当前 `v0.1.2.0` 的构建配置未启用代码签名，macOS 安装包也未经过公证。首次打开 macOS 应用时，可能需要在“隐私与安全性”中手动允许。
+GitHub Actions 已配置 Windows x64、macOS Apple Silicon 和 macOS Intel 构建任务，并对最终安装包执行校验和启动冒烟测试。当前 `v0.2.0.0` 的构建配置未启用代码签名，macOS 安装包也未经过公证。首次打开 macOS 应用时，可能需要在“隐私与安全性”中手动允许。
 
 | 版本层 | 当前约定 |
 | --- | --- |
-| Git 标签 | `v0.1.2.0` |
-| npm / Electron SemVer | `0.1.2` |
-| Windows FileVersion | `0.1.2.0` |
-| 安装包 | `Mora-Setup-v0.1.2.0-win-x64.exe` / `Mora-v0.1.2.0-mac-<arch>.dmg` |
+| Git 标签 | `v0.2.0.0` |
+| npm / Electron SemVer | `0.2.0` |
+| Windows FileVersion | `0.2.0.0` |
+| 安装包 | `Mora-Setup-v0.2.0.0-win-x64.exe` / `Mora-v0.2.0.0-mac-<arch>.dmg` |
 
 ## HTTP API 与自动化入口
 
@@ -353,7 +353,7 @@ GitHub Actions 已配置 Windows x64、macOS Apple Silicon 和 macOS Intel 构�
 
 ## 当前已知限制
 
-`v0.1.2.0` 为 alpha 版本，目前存在以下限制：
+`v0.2.0.0` 为 alpha 版本，目前存在以下限制：
 
 - 淘宝、天猫等电商平台的登录墙、动态渲染、验证码、风控和 Cookie 隔离可能导致商品链接无法解析；当前可靠回退方式是手动填写商品信息或上传商品截图。
 - 自动脚本依赖可访问的文本模型；云端端点不可用、额度不足或地区受限时会生成失败，完全离线使用需要手动导入脚本或配置本机 Ollama。

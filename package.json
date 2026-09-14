@@ -1,6 +1,6 @@
 {
   "name": "mora",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "MORA — Multimodal Orchestration for Retail Automation",
   "private": true,
   "license": "AGPL-3.0-only",
@@ -27,7 +27,9 @@
     "pack:dir": "pnpm media:prepare && pnpm bundle:desktop && electron-builder --dir",
     "dist": "pnpm media:prepare && pnpm bundle:desktop && electron-builder --publish never",
     "dist:win": "pnpm media:prepare && pnpm bundle:desktop && electron-builder --win nsis --x64 --publish never",
-    "dist:mac": "pnpm media:prepare && pnpm bundle:desktop && electron-builder --mac dmg --publish never"
+    "dist:mac": "pnpm media:prepare && pnpm bundle:desktop && electron-builder --mac dmg --publish never",
+    "test:e2e": "pnpm build && playwright test",
+    "test:e2e:run": "playwright test"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
@@ -41,16 +43,18 @@
     "ffmpeg-static": "^5.3.0",
     "fluent-ffmpeg": "^2.1.3",
     "geist": "^1.7.2",
+    "lucide": "0.577.0",
     "lucide-react": "^0.577.0",
+    "morphicons": "1.7.1",
     "motion": "^12.38.0",
     "next": "16.2.11",
     "openai": "^6.32.0",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "react-icons": "^5.5.0",
     "tailwind-merge": "^3.5.0",
     "tw-animate-css": "^1.4.0",
+    "undici": "6.27.0",
     "zustand": "^5.0.12"
   },
   "pnpm": {
@@ -59,7 +63,8 @@
       "adm-zip": "0.6.0",
       "nanoid": "3.3.18",
       "postcss": "8.5.23",
-      "sharp": "0.35.0"
+      "sharp": "0.35.0",
+      "onnxruntime-node": "1.23.2"
     },
     "onlyBuiltDependencies": [
       "@ffprobe-installer/ffprobe",
@@ -76,7 +81,7 @@
   "build": {
     "appId": "com.mora.app",
     "productName": "Mora",
-    "buildVersion": "0.1.2.0",
+    "buildVersion": "0.2.0.0",
     "npmRebuild": false,
     "compression": "maximum",
     "directories": {
@@ -86,22 +91,16 @@
     "files": [
       "electron/**/*",
       "package.json",
-      "!node_modules/**",
-      "node_modules/ffmpeg-static/**",
-      "node_modules/@ffprobe-installer/**"
+      "!node_modules/**"
     ],
     "afterPack": "./electron/after-pack.cjs",
-    "asarUnpack": [
-      "node_modules/ffmpeg-static/**",
-      "node_modules/@ffprobe-installer/**"
-    ],
     "mac": {
       "target": "dmg",
       "category": "public.app-category.video",
       "identity": null,
       "hardenedRuntime": false,
-      "bundleShortVersion": "0.1.2",
-      "bundleVersion": "0.1.2",
+      "bundleShortVersion": "0.2.0",
+      "bundleVersion": "0.2.0",
       "artifactName": "${productName}-v${version}.0-mac-${arch}.${ext}",
       "icon": "electron/icon.png"
     },
@@ -120,6 +119,7 @@
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.4",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",

@@ -15,8 +15,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { LuUpload, LuPalette } from "react-icons/lu";
-import { Check, CheckCircle2, CircleAlert, WifiOff } from "lucide-react";
+import { Check, CheckCircle2, ChevronDown, ChevronRight, CircleAlert, Image as ImageIcon, MessageSquareText, Mic2, Palette, ShieldCheck, Store, Upload, Video, WifiOff } from "lucide-react";
+import { Eye as EyeData, EyeOff as EyeOffData } from "lucide";
+import { MorphIcon } from "morphicons/react";
+import { ICON_STROKE_WIDTH } from "@/lib/iconography";
 import { useLocale, useT } from "@/lib/i18n";
 import { useSettingsStore } from "@/lib/stores/settings-store";
 import { useBrandStore } from "@/lib/stores/brand-store";
@@ -30,7 +32,8 @@ import {
 } from "@/lib/tts-presets";
 import { mergeCustomModels } from "@/lib/gen-params";
 import { getVideoModelCapabilities, resolveModelResolution } from "@/lib/model-capabilities";
-import { ATLAS_VIDEO_FAMILIES } from "@/lib/atlas-video-models";
+import { ATLAS_VIDEO_FAMILIES, atlasVideoFamilyId } from "@/lib/atlas-video-models";
+import { estimateVideoSpend } from "@/lib/video-spend";
 import { LLM_PRESETS } from "@/lib/llm-presets";
 import { GroupedModelSelect, ModelPicker } from "@/components/settings/model-picker";
 import { GenerationSettings } from "@/components/generation-settings";
@@ -156,21 +159,7 @@ function PasswordInput({
         title={visible ? "Hide API key" : "Show API key"}
         className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
       >
-        {visible ? (
-          // hide icon
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-            <line x1="1" y1="1" x2="23" y2="23" />
-            <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
-          </svg>
-        ) : (
-          // show icon
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
-        )}
+        <MorphIcon icon={visible ? EyeOffData : EyeData} size={16} strokeWidth={ICON_STROKE_WIDTH} spring="smooth" reducedMotion="user" />
       </button>
     </div>
   );
@@ -203,6 +192,7 @@ export default function SettingsPage() {
     defaultImageProvider,
     defaultVideoModel,
     defaultVideoProvider,
+    spendCapUsd,
     customModels,
     setProvider,
     setLLM,
@@ -211,6 +201,7 @@ export default function SettingsPage() {
     setDefaultAspectRatio,
     setDefaultImageModel,
     setDefaultVideoModel,
+    setSpendCapUsd,
   } = useSettingsStore();
 
   // TTS preview playback state
@@ -320,8 +311,13 @@ export default function SettingsPage() {
   const selectedVideoCapabilities = getVideoModelCapabilities(defaultVideoModel);
   const effectiveVideoResolution = resolveModelResolution(defaultResolution, selectedVideoCapabilities.resolutionValues);
   const selectedAtlasFamily = selectedVideoProvider === "atlas-cloud"
-    ? ATLAS_VIDEO_FAMILIES.find((family) => family.id === defaultVideoModel)
+    ? ATLAS_VIDEO_FAMILIES.find((family) => family.id === atlasVideoFamilyId(defaultVideoModel))
     : undefined;
+  const selectedVideoSecondEstimate = estimateVideoSpend(
+    selectedAtlasFamily?.pricePerSecond,
+    1,
+    effectiveVideoResolution.effective,
+  );
 
   // auto-select a default model after enabling a provider: if nothing is selected (or the selection is gone) and options exist, fall back to the first one
   // — prevents the beginner trap of "set up a Key but generation fails because no default model was chosen"
@@ -430,7 +426,7 @@ export default function SettingsPage() {
           <div className="mora-settings-flows">
             <div className="mora-settings-flow">
               <span><strong>{t("relationshipProviders")}</strong><small>{t("relationshipProvidersDesc")}</small></span>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+              <ChevronRight aria-hidden="true" />
               <span><strong>{t("relationshipDefaults")}</strong><small>{t("relationshipDefaultsDesc")}</small></span>
             </div>
             <div className="mora-settings-flow is-independent">
@@ -588,9 +584,7 @@ export default function SettingsPage() {
                 <CardContent className="p-5">
                   <div className="flex items-center gap-2 mb-4">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-white">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                      </svg>
+                      <MessageSquareText size={16} aria-hidden="true" />
                     </div>
                     <h3 className="font-semibold text-sm">{t("llmProvider")}</h3>
                   </div>
@@ -773,11 +767,7 @@ export default function SettingsPage() {
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-pink-600 text-white">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
-                          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                          <line x1="12" y1="19" x2="12" y2="22" />
-                        </svg>
+                        <Mic2 size={16} aria-hidden="true" />
                       </div>
                       <div>
                         <h3 className="font-semibold text-sm">{t("ttsTitle")}</h3>
@@ -1050,6 +1040,17 @@ export default function SettingsPage() {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">{t("spendCap")}</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={spendCapUsd}
+                        onChange={(event) => setSpendCapUsd(Number(event.target.value))}
+                      />
+                      <p className="text-[11px] leading-4 text-muted-foreground">{t("spendCapHint")}</p>
+                    </div>
                   </div>
                   {defaultVideoModel && (
                     <div className="mt-4 rounded-xl border border-border/60 bg-muted/25 px-4 py-3 text-xs">
@@ -1060,8 +1061,8 @@ export default function SettingsPage() {
                           <strong className="font-semibold text-foreground">{effectiveVideoResolution.effective}</strong>
                           {effectiveVideoResolution.adjusted && <span className="ml-1 text-muted-foreground">({t("videoFromPreference", { value: defaultResolution })})</span>}
                         </span>
-                        {selectedAtlasFamily?.pricePerSecond != null && (
-                          <span><span className="text-muted-foreground">{t("videoBillingTier")}：</span>≈ ${selectedAtlasFamily.pricePerSecond.toFixed(3)}/s</span>
+                        {selectedVideoSecondEstimate && (
+                          <span><span className="text-muted-foreground">{t("videoBillingTier")}：</span>≈ ${selectedVideoSecondEstimate.maxUsd.toFixed(3)}/s</span>
                         )}
                       </div>
                       <p className="mt-2 leading-5 text-muted-foreground">{t("videoResolutionBehavior")}</p>
@@ -1093,7 +1094,7 @@ export default function SettingsPage() {
               <details className="group rounded-xl border border-border/50 bg-card/30">
                 <summary className="flex items-center justify-between cursor-pointer list-none select-none px-5 py-3.5 text-sm font-medium text-muted-foreground hover:text-foreground">
                   <span>{t("advancedSection")}</span>
-                  <svg className="size-4 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6" /></svg>
+                  <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden="true" />
                 </summary>
                 <div className="px-1 pb-1 space-y-4">
                   <GenerationSettings selectedVideoProvider={selectedVideoProvider} />
@@ -1108,7 +1109,7 @@ export default function SettingsPage() {
         <details className="group mt-4 rounded-lg border border-border/40">
           <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground">
             <span>{t("diagnosticsTitle")}</span>
-            <svg className="size-4 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6" /></svg>
+            <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden="true" />
           </summary>
           <div className="px-4 pb-4">
             <div className="flex gap-2">
@@ -1154,10 +1155,7 @@ function BrandSettings() {
         <CardContent className="p-5">
           <div className="flex items-center gap-2 mb-4">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-white">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
+              <Store size={16} aria-hidden="true" />
             </div>
             <h3 className="font-semibold text-sm">{t("brandShopTitle")}</h3>
           </div>
@@ -1189,11 +1187,7 @@ function BrandSettings() {
                       />
                     </>
                   ) : (
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/50">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                      <circle cx="8.5" cy="8.5" r="1.5" />
-                      <polyline points="21 15 16 10 5 21" />
-                    </svg>
+                    <ImageIcon size={24} strokeWidth={1.5} className="text-muted-foreground/50" aria-hidden="true" />
                   )}
                 </div>
                 <div className="flex flex-col gap-2">
@@ -1215,7 +1209,7 @@ function BrandSettings() {
                       }}
                     />
                     <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent transition-colors">
-                      <LuUpload className="w-3 h-3" />
+                      <Upload className="w-3 h-3" />
                       {t("brandUploadLogo")}
                     </span>
                   </label>
@@ -1239,7 +1233,7 @@ function BrandSettings() {
         <CardContent className="p-5">
           <div className="flex items-center gap-2 mb-4">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-rose-600 text-white">
-              <LuPalette className="w-4 h-4" />
+              <Palette className="w-4 h-4" />
             </div>
             <h3 className="font-semibold text-sm">{t("brandColorTitle")}</h3>
           </div>
@@ -1304,9 +1298,7 @@ function BrandSettings() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 text-white">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
+                <ShieldCheck size={16} aria-hidden="true" />
               </div>
               <h3 className="font-semibold text-sm">{t("brandWatermarkTitle")}</h3>
             </div>
@@ -1374,10 +1366,7 @@ function BrandSettings() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 text-white">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="23 7 16 12 23 17 23 7" />
-                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                </svg>
+                <Video size={16} aria-hidden="true" />
               </div>
               <h3 className="font-semibold text-sm">{t("brandOutroTitle")}</h3>
             </div>

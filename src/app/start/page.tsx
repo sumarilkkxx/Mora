@@ -10,6 +10,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ArrowRight, Check, ChevronLeft, ChevronRight, Image as ImageIcon, Link2, Mic2, Scissors, Upload, X } from "lucide-react";
 import { ChoiceCard } from "@/components/ui/choice-card";
 import { useSettingsStore } from "@/lib/stores/settings-store";
 import { ProductionProfilePicker } from "@/components/production-profile-picker";
@@ -710,7 +711,7 @@ export default function StartPage() {
           <p className="cf-sub">{t("sub")}</p>
 
           <Link href="/project/edit/new" className="mx-auto mb-4 flex max-w-[620px] items-center justify-between gap-4 rounded-2xl border border-primary/25 bg-primary/[.055] px-4 py-3 text-left no-underline transition-[border-color,background-color,transform] hover:border-primary/45 hover:bg-primary/[.085] active:scale-[.995]">
-            <span className="flex min-w-0 items-center gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="m8.7 8.4 10.8 6.2"/><path d="m8.7 15.6 10.8-6.2"/></svg></span><span className="min-w-0"><strong className="block text-sm font-semibold text-foreground">{t("guidedEditTitle")}</strong><small className="mt-0.5 block text-xs leading-5 text-muted-foreground">{t("guidedEditDesc")}</small></span></span>
+            <span className="flex min-w-0 items-center gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><Scissors size={18} aria-hidden="true" /></span><span className="min-w-0"><strong className="block text-sm font-semibold text-foreground">{t("guidedEditTitle")}</strong><small className="mt-0.5 block text-xs leading-5 text-muted-foreground">{t("guidedEditDesc")}</small></span></span>
             <span className="shrink-0 text-xs font-semibold text-primary">{t("guidedEditCta")} →</span>
           </Link>
 
@@ -730,7 +731,7 @@ export default function StartPage() {
                     <div key={label} className={`cf-prog-step${i < stageIdx ? " done" : i === stageIdx ? " on" : ""}`}>
                       <span className="ic">
                         {i < stageIdx ? (
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l5 5L20 6" /></svg>
+                          <Check size={11} strokeWidth={3} aria-hidden="true" />
                         ) : i === stageIdx ? (
                           <span className="cf-spin sm" />
                         ) : (
@@ -747,15 +748,15 @@ export default function StartPage() {
               <>
             <div className="cf-tabs" role="tablist" aria-label={t("startModeLabel")}>
               <button type="button" role="tab" aria-selected={mode === "upload"} className={`cf-tab${mode === "upload" ? " on" : ""}`} onClick={() => setMode("upload")}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.6-3.6a2 2 0 0 0-2.8 0L6 20" /></svg>
+                <ImageIcon size={16} aria-hidden="true" />
                 {t("tabUpload")}
               </button>
               <button type="button" role="tab" aria-selected={mode === "link"} className={`cf-tab${mode === "link" ? " on" : ""}`} onClick={() => setMode("link")}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
+                <Link2 size={16} aria-hidden="true" />
                 {t("tabLink")}
               </button>
               <button type="button" role="tab" aria-selected={mode === "topic"} className={`cf-tab${mode === "topic" ? " on" : ""}`} onClick={() => setMode("topic")}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 19v3" /><path d="M8 22h8" /><rect x="9" y="2" width="6" height="13" rx="3" /><path d="M5 10a7 7 0 0 0 14 0" /></svg>
+                <Mic2 size={16} aria-hidden="true" />
                 {t("tabTopic")}
               </button>
             </div>
@@ -769,7 +770,7 @@ export default function StartPage() {
                   onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
                   onDrop={(e) => { e.preventDefault(); setIsDragging(false); addFiles(e.dataTransfer.files); }}
                 >
-                  <div className="cf-dic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v12" /></svg></div>
+                  <div className="cf-dic"><Upload size={22} aria-hidden="true" /></div>
                   <div className="cf-dt">{t("dropTitle")}</div>
                   <div className="cf-ds">{t("dropSub")}</div>
                   <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => addFiles(e.target.files)} />
@@ -780,7 +781,7 @@ export default function StartPage() {
                       <div key={i.id} className="cf-thumb">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={i.url} alt={t("imgAlt")} decoding="async" loading="lazy" />
-                        <button onClick={(e) => { e.stopPropagation(); removeImage(i.id); }} aria-label={t("removeAria")}>×</button>
+                        <button onClick={(e) => { e.stopPropagation(); removeImage(i.id); }} aria-label={t("removeAria")}><X size={13} aria-hidden="true" /></button>
                       </div>
                     ))}
                   </div>
@@ -861,7 +862,7 @@ export default function StartPage() {
                   <span className="badge">{t("llmSetupBadge")}</span>
                   {t("llmSetupTitle")}
                   <button type="button" className="cf-keyclose" aria-label={t("llmSetupDismiss")} title={t("llmSetupDismiss")} onClick={() => setNeedKey(false)}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                    <X size={13} aria-hidden="true" />
                   </button>
                 </div>
                 <div className="cf-keydesc">{t("llmSetupDesc")}</div>
@@ -873,7 +874,7 @@ export default function StartPage() {
             <div className="cf-cta-row">
               <button className="cf-cta" onClick={onStart} disabled={!canStart || busy}>
                 {busy ? (stage || t("busyDefault")) : t("ctaStart")}
-                {!busy && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M5 12h14M13 6l6 6-6 6" /></svg>}
+                {!busy && <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" />}
               </button>
               <div className="cf-reassure">{t("reassureLlm")}</div>
             </div>
@@ -887,7 +888,7 @@ export default function StartPage() {
           {showGuide && (
             <div className="cf-guide">
               <div className="cf-guide-title">{t("guideTitle")}</div>
-              <button type="button" className="cf-guide-close" onClick={dismissGuide} aria-label={t("guideClose")}>×</button>
+              <button type="button" className="cf-guide-close" onClick={dismissGuide} aria-label={t("guideClose")}><X size={13} aria-hidden="true" /></button>
               <div className="cf-guide-steps">
                 <div className="cf-guide-step"><b>1</b>{t("guideStep1")}</div>
                 <div className="cf-guide-step"><b>2</b>{t("guideStep2")}</div>
@@ -933,7 +934,7 @@ export default function StartPage() {
                     aria-label={t("trendsPreviousPage")}
                     onClick={() => setTrendsPage((page) => Math.max(0, page - 1))}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+                    <ChevronLeft size={14} strokeWidth={2.2} aria-hidden="true" />
                   </button>
                   <span className="cf-trends-page-status" aria-live="polite">
                     {normalizedTrendsPage + 1}<span>/</span>{trendsPageCount}
@@ -945,7 +946,7 @@ export default function StartPage() {
                     aria-label={t("trendsNextPage")}
                     onClick={() => setTrendsPage((page) => Math.min(trendsPageCount - 1, page + 1))}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+                    <ChevronRight size={14} strokeWidth={2.2} aria-hidden="true" />
                   </button>
                 </div>
                 )}

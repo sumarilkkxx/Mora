@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { LuPlus, LuTrash2, LuUser, LuStar } from "react-icons/lu";
+import { Plus, Trash2, User, Star } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { useSettingsStore } from "@/lib/stores/settings-store";
 import { useCharacterStore, type Character } from "@/lib/stores/project-store";
@@ -165,7 +165,7 @@ export function PresenterManager() {
                       </button>
                     ) : (
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                        <LuUser className="w-5 h-5 text-primary" />
+                        <User className="w-5 h-5 text-primary" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
@@ -173,7 +173,7 @@ export function PresenterManager() {
                         <h3 className="font-semibold text-sm">{char.name}</h3>
                         {char.isDefault && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-xs text-primary">
-                            <LuStar className="w-3 h-3" />
+                            <Star className="w-3 h-3" />
                             {t("characterDefault")}
                           </span>
                         )}
@@ -196,12 +196,12 @@ export function PresenterManager() {
                     </Button>
                     {!char.isDefault && (
                       <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={() => setAsDefault(char.id)}>
-                        <LuStar className="w-3 h-3" />
+                        <Star className="w-3 h-3" />
                       </Button>
                     )}
                     <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={() => startEdit(char)}>{t("characterEdit")}</Button>
                     <Button variant="ghost" size="sm" className="text-xs h-7 px-2 text-destructive hover:text-destructive" onClick={() => removeCharacter(char.id)}>
-                      <LuTrash2 className="w-3 h-3" />
+                      <Trash2 className="w-3 h-3" />
                     </Button>
                   </div>
                 </div>
@@ -242,7 +242,7 @@ export function PresenterManager() {
         </Card>
       ) : (
         <Button variant="outline" className="w-full h-12 border-dashed" onClick={() => setIsCreating(true)}>
-          <LuPlus className="w-4 h-4 mr-2" />
+          <Plus className="w-4 h-4 mr-2" />
           {t("characterAddButton")}
         </Button>
       )}

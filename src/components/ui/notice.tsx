@@ -1,13 +1,13 @@
 import type { HTMLAttributes, ReactNode } from "react";
-import { CircleAlert, CircleCheck, CircleX, Info } from "lucide-react";
+import { statusIcons } from "@/lib/iconography";
 
 import { cn } from "@/lib/utils";
 
 const icons = {
-  info: Info,
-  success: CircleCheck,
-  warning: CircleAlert,
-  danger: CircleX,
+  info: statusIcons.info,
+  success: statusIcons.success,
+  warning: statusIcons.warning,
+  danger: statusIcons.danger,
 };
 
 export function Notice({

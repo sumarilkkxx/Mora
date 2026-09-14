@@ -27,6 +27,7 @@ import { toRemoteUsableImage } from "@/lib/remote-image";
 import { probeMedia } from "@/lib/media-probe";
 import { recordAiTask } from "@/lib/ai-tasks";
 import { insufficientBalanceDetails } from "@/lib/provider-billing-error";
+import { estimateVideoSpend, resolveVideoSpendCap } from "@/lib/video-spend";
 import { apiError, errText } from "@/lib/api-error";
 import { contentPolicyError, isContentPolicyRejection } from "@/lib/content-policy-error";
 import type { GenAspectRatio, GenResolution } from "@/lib/gen-params";
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return apiError(req, "无效的项目ID", "Invalid project id", 400);
     }
     const body = await req.json();
-    const { scriptId, provider: providerName, model, apiKey, baseUrl, options, characterSheetUrl, dryRun } = body as {
+    const { scriptId, provider: providerName, model, apiKey, baseUrl, options, characterSheetUrl, dryRun, spendCapUsd, acknowledgeOverCap } = body as {
       scriptId?: string;
       provider?: string;
       model?: string;
@@ -76,6 +77,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       characterSheetUrl?: string;
       /** Preview only: return the full film prompt + counts + warnings, submit nothing, spend nothing */
       dryRun?: boolean;
+      /** Refuse a priced paid submission above this USD ceiling unless explicitly acknowledged. */
+      spendCapUsd?: number;
+      acknowledgeOverCap?: boolean;
     };
     billingProviderName = providerName ?? "";
     billingModel = model ?? "";
@@ -132,6 +136,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     let supportedDurations = fallbackFilmDurations(providerName, submittedModel);
     let supportedResolutions: string[] | undefined;
     let supportedAspectRatios: string[] | undefined;
+    let pricePerSecond: number | undefined;
     let provider = providerName && (dryRun || apiKey)
       ? createProvider({ name: providerName, apiKey: apiKey ?? "", baseUrl: baseUrl ?? "" })
       : undefined;
@@ -150,6 +155,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         const liveValues = liveModel?.extra?.durationValues;
         const liveResolutions = liveModel?.extra?.supportedResolutions;
         const liveAspectRatios = liveModel?.extra?.supportedAspectRatios;
+        const livePrice = Number(liveModel?.extra?.estimatedPricePerUnit);
+        if (Number.isFinite(livePrice) && livePrice >= 0) pricePerSecond = livePrice;
         if (Array.isArray(liveValues)) {
           const normalized = liveValues.filter(
             (value): value is number => typeof value === "number" && Number.isFinite(value) && value > 0
@@ -192,6 +199,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return apiError(req, `该模型只支持当前界面尚未提供的画面比例 ${aspectRatio}`, `This model only supports ${aspectRatio}, which is not available in the current settings UI`, 400);
     }
     const dimensions = videoRequestDimensions(resolution, aspectRatio);
+    const estimate = estimateVideoSpend(pricePerSecond, duration, resolution);
     const ignoredSettings = ["openrouter", "atlas-cloud"].includes(providerName?.toLowerCase() ?? "")
       ? [opts.fps != null ? "fps" : "", opts.motionStrength != null ? "motionStrength" : "", opts.negativePrompt ? "negativePrompt" : ""].filter(Boolean)
       : [];
@@ -223,11 +231,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           generateAudio: true,
           ...(opts.seed != null ? { seed: opts.seed } : {}),
         },
+        ...(estimate && { estimate }),
         ignoredSettings,
         referenceImages: plannedRefs,
         referenceQuota: referenceQuotaCheck(plannedRefs, submittedModel, providerName),
         dialogueWarnings,
       });
+    }
+
+    // This is the last server-side gate before media preparation and the paid provider POST.
+    // Compare against the conservative tier-adjusted total; a base catalog price alone is not
+    // representative of what Atlas bills at 720p/1080p.
+    const cap = resolveVideoSpendCap(spendCapUsd);
+    if (estimate && cap > 0 && estimate.maxUsd > cap && !acknowledgeOverCap) {
+      return apiError(
+        req,
+        `预估花费最高 $${estimate.maxUsd.toFixed(2)}（$${estimate.unitUsd}/秒 × ${estimate.seconds} 秒 × ${estimate.tierMultiplier} 分辨率倍率），超过单次上限 $${cap.toFixed(2)}。请降低分辨率、缩短时长或明确确认继续。`,
+        `Estimated spend is up to $${estimate.maxUsd.toFixed(2)} ($${estimate.unitUsd}/s × ${estimate.seconds}s × ${estimate.tierMultiplier} resolution multiplier), above the $${cap.toFixed(2)} per-run cap. Lower resolution or duration, or explicitly confirm to continue.`,
+        409,
+      );
     }
 
     // past the dryRun branch money moves — provider and key become mandatory

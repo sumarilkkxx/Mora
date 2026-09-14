@@ -3,15 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  LuCheck,
-  LuClipboard,
-  LuFileVideo,
-  LuImage,
-  LuLoaderCircle,
-  LuSave,
-  LuScanSearch,
-  LuUpload,
-} from "react-icons/lu";
+  Check,
+  Clipboard,
+  FileVideo,
+  Image as ImageIcon,
+  LoaderCircle,
+  Save,
+  ScanSearch,
+  Upload,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocale, useT } from "@/lib/i18n";
 import type { MediaAnalysisResult } from "@/lib/media-analysis";
@@ -177,7 +177,7 @@ export default function MediaLabPage() {
                 className="flex aspect-[4/3] w-full cursor-pointer flex-col items-center justify-center px-6 text-center outline-none transition-colors hover:bg-muted/20 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
               >
                 <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <LuUpload className="h-5 w-5" aria-hidden="true" />
+                  <Upload className="h-5 w-5" aria-hidden="true" />
                 </span>
                 <span className="font-semibold">{t("dropTitle")}</span>
                 <span className="mt-2 max-w-sm text-xs leading-5 text-muted-foreground">{t("dropHint")}</span>
@@ -186,7 +186,7 @@ export default function MediaLabPage() {
             {file && (
               <div className="flex items-center justify-between gap-3 border-t border-border/50 px-4 py-3">
                 <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-                  {isVideo ? <LuFileVideo className="h-4 w-4 shrink-0" /> : <LuImage className="h-4 w-4 shrink-0" />}
+                  {isVideo ? <FileVideo className="h-4 w-4 shrink-0" /> : <ImageIcon className="h-4 w-4 shrink-0" />}
                   <span className="truncate">{fileMeta}</span>
                 </div>
                 <button type="button" onClick={() => inputRef.current?.click()} className="min-h-8 shrink-0 text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
@@ -202,7 +202,7 @@ export default function MediaLabPage() {
           {error && <Notice tone="danger">{error}</Notice>}
 
           <Button onClick={analyze} disabled={!file || !configured || loading} className="h-11 w-full brand-gradient text-white">
-            {loading ? <LuLoaderCircle className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <LuScanSearch className="mr-2 h-4 w-4" aria-hidden="true" />}
+            {loading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <ScanSearch className="mr-2 h-4 w-4" aria-hidden="true" />}
             {loading ? t("analyzing") : t("analyze")}
           </Button>
           {loading && (
@@ -227,7 +227,7 @@ export default function MediaLabPage() {
 
           {!result ? (
             <div className="flex min-h-[360px] flex-col items-center justify-center rounded-xl border border-dashed border-border/60 px-8 text-center text-sm text-muted-foreground">
-              <LuScanSearch className="mb-4 h-8 w-8 opacity-40" aria-hidden="true" />
+              <ScanSearch className="mb-4 h-8 w-8 opacity-40" aria-hidden="true" />
               {t("empty")}
             </div>
           ) : (
@@ -267,7 +267,7 @@ export default function MediaLabPage() {
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-primary">{t("prompt")}</h3>
                   <button type="button" onClick={copyPrompt} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                    {copied ? <LuCheck className="h-3.5 w-3.5" /> : <LuClipboard className="h-3.5 w-3.5" />}
+                    {copied ? <Check className="h-3.5 w-3.5" /> : <Clipboard className="h-3.5 w-3.5" />}
                     {t(copied ? "copied" : "copy")}
                   </button>
                 </div>
@@ -282,7 +282,7 @@ export default function MediaLabPage() {
                     {projects.length ? projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>) : <option value="">{t("noProject")}</option>}
                   </select>
                   <Button onClick={saveToProject} disabled={!projectId || saving} className="h-10">
-                    {saving ? <LuLoaderCircle className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <LuSave aria-hidden="true" />}
+                    {saving ? <LoaderCircle className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <Save aria-hidden="true" />}
                     {saving ? t("saving") : t("saveInsight")}
                   </Button>
                 </div>
@@ -293,7 +293,7 @@ export default function MediaLabPage() {
                 <div>
                   <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("uses")}</h3>
                   <ul className="grid gap-2 sm:grid-cols-2">
-                    {result.suggestedUses.map((use) => <li key={use} className="flex gap-2 rounded-lg bg-muted/20 px-3 py-2 text-xs leading-5"><LuCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />{use}</li>)}
+                    {result.suggestedUses.map((use) => <li key={use} className="flex gap-2 rounded-lg bg-muted/20 px-3 py-2 text-xs leading-5"><Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />{use}</li>)}
                   </ul>
                 </div>
               )}
