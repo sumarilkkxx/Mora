@@ -6,6 +6,7 @@
 const { app, BrowserWindow, dialog, shell } = require("electron");
 const { fork } = require("child_process");
 const http = require("http");
+const { createRequire } = require("node:module");
 const { getStableServerPort } = require("./server-port.cjs");
 const path = require("path");
 const fs = require("fs");
@@ -119,8 +120,10 @@ async function startServer(port) {
   fs.mkdirSync(dataDir, { recursive: true });
   fs.writeFileSync(path.join(app.getPath("userData"), "api-token"), apiToken, { mode: 0o600 });
 
-  const ffmpegPath = resolveBinary(() => require("ffmpeg-static"));
-  const ffprobePath = resolveBinary(() => require("@ffprobe-installer/ffprobe").path);
+  // Share the server's bundled media tools; do not ship a second copy in app.asar.
+  const mediaRequire = app.isPackaged ? createRequire(entry) : require;
+  const ffmpegPath = resolveBinary(() => mediaRequire("ffmpeg-static"));
+  const ffprobePath = resolveBinary(() => mediaRequire("@ffprobe-installer/ffprobe").path);
 
   // Route the child's stdout/stderr to the diagnostics log via a real file descriptor rather than "inherit".
   // Critical on Windows: a packaged GUI (windowed) exe has no console, so the inherited stdout/stderr handles are
@@ -262,6 +265,7 @@ app.whenReady().then(async () => {
   // (triggers better-sqlite3 load + migrate under the Electron Node ABI); no window is opened, exits immediately
   if (process.env.HEADLESS_SMOKE) {
     try {
+      await require("./runtime-check.cjs").checkRuntime(serverEntry());
       await checkServer(url, apiToken);
       console.log("SMOKE_OK", url, "DATA_DIR=" + path.join(app.getPath("userData"), "data"));
       killServer();

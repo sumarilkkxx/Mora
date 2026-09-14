@@ -96,6 +96,9 @@ jobs:
       - name: Prepare and verify bundled media binaries
         run: pnpm media:prepare
 
+      - name: Test desktop payload pruning
+        run: node --test scripts/desktop-payload.test.cjs
+
       - name: Test
         run: pnpm test
 
@@ -145,8 +148,8 @@ jobs:
           app_binary="$app_path/Contents/MacOS/Mora"
           file "$app_binary" | grep -q '${{ matrix.expected_arch }}'
 
-          ffmpeg_path="$(find "$app_path/Contents/Resources/app.asar.unpacked/node_modules/ffmpeg-static" -type f -name ffmpeg -print -quit)"
-          ffprobe_path="$(find "$app_path/Contents/Resources/app.asar.unpacked/node_modules/@ffprobe-installer" -type f -name ffprobe -print -quit)"
+          ffmpeg_path="$(find "$app_path/Contents/Resources/standalone/node_modules/ffmpeg-static" -type f -name ffmpeg -print -quit)"
+          ffprobe_path="$(find "$app_path/Contents/Resources/standalone/node_modules/@ffprobe-installer" -type f -name ffprobe -print -quit)"
           test -x "$ffmpeg_path"
           test -x "$ffprobe_path"
           "$ffmpeg_path" -version
@@ -156,6 +159,10 @@ jobs:
 
           hdiutil detach "$mount_dir"
           trap - EXIT
+
+      - name: Report installer size
+        run: |
+          node -e "const fs = require('node:fs'); for (const name of fs.readdirSync('release').filter(n => /\.(exe|dmg)$/.test(n))) console.log(name + ': ' + (fs.statSync('release/' + name).size / 1024 ** 2).toFixed(1) + ' MiB');"
 
       - name: Upload installer
         uses: actions/upload-artifact@v6

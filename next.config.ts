@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Preserve video uploads through the API proxy; the upload route enforces 1 GiB.
+  experimental: { proxyClientMaxBodySize: 1024 ** 3 },
   // Keep development and production compiler state separate. On Windows, running
   // `next build` while the dev server is open can otherwise corrupt Turbopack's
   // shared persistence files and leave the UI stuck compiling the error route.
@@ -18,7 +20,7 @@ const nextConfig: NextConfig = {
   // .next/standalone, which then shipped inside every desktop installer (issue: 330MB dmg).
   // data/ is a runtime-created directory (Electron uses userData anyway), never a build input.
   outputFileTracingExcludes: {
-    "/**": ["./.git/**", "./.github/**", "./.next-dev/**", "./data/**", "./docs/**", "./tasks/**", "./release/**", "./e2e/**", "./remotion/**"],
+    "/**": ["./.pnpm-store/**", "./assets/readme/**", "./.git/**", "./.github/**", "./.next-dev/**", "./data/**", "./docs/**", "./tasks/**", "./release/**", "./e2e/**", "./evals/**", "./.scratch/**", "./test-results/**", "./playwright-report/**", "./remotion/**"],
   },
 };
 
