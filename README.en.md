@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v0.1.2.0-087BDF?style=flat-square" alt="Version v0.1.2.0">
+  <img src="https://img.shields.io/badge/version-v0.2.0.0-087BDF?style=flat-square" alt="Version v0.2.0.0">
   <img src="https://img.shields.io/badge/license-AGPL--3.0--only-28526F?style=flat-square" alt="License AGPL-3.0-only">
   <img src="https://img.shields.io/badge/local--first-FFmpeg%20%2B%20SQLite-0D355A?style=flat-square" alt="Local-first with FFmpeg and SQLite">
   <img src="https://img.shields.io/badge/status-alpha-087BDF?style=flat-square" alt="Status alpha">
@@ -330,14 +330,14 @@ pnpm dist:win
 pnpm dist:mac
 ```
 
-GitHub Actions includes Windows x64, macOS Apple Silicon, and macOS Intel build jobs, followed by installer verification and packaged-app smoke tests. The current `v0.1.2.0` build configuration does not enable code signing, and macOS installers are not notarized. On first launch, you may need to allow the macOS app manually in Privacy & Security.
+GitHub Actions includes Windows x64, macOS Apple Silicon, and macOS Intel build jobs, followed by installer verification and packaged-app smoke tests. The current `v0.2.0.0` build configuration does not enable code signing, and macOS installers are not notarized. On first launch, you may need to allow the macOS app manually in Privacy & Security.
 
 | Version layer | Current convention |
 | --- | --- |
-| Git tag | `v0.1.2.0` |
-| npm / Electron SemVer | `0.1.2` |
-| Windows FileVersion | `0.1.2.0` |
-| Artifacts | `Mora-Setup-v0.1.2.0-win-x64.exe` / `Mora-v0.1.2.0-mac-<arch>.dmg` |
+| Git tag | `v0.2.0.0` |
+| npm / Electron SemVer | `0.2.0` |
+| Windows FileVersion | `0.2.0.0` |
+| Artifacts | `Mora-Setup-v0.2.0.0-win-x64.exe` / `Mora-v0.2.0.0-mac-<arch>.dmg` |
 
 ## HTTP API and automation surfaces
 
@@ -353,7 +353,7 @@ GitHub Actions includes Windows x64, macOS Apple Silicon, and macOS Intel build 
 
 ## Known limitations
 
-`v0.1.2.0` is an alpha release with the following known limitations:
+`v0.2.0.0` is an alpha release with the following known limitations:
 
 - Login walls, client-side rendering, CAPTCHAs, anti-bot controls, and cookie isolation on Taobao, Tmall, and other marketplaces can prevent product-link ingestion. The reliable fallback today is manual product data or uploaded screenshots.
 - Automatic scripting requires a reachable text model. An unavailable endpoint, exhausted quota, or regional restriction can cause generation to fail; fully offline use requires an imported script or local Ollama.

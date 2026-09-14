@@ -2,6 +2,8 @@ name: Build and release desktop apps
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
   push:
     tags: ["v*"]
 
@@ -29,6 +31,7 @@ jobs:
         run: git fetch origin main:refs/remotes/origin/main --no-tags
 
       - name: Require main as the release source
+        if: github.event_name != 'pull_request'
         shell: bash
         run: |
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && "${GITHUB_REF}" != "refs/heads/main" ]]; then
@@ -105,7 +108,7 @@ jobs:
       - name: Build package
         run: ${{ matrix.command }}
         env:
-          # v0.1.2.0 intentionally ships unsigned: the project does not use paid Apple/Windows
+          # v0.2.0.0 intentionally ships unsigned: the project does not use paid Apple/Windows
           # signing certificates yet. Passing empty CSC_* values makes electron-builder treat
           # the workspace directory as a certificate path, so signing must be disabled explicitly.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
@@ -181,6 +184,9 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout release notes
+        uses: actions/checkout@v6
+
       - name: Download installers
         uses: actions/download-artifact@v7
         with:
@@ -215,7 +221,7 @@ jobs:
             gh release create "${GITHUB_REF_NAME}" release-assets/* \
               --repo "${GITHUB_REPOSITORY}" \
               --verify-tag \
-              --generate-notes \
+              --notes-file "docs/releases/${GITHUB_REF_NAME}.md" \
               --prerelease \
               --title "Mora ${GITHUB_REF_NAME}"
           fi

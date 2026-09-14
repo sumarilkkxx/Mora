@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v0.1.2.0-087BDF?style=flat-square" alt="Version v0.1.2.0">
+  <img src="https://img.shields.io/badge/version-v0.2.0.0-087BDF?style=flat-square" alt="Version v0.2.0.0">
   <img src="https://img.shields.io/badge/license-AGPL--3.0--only-28526F?style=flat-square" alt="License AGPL-3.0-only">
   <img src="https://img.shields.io/badge/local--first-FFmpeg%20%2B%20SQLite-0D355A?style=flat-square" alt="Local-first with FFmpeg and SQLite">
   <img src="https://img.shields.io/badge/status-alpha-087BDF?style=flat-square" alt="Status alpha">
@@ -330,14 +330,14 @@ pnpm dist:win
 pnpm dist:mac
 ```
 
-GitHub Actions 已配置 Windows x64、macOS Apple Silicon 和 macOS Intel 构建任务，并对最终安装包执行校验和启动冒烟测试。当前 `v0.1.2.0` 的构建配置未启用代码签名，macOS 安装包也未经过公证。首次打开 macOS 应用时，可能需要在“隐私与安全性”中手动允许。
+GitHub Actions 已配置 Windows x64、macOS Apple Silicon 和 macOS Intel 构建任务，并对最终安装包执行校验和启动冒烟测试。当前 `v0.2.0.0` 的构建配置未启用代码签名，macOS 安装包也未经过公证。首次打开 macOS 应用时，可能需要在“隐私与安全性”中手动允许。
 
 | 版本层 | 当前约定 |
 | --- | --- |
-| Git 标签 | `v0.1.2.0` |
-| npm / Electron SemVer | `0.1.2` |
-| Windows FileVersion | `0.1.2.0` |
-| 安装包 | `Mora-Setup-v0.1.2.0-win-x64.exe` / `Mora-v0.1.2.0-mac-<arch>.dmg` |
+| Git 标签 | `v0.2.0.0` |
+| npm / Electron SemVer | `0.2.0` |
+| Windows FileVersion | `0.2.0.0` |
+| 安装包 | `Mora-Setup-v0.2.0.0-win-x64.exe` / `Mora-v0.2.0.0-mac-<arch>.dmg` |
 
 ## HTTP API 与自动化入口
 
@@ -353,7 +353,7 @@ GitHub Actions 已配置 Windows x64、macOS Apple Silicon 和 macOS Intel 构�
 
 ## 当前已知限制
 
-`v0.1.2.0` 为 alpha 版本，目前存在以下限制：
+`v0.2.0.0` 为 alpha 版本，目前存在以下限制：
 
 - 淘宝、天猫等电商平台的登录墙、动态渲染、验证码、风控和 Cookie 隔离可能导致商品链接无法解析；当前可靠回退方式是手动填写商品信息或上传商品截图。
 - 自动脚本依赖可访问的文本模型；云端端点不可用、额度不足或地区受限时会生成失败，完全离线使用需要手动导入脚本或配置本机 Ollama。
