@@ -4,6 +4,26 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { prunePayload, verifyPayload } = require('./desktop-payload.cjs');
+const { createRequire } = require('node:module');
+const { stageMedia } = require('./stage-media.cjs');
+
+test('repairs a trace missing the platform ffprobe executable using installed packages', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mora-media-'));
+  const sourceRequire = createRequire(path.join(process.cwd(), 'package.json'));
+  try {
+    const target = path.join(root, 'node_modules/@ffprobe-installer/ffprobe');
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.cpSync(path.dirname(sourceRequire.resolve('@ffprobe-installer/ffprobe/package.json')), target, { recursive: true });
+    const stagedRequire = createRequire(path.join(root, 'server.js'));
+    assert.throws(() => stagedRequire('@ffprobe-installer/ffprobe'), /Cannot find module/);
+    stageMedia(process.cwd(), root);
+    for (const binary of [stagedRequire('ffmpeg-static'), stagedRequire('@ffprobe-installer/ffprobe').path]) {
+      assert.ok(fs.existsSync(binary));
+      assert.ok(fs.realpathSync(binary).startsWith(fs.realpathSync(root) + path.sep));
+      require('node:child_process').execFileSync(binary, ['-version'], { stdio: 'pipe', timeout: 30000 });
+    }
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
 
 test('keeps the full target ASR runtime and media tools while removing caches and foreign binaries', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mora-payload-'));

@@ -31,6 +31,7 @@ for (const [from, to] of copies) {
 }
 
 // Prune the staged copy only, retaining the complete ASR engine for this target.
+require("./stage-media.cjs").stageMedia(root, standalone);
 const { prunePayload, reportPayload } = require("./desktop-payload.cjs");
 prunePayload(standalone);
 reportPayload(standalone);
