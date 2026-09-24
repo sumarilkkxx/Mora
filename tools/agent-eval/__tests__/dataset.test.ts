@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -11,6 +11,7 @@ import { AgentEvaluationRecorder } from "../core/trace";
 import { assertDatasetIsolation, parseEvaluationDataset, selectBalancedEvaluationCases } from "../core/dataset";
 
 const load = (name: string) => parseEvaluationDataset(JSON.parse(readFileSync(join(process.cwd(), "tools", "agent-eval", "datasets", `${name}.json`), "utf8")));
+const holdoutSourcesAvailable = load("holdout").cases.every(item => existsSync(join(process.cwd(), item.source.path)));
 const directories: string[] = [];
 afterEach(async () => { await Promise.all(directories.splice(0).map(directory => rm(directory, { recursive: true, force: true }))); });
 
@@ -38,6 +39,13 @@ describe("agent evaluation datasets", () => {
     expect(() => assertDatasetIsolation([smoke, dev, holdout])).not.toThrow();
     const manifest = readFileSync(join(process.cwd(), holdout.sourceManifest.path));
     expect(createHash("sha256").update(manifest).digest("hex")).toBe(holdout.sourceManifest.sha256);
+    const manifestSources = (JSON.parse(manifest.toString("utf8")) as { sources: unknown[] }).sources;
+    expect(manifestSources).toHaveLength(holdout.cases.length);
+    expect(manifestSources).toEqual(expect.arrayContaining(holdout.cases.map(item => expect.objectContaining(item.source))));
+  });
+
+  it.skipIf(!holdoutSourcesAvailable)("verifies local holdout source hashes when source media is available", () => {
+    const holdout = load("holdout");
     for (const item of holdout.cases) {
       const source = readFileSync(join(process.cwd(), item.source.path));
       expect(createHash("sha256").update(source).digest("hex"), item.caseId).toBe(item.source.sha256);
