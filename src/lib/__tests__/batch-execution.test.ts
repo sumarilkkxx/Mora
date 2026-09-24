@@ -68,10 +68,13 @@ describe("batch execution ownership", () => {
     const before = Date.now();
     fake.db.update(compositions).set({ status: "done" }).where(eq(compositions.id, "render")).run();
     fake.db.insert(compositions).values({ id: "cloud", projectId: "completion-project", createdAt, status: "done" }).run();
+    const after = Date.now();
+    const clockToleranceMs = 1_000;
     for (const id of ["render", "cloud"]) {
       const row = fake.db.select().from(compositions).where(eq(compositions.id, id)).get()!;
       expect(row.createdAt).toEqual(createdAt);
-      expect(row.completedAt!.getTime()).toBeGreaterThanOrEqual(before);
+      expect(row.completedAt!.getTime()).toBeGreaterThanOrEqual(before - clockToleranceMs);
+      expect(row.completedAt!.getTime()).toBeLessThanOrEqual(after + clockToleranceMs);
     }
   });
   it("migrates existing completed work without making it appear newly completed", () => {
