@@ -6,7 +6,7 @@ import {
   filmRequestSeconds,
   FILM_MAX_SECONDS,
 } from "@/lib/storyboard-film";
-import type { Shot, ScriptCharacter } from "@/lib/db/schema";
+import type { Shot, ScriptCharacter } from "@/lib/domain/script";
 
 /**
  * Grid-to-film prompt contract (v0.8.84). The exact shape was field-proven on a

@@ -18,8 +18,10 @@ app.whenReady().then(async () => {
       res.end(JSON.stringify({ token: req.headers["x-mora-token"] ?? null }));
     } else { res.setHeader("content-type", "text/html"); res.end("<!doctype html><title>API fixture</title>"); }
   });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const origin = `http://127.0.0.1:${server.address().port}`;
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve(undefined)));
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("Desktop API fixture did not expose a TCP port");
+  const origin = `http://127.0.0.1:${address.port}`;
   const window = new BrowserWindow({ show: false, webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });
   installApiCredentials(window, origin, "fixture");
   await window.loadURL(origin);

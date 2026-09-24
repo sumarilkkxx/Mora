@@ -15,7 +15,7 @@ import {
   type ScriptGenerationInput,
   type TopicScriptInput,
 } from "./prompts";
-import type { Shot, ScriptCharacter } from "@/lib/db/schema";
+import type { Shot, ScriptCharacter } from "@/lib/domain/script";
 import { createLLMClient, withLLMErrors, LLMRequestError, jsonModeParams } from "@/lib/llm-error";
 import { stripThinkBlocks } from "@/lib/llm-clean";
 

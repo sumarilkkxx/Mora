@@ -8,7 +8,7 @@
  * Pure function, unit-testable; displayed on the script page in the UI.
  */
 import { checkScriptCompliance } from "./ad-compliance";
-import type { Shot } from "./db/schema";
+import type { Shot } from "@/lib/domain/script";
 
 export type CheckStatus = "pass" | "warn" | "fail";
 export type CheckKey = "compliance" | "hook" | "duration" | "caption" | "cta" | "structure" | "aigc" | "productEarly";

@@ -138,6 +138,19 @@ export async function POST(req: NextRequest) {
       taskId,
       keyframePath,
     });
+    if (!rowId) {
+      return NextResponse.json({
+        error: errText(
+          req,
+          `云端任务已提交，但恢复记录保存失败。请立即保存任务 ID ${taskId}，不要重复提交。`,
+          `The cloud task was submitted, but its recovery record could not be saved. Save task ID ${taskId} now and do not resubmit.`,
+        ),
+        taskId,
+        modelId,
+        persistenceFailed: true,
+        recoverable: false,
+      }, { status: 503 });
+    }
 
     // Background mode ends the paid submit request here. The global task center owns
     // status checks and final persistence, so navigation or closing this page cannot

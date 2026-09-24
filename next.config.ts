@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
   // .next/standalone, which then shipped inside every desktop installer (issue: 330MB dmg).
   // data/ is a runtime-created directory (Electron uses userData anyway), never a build input.
   outputFileTracingExcludes: {
-    "/**": ["./.pnpm-store/**", "./assets/readme/**", "./.git/**", "./.github/**", "./.next-dev/**", "./data/**", "./docs/**", "./tasks/**", "./release/**", "./e2e/**", "./evals/**", "./.scratch/**", "./test-results/**", "./playwright-report/**", "./remotion/**"],
+    "/**": ["./.pnpm-store/**", "./assets/readme/**", "./.git/**", "./.github/**", "./.next-dev/**", "./data/**", "./docs/**", "./tasks/**", "./tools/agent-eval/**", "./release/**", "./e2e/**", "./evals/**", "./.scratch/**", "./test-results/**", "./playwright-report/**", "./remotion/**"],
   },
 };
 

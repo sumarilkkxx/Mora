@@ -5,6 +5,7 @@ import { getDb } from "@/lib/db";
 import { compositions, projects } from "@/lib/db/schema";
 import { fileNameOf } from "@/lib/paths";
 import { extractFirstFrame } from "@/lib/video-composer/frame-extract";
+import { userVisibleProjects } from "@/lib/project-visibility";
 
 /** Poster backfill budget per request — keeps the first works-page load snappy on old libraries. */
 const BACKFILL_MAX = 6;
@@ -35,7 +36,7 @@ export async function GET() {
       })
       .from(compositions)
       .innerJoin(projects, eq(compositions.projectId, projects.id))
-      .where(and(eq(compositions.status, "done"), isNull(projects.deletedAt)))
+      .where(and(eq(compositions.status, "done"), isNull(projects.deletedAt), userVisibleProjects()))
       .orderBy(desc(compositions.createdAt))
       .limit(200);
 

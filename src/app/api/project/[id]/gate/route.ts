@@ -20,7 +20,7 @@ import {
 import { checkAiCommerceCompliance } from "@/lib/ai-commerce-compliance";
 import { computeRealMix, shotReality } from "@/lib/real-mix";
 import { apiError, errText } from "@/lib/api-error";
-import type { Shot } from "@/lib/db/schema";
+import type { Shot } from "@/lib/domain/script";
 
 const SAFE_ID = /^[a-zA-Z0-9\-]+$/;
 

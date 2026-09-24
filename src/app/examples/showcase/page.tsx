@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getExampleShowcase, getExampleTemplates } from "@/lib/examples";
-import type { Shot } from "@/lib/db/schema";
+import type { Shot } from "@/lib/domain/script";
 import { useT, useLocale } from "@/lib/i18n";
 
 // Shot type labels (label uses a showcase-namespace i18n key, resolved per language)

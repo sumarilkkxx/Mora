@@ -3,7 +3,6 @@
  * Classic viral script structures for cleaning supplies, storage, kitchenware, home textiles, etc.
  */
 
-import type { Shot } from "@/lib/db/schema";
 import type { ScriptTemplate } from "./beauty";
 
 export const homeTemplates: ScriptTemplate[] = [

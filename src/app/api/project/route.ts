@@ -6,6 +6,7 @@ import { compositions, projects } from "@/lib/db/schema";
 import { and, desc, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { productionModeForCreation, productionModeForVideoOrigin } from "@/lib/production-mode";
 import { normalizeTargetVideoDuration } from "@/lib/target-video-duration";
+import { userVisibleProjects } from "@/lib/project-visibility";
 
 // fetch project list, most recently edited first (the /start "continue" cards rely on this order)
 export async function GET(req: NextRequest) {
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
     const db = getDb();
     const includeTrash = req.nextUrl.searchParams.get("trash") === "1";
     const result = await db.select().from(projects)
-      .where(includeTrash ? isNotNull(projects.deletedAt) : isNull(projects.deletedAt))
+      .where(and(userVisibleProjects(), includeTrash ? isNotNull(projects.deletedAt) : isNull(projects.deletedAt)))
       .orderBy(desc(includeTrash ? projects.deletedAt : projects.updatedAt));
     if (result.length === 0) return NextResponse.json(result);
 

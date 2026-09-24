@@ -1,7 +1,7 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { proxy } from "@/proxy";
-import { internalApiHeaders } from "@/lib/internal-api";
+import { internalApiHeaders, trustedInternalApiOrigin } from "@/lib/internal-api";
 const url = "http://localhost:3457/api/project";
 afterEach(() => vi.unstubAllEnvs());
 describe("API request boundary", () => {
@@ -30,5 +30,13 @@ describe("API request boundary", () => {
   });
   it("uses the public host when Next normalizes its internal request URL", () => {
     expect(proxy(new NextRequest(url, { method: "POST", headers: { host: "127.0.0.1:3457", origin: "http://127.0.0.1:3457", "content-type": "application/json" } })).status).toBe(200);
+  });
+  it("never derives a credential-bearing self-request from an untrusted host", () => {
+    expect(trustedInternalApiOrigin("http://127.0.0.1:3457/api/project")).toBe("http://127.0.0.1:3457");
+    expect(() => trustedInternalApiOrigin("https://attacker.example/api/project")).toThrow(/MORA_SERVER_ORIGIN/);
+    vi.stubEnv("MORA_SERVER_ORIGIN", "http://127.0.0.1:4567");
+    expect(trustedInternalApiOrigin("https://attacker.example/api/project")).toBe("http://127.0.0.1:4567");
+    vi.stubEnv("MORA_SERVER_ORIGIN", "file:///tmp/mora");
+    expect(() => trustedInternalApiOrigin("http://127.0.0.1:3457/api/project")).toThrow(/HTTP/);
   });
 });

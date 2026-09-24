@@ -301,6 +301,7 @@ export abstract class BaseProvider implements AIProvider {
    * @returns Remote file URL after upload
    */
   protected async uploadMedia(fileUrl: string, uploadPath: string): Promise<string> {
+    void uploadPath
     // default implementation: return the original URL as-is (assumes platform supports remote URLs)
     // subclasses can override this method to implement platform-specific upload logic
     return fileUrl

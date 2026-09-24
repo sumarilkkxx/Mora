@@ -11,7 +11,7 @@ import { useSettingsStore } from "@/lib/stores/settings-store";
 import { notifyTaskSubmitted } from "@/lib/task-events";
 import { mergeCustomModels, buildImageOptions, buildVideoOptions, toEditVariant } from "@/lib/gen-params";
 import { useCharacterStore } from "@/lib/stores/project-store";
-import type { Shot } from "@/lib/db/schema";
+import type { Shot } from "@/lib/domain/script";
 import { buildAssetRows, shouldOfferStockFill, needsImageModelWarning, nextChainKeyframe, type AssetItem, chainByDefault } from "@/lib/assets-view";
 import { realMixFromRows, shotReality } from "@/lib/real-mix";
 import { buildMotionPrompt } from "@/lib/motion-prompt";
@@ -862,12 +862,17 @@ export default function AssetsPage() {
               prompt: genPrompt, provider: modelTarget.provider, model: genModel,
             }),
           });
-          if (saveRes.ok) {
-            const saved = await saveRes.json();
-            if (saved.filePath) savedUrl = saved.filePath;
+          const saved = await saveRes.json().catch(() => ({}));
+          if (!saveRes.ok || typeof saved.filePath !== "string") {
+            throw new Error(saved.error || t("errorGenerateFailed"));
           }
-        } catch {
-          // persist failure doesn't affect the preview (the composer will fall back to the product image as a safety net)
+          savedUrl = saved.filePath;
+        } catch (error) {
+          throw new Error(
+            error instanceof Error
+              ? `${t("errorGenerateFailed")}: ${error.message}`
+              : t("errorGenerateFailed"),
+          );
         }
         setAssets((prev) =>
           prev.map((a) => (a.shotId === shotId ? { ...a, status: "done", thumbnailUrl: savedUrl } : a))

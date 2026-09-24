@@ -6,7 +6,7 @@ import { useCharacterStore, useProjectStore } from "../project-store";
 import type { ProductItem } from "../product-library-store";
 import type { ScriptTemplate } from "../template-store";
 import type { Character } from "../project-store";
-import type { Shot } from "@/lib/db/schema";
+import type { Shot } from "@/lib/domain/script";
 
 // ==================== ProductLibrary Store Tests ====================
 

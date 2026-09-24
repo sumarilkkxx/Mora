@@ -14,7 +14,7 @@ import { estimateDurationSec } from "@/lib/script-import";
 import { reasoningParams } from "@/lib/script-engine/generator";
 import { createLLMClient, withLLMErrors } from "@/lib/llm-error";
 import { stripThinkBlocks } from "@/lib/llm-clean";
-import type { Shot } from "@/lib/db/schema";
+import type { Shot } from "@/lib/domain/script";
 
 export interface DubLLMConfig {
   baseUrl: string;

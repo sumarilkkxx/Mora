@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { stylePrompts, styleNameMap, styleFormGroups, type ScriptStyleType } from "@/lib/script-engine/prompts";
 import { validateCharacters } from "@/lib/script-engine/generator";
 import { assignCharacterVoices } from "@/lib/character-voices";
-import type { ScriptCharacter } from "@/lib/db/schema";
+import type { ScriptCharacter } from "@/lib/domain/script";
 
 describe("十风格体系（剧情形/物品形/口播形/场景形）", () => {
   const nonCustom = (Object.keys(styleNameMap) as ScriptStyleType[]).filter((s) => s !== "custom");

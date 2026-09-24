@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildStoryboardGridPrompt, computeGridCells, GRID_MAX_SHOTS, neutralizeStoryboardVisual } from "@/lib/storyboard-grid";
-import type { Shot, ScriptCharacter } from "@/lib/db/schema";
+import type { Shot, ScriptCharacter } from "@/lib/domain/script";
 
 const shot = (shotId: number, type: string, description: string) =>
   ({ shotId, type, duration: 3, description, voiceover: "词", visualSource: "ai_generate", transition: "cut" }) as unknown as Shot;

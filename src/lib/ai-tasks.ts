@@ -62,20 +62,16 @@ export async function updateAiTask(
   patch: { status?: AiTaskStatus; resultUrls?: string[]; error?: string | null }
 ): Promise<void> {
   if (!rowId) return;
-  try {
-    const db = getDb();
-    await db
-      .update(aiTasks)
-      .set({
-        ...(patch.status && { status: patch.status }),
-        ...(patch.resultUrls && { resultUrls: patch.resultUrls }),
-        ...(patch.error !== undefined && { error: patch.error }),
-        updatedAt: new Date(),
-      })
-      .where(eq(aiTasks.id, rowId));
-  } catch (error) {
-    console.error("ai_tasks 更新失败:", error);
-  }
+  const db = getDb();
+  await db
+    .update(aiTasks)
+    .set({
+      ...(patch.status && { status: patch.status }),
+      ...(patch.resultUrls && { resultUrls: patch.resultUrls }),
+      ...(patch.error !== undefined && { error: patch.error }),
+      updatedAt: new Date(),
+    })
+    .where(eq(aiTasks.id, rowId));
 }
 
 /** Update status/result by provider task ID (used by the standalone status/resume endpoint) */
@@ -84,20 +80,16 @@ export async function updateAiTaskByProviderTaskId(
   taskId: string,
   patch: { status?: AiTaskStatus; resultUrls?: string[]; error?: string | null }
 ): Promise<void> {
-  try {
-    const db = getDb();
-    await db
-      .update(aiTasks)
-      .set({
-        ...(patch.status && { status: patch.status }),
-        ...(patch.resultUrls && { resultUrls: patch.resultUrls }),
-        ...(patch.error !== undefined && { error: patch.error }),
-        updatedAt: new Date(),
-      })
-      .where(and(eq(aiTasks.provider, provider), eq(aiTasks.taskId, taskId)));
-  } catch (error) {
-    console.error("ai_tasks 更新失败:", error);
-  }
+  const db = getDb();
+  await db
+    .update(aiTasks)
+    .set({
+      ...(patch.status && { status: patch.status }),
+      ...(patch.resultUrls && { resultUrls: patch.resultUrls }),
+      ...(patch.error !== undefined && { error: patch.error }),
+      updatedAt: new Date(),
+    })
+    .where(and(eq(aiTasks.provider, provider), eq(aiTasks.taskId, taskId)));
 }
 
 /** Resolve the persisted context needed to finalize a recovered provider task. */

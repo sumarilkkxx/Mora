@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { desc, inArray } from "drizzle-orm";
+import { and, desc, inArray, isNull } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { projects, scripts as scriptsTable } from "@/lib/db/schema";
 import { fingerprintOf, homogeneityReport } from "@/lib/structure-fingerprint";
+import { userVisibleProjects } from "@/lib/project-visibility";
 
 /**
  * GET /api/insights/homogeneity?limit=8 — cross-project template self-check: fingerprints the latest
@@ -18,6 +19,7 @@ export async function GET(req: NextRequest) {
   const recent = await db
     .select({ id: projects.id, name: projects.name })
     .from(projects)
+    .where(and(isNull(projects.deletedAt), userVisibleProjects()))
     .orderBy(desc(projects.createdAt))
     .limit(limit);
   if (recent.length < 2) {

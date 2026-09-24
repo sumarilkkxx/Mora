@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq, desc } from "drizzle-orm";
 import { getDb } from "@/lib/db";
-import { scripts as scriptsTable, projects, type Shot } from "@/lib/db/schema";
+import { scripts as scriptsTable, projects } from "@/lib/db/schema";
+import type { Shot } from "@/lib/domain/script";
 import { translateShots, defaultVoiceForLang, langName } from "@/lib/script-engine/translate";
 import { apiError, errText } from "@/lib/api-error";
 

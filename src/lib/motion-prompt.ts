@@ -17,7 +17,7 @@
  *
  * Pure functions, unit-testable, no I/O.
  */
-import type { Shot } from "@/lib/db/schema";
+import type { Shot } from "@/lib/domain/script";
 import { REAL_FACE_CONSTRAINT } from "@/lib/presenters";
 import { emotionActingLine, shotEmotion } from "@/lib/emotion-acting";
 import type { ProductCategory } from "@/lib/script-engine/templates";

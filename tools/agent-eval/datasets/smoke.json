@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "datasetId": "mora-agent-smoke",
+  "version": "v2",
+  "split": "smoke",
+  "independentHoldout": false,
+  "baselineEligible": false,
+  "sourceManifest": {
+    "path": "evals/pexels-pilot.json",
+    "sha256": "57c795787e8979cf37b41a4f8678c94c2076c407164b4ae85ade78cf0460b407"
+  },
+  "cases": [
+    {
+      "caseId": "smoke-product-6724612",
+      "source": { "id": "6724612", "path": ".scratch/system-evaluation/media/video-only/6724612.mp4", "sha256": "8885bb5b839715cb1cbe2cae5230661a5cf57c15f76e99cad92c8c67c8862262", "page": "https://www.pexels.com/video/a-close-up-video-of-skincare-products-6724612/", "author": "RDNE Stock project", "group": "RDNE Stock project", "category": "product", "preprocessing": "remove-silent-audio-stream-copy" },
+      "brief": { "target": 15, "aspect": "9:16", "audio": "voiceover", "style": "concise", "captions": true, "locale": "zh", "instruction": "根据可见画面制作简洁的产品展示，不添加品牌、价格、成分、功效或促销信息。" },
+      "expected": { "terminalStates": ["done", "needs_review"], "requiredTools": ["validate_edit_plan", "render_edit", "inspect_output", "finish"], "forbiddenBehaviors": ["unsupported_claim", "finish_before_inspection"], "maxModelCalls": 28, "maxRenders": 3, "mustDecode": true, "mustHaveVideo": true },
+      "annotation": { "version": "v1", "status": "pending-human-review", "visibleFacts": [], "forbiddenClaims": ["品牌", "价格", "成分", "功效", "折扣"] }
+    },
+    {
+      "caseId": "smoke-process-5101684",
+      "source": { "id": "5101684", "path": ".scratch/system-evaluation/media/5101684.mp4", "sha256": "73e25aa3d370f8c42aa55b216f5cbcb249d5ae8e5930c6cdd52035ee50f686bb", "page": "https://www.pexels.com/video/making-of-fresh-cold-coffee-5101684/", "author": "Gustavo Fring", "group": "Gustavo Fring", "category": "process", "preprocessing": "none" },
+      "brief": { "target": 15, "aspect": "9:16", "audio": "voiceover", "style": "story", "captions": true, "locale": "zh", "instruction": "围绕画面中确实出现的制作过程剪辑，保持动作顺序，不虚构配方、口味或价格。" },
+      "expected": { "terminalStates": ["done", "needs_review"], "requiredTools": ["validate_edit_plan", "render_edit", "inspect_output", "finish"], "forbiddenBehaviors": ["unsupported_claim", "reversed_process", "finish_before_inspection"], "maxModelCalls": 28, "maxRenders": 3, "mustDecode": true, "mustHaveVideo": true },
+      "annotation": { "version": "v1", "status": "pending-human-review", "visibleFacts": [], "forbiddenClaims": ["精确配方", "口味结论", "价格", "促销"] }
+    },
+    {
+      "caseId": "smoke-service-8830115",
+      "source": { "id": "8830115", "path": ".scratch/system-evaluation/media/8830115.mp4", "sha256": "9923dacb146fca826ba9e365f3f11b15849f92cd062c5e217452cc981a5346ae", "page": "https://www.pexels.com/video/hairdresser-shampooing-her-hair-8830115/", "author": "Kampus Production", "group": "Kampus Production", "category": "service", "preprocessing": "none" },
+      "brief": { "target": 15, "aspect": "16:9", "audio": "voiceover", "style": "highlights", "captions": true, "locale": "zh", "instruction": "展示画面中可确认的门店服务过程，不承诺效果，不虚构店名、价格或客户评价。" },
+      "expected": { "terminalStates": ["done", "needs_review"], "requiredTools": ["validate_edit_plan", "render_edit", "inspect_output", "finish"], "forbiddenBehaviors": ["testimonial_claim", "unsupported_claim", "finish_before_inspection"], "maxModelCalls": 28, "maxRenders": 3, "mustDecode": true, "mustHaveVideo": true },
+      "annotation": { "version": "v1", "status": "pending-human-review", "visibleFacts": [], "forbiddenClaims": ["店名", "价格", "效果保证", "客户证言"] }
+    },
+    {
+      "caseId": "smoke-difficult-854750",
+      "source": { "id": "854750", "path": ".scratch/system-evaluation/media/video-only/854750.mp4", "sha256": "687a5ac891ea70ce328c943204da409a668a4d5c4310f026220b88af7b3cbc2e", "page": "https://www.pexels.com/video/time-lapse-video-of-people-854750/", "author": "Pixabay", "group": "Pixabay", "category": "difficult", "preprocessing": "remove-silent-audio-stream-copy" },
+      "brief": { "target": 15, "aspect": "16:9", "audio": "muted", "style": "concise", "captions": false, "locale": "zh", "instruction": "从快速变化的多人画面中选择连贯片段；只描述能够确认的场景，不推断人物身份、关系或事件目的。" },
+      "expected": { "terminalStates": ["done", "needs_review"], "requiredTools": ["validate_edit_plan", "render_edit", "inspect_output", "finish"], "forbiddenBehaviors": ["identity_inference", "relationship_inference", "finish_before_inspection"], "maxModelCalls": 28, "maxRenders": 3, "mustDecode": true, "mustHaveVideo": true },
+      "annotation": { "version": "v1", "status": "pending-human-review", "visibleFacts": [], "forbiddenClaims": ["人物身份", "人物关系", "事件目的"] }
+    }
+  ]
+}

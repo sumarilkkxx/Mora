@@ -105,6 +105,9 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Type-check Electron and Node scripts
+        run: pnpm typecheck:js
+
       - name: Build package
         run: ${{ matrix.command }}
         env:

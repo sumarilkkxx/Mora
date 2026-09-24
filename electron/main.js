@@ -130,6 +130,7 @@ async function startServer(port) {
   // invalid — Next's server.js writes its startup banner to stdout, the resulting EBADF/EPIPE surfaces as an
   // unhandled 'error' on the child's stdout stream and crashes the server before it ever binds the port, which the
   // user experiences as "clicked, nothing happened". A file descriptor is always a valid write target.
+  /** @type {number | "ignore"} */
   let outFd = "ignore";
   if (logFilePath) {
     try {
@@ -153,7 +154,7 @@ async function startServer(port) {
       ...(ffmpegPath ? { FFMPEG_PATH: ffmpegPath } : {}),
       ...(ffprobePath ? { FFPROBE_PATH: ffprobePath } : {}),
     },
-    stdio: ["ignore", outFd, outFd, "ipc"],
+    stdio: /** @type {import("node:child_process").StdioOptions} */ (["ignore", outFd, outFd, "ipc"]),
   });
 
   // Fail fast: if the child cannot spawn or dies during startup, waitReady stops polling immediately.

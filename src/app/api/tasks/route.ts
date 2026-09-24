@@ -5,6 +5,7 @@ import { aiTasks, autoEditRuns, batchJobItems, batchJobs, compositions, pipeline
 import { recoverAutoEdits } from "@/lib/auto-edit/runner";
 import { isPipelineRunActive } from "@/lib/pipeline-runner";
 import { ACTIVE_AI_TASK_STATUSES } from "@/lib/ai-tasks";
+import { userVisibleProjects } from "@/lib/project-visibility";
 
 /**
  * GET /api/tasks — the global task center feed: everything currently running (or
@@ -22,7 +23,7 @@ export async function GET() {
   try {
     const db = getDb();
     const projectName = new Map<string, string>();
-    for (const p of await db.select({ id: projects.id, name: projects.name }).from(projects).where(isNull(projects.deletedAt))) {
+    for (const p of await db.select({ id: projects.id, name: projects.name }).from(projects).where(and(isNull(projects.deletedAt), userVisibleProjects()))) {
       projectName.set(p.id, p.name);
     }
     const activeProjectIds = new Set(projectName.keys());

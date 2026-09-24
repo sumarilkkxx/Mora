@@ -333,7 +333,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     // Phase 1: submit, then persist the paid task ID before polling (issue #16)
     const { taskId, modelId } = await provider.submitVideoTask(videoOptions);
-    await recordAiTask({
+    const recoveryRowId = await recordAiTask({
       projectId: id,
       provider: providerName,
       model: modelId,
@@ -342,6 +342,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       prompt,
       taskId,
     });
+    if (!recoveryRowId) {
+      return NextResponse.json({
+        error: errText(
+          req,
+          `云端任务已提交，但恢复记录保存失败。请立即保存任务 ID ${taskId}，不要重复提交。`,
+          `The cloud task was submitted, but its recovery record could not be saved. Save task ID ${taskId} now and do not resubmit.`,
+        ),
+        taskId,
+        modelId,
+        persistenceFailed: true,
+        recoverable: false,
+      }, { status: 503 });
+    }
 
     // A one-call film can take minutes. Submission is the only foreground step;
     // the app-wide task center polls and persists the completed composition.

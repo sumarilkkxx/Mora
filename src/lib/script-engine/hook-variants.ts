@@ -9,7 +9,7 @@
  * these are "mechanism-level A/B drafts" (for testing which hook type converts better),
  * not word-polished final copy — refine after identifying the winning mechanism.
  */
-import type { Shot } from "../db/schema";
+import type { Shot } from "@/lib/domain/script";
 import type { ProductCategory } from "./templates";
 import { selectHookPatterns, type HookPattern } from "./hook-patterns";
 

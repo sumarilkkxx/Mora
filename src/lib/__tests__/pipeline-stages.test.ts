@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { PIPELINE_STAGES, isPipelineStage, stagesFrom, STAGE_LABEL_KEYS } from "../pipeline-stages";
+import { PIPELINE_STAGES, isPipelineStage, resumeStageAfterInterruption, stagesFrom, STAGE_LABEL_KEYS } from "../pipeline-stages";
 
 describe("pipeline stages（服务端全托管链阶段模型）", () => {
   it("阶段顺序固定：判官 → 配画面 → 合成", () => {
@@ -22,6 +22,12 @@ describe("pipeline stages（服务端全托管链阶段模型）", () => {
     expect(isPipelineStage("judge")).toBe(true);
     expect(isPipelineStage("done")).toBe(false);
     expect(isPipelineStage(null)).toBe(false);
+  });
+
+  it("中断恢复跳过可能已计费的模糊阶段，只重试本地合成", () => {
+    expect(resumeStageAfterInterruption("judge")).toBe("stock_fill");
+    expect(resumeStageAfterInterruption("stock_fill")).toBe("compose");
+    expect(resumeStageAfterInterruption("compose")).toBe("compose");
   });
 
   it("每个阶段都有进度文案 key（script 命名空间）", () => {

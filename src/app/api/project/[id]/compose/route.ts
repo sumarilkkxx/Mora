@@ -27,7 +27,7 @@ import { buildKaraokeAss } from "@/lib/video-composer/karaoke";
 import { isAudibleFromVolumedetect } from "@/lib/video-composer/audio-probe";
 import { buildComplianceOverlays } from "@/lib/compliance-overlays";
 import { fetchFreeBgm, moodQueryForCategory, moodQueryForMood } from "@/lib/free-bgm";
-import type { Shot, ScriptCharacter } from "@/lib/db/schema";
+import type { Shot, ScriptCharacter } from "@/lib/domain/script";
 import { assignCharacterVoices } from "@/lib/character-voices";
 import { readyAssetsByShot } from "@/lib/assets-view";
 import { desc, and } from "drizzle-orm";

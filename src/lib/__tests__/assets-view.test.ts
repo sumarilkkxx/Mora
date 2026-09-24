@@ -8,7 +8,7 @@ import {
   readyAssetsByShot,
   type SavedAssetRow,
 } from "@/lib/assets-view";
-import type { Shot } from "@/lib/db/schema";
+import type { Shot } from "@/lib/domain/script";
 
 // Create a minimal usable shot
 function shot(partial: Partial<Shot> & { shotId: number }): Shot {

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Shot, CharacterVoiceProfile } from "@/lib/db/schema";
+import type { Shot, CharacterVoiceProfile } from "@/lib/domain/script";
 
 // ==================== Character ====================
 

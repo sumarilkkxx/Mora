@@ -1,7 +1,7 @@
 // Onboarding example pack: sample products (one-click fill / import to product library), reference script structures, and homepage showcase.
 // Note: these are "official examples", fully separated from user-created data and clearly labelled — they will never appear under "My Projects".
 // Bilingual: copy is fetched by UI locale (getExampleProducts/Templates/Showcase(locale)).
-import type { Shot } from "@/lib/db/schema";
+import type { Shot } from "@/lib/domain/script";
 import type { Locale } from "@/lib/i18n/config";
 
 // Example product categories (aligned with ProductItem.category in the product library)

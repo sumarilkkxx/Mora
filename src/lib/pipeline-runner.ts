@@ -164,6 +164,8 @@ export async function startPipelineRun(input: StartPipelineInput): Promise<strin
         if (stage === "judge") await runJudgeStage(input);
         else if (stage === "stock_fill") await runStockFillStage(input);
         else await runComposeStage(input, run.id);
+        const next = stages[stages.indexOf(stage) + 1];
+        if (next) await setRun(run.id, { stage: next });
       }
       await setRun(run.id, { status: "done" });
     } catch (e) {

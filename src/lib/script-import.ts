@@ -10,7 +10,7 @@
  * description reuses the original sentence as a fallback search query for asset matching.
  */
 
-import type { Shot } from "@/lib/db/schema";
+import type { Shot } from "@/lib/domain/script";
 
 /** Sentence-ending punctuation (primary split boundary for shots) */
 const SENTENCE_DELIM = /[。！？!?\n]+/;

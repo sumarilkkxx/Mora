@@ -11,7 +11,7 @@
  *
  * Pure functions only (prompt building + duration math); the route does the I/O.
  */
-import type { Shot, ScriptCharacter } from "@/lib/db/schema";
+import type { Shot, ScriptCharacter } from "@/lib/domain/script";
 import { stripPauseMarks } from "@/lib/voice-markup";
 import { atlasVideoFamilyId } from "@/lib/atlas-video-models";
 
