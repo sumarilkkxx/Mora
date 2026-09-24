@@ -3,7 +3,6 @@
  * Classic viral script structures for snacks, beverages, ready meals, condiments, etc.
  */
 
-import type { Shot } from "@/lib/db/schema";
 import type { ScriptTemplate } from "./beauty";
 
 export const foodTemplates: ScriptTemplate[] = [

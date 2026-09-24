@@ -132,6 +132,7 @@ export interface ResolvedTTSConfig {
  * ready to send to the backend.
  */
 export function resolveTTSConfig(tts: TTSSettingLike | undefined, _providers: ProvidersLike): ResolvedTTSConfig {
+  void _providers;
   const meta = getTTSProviderMeta(tts?.provider);
   // baseUrl: for editable platforms use the user-provided value (fall back to default if blank); otherwise force the platform default
   const baseUrl = meta.editableBaseUrl ? (tts?.baseUrl || meta.baseUrl) : meta.baseUrl;

@@ -3,7 +3,6 @@
  * Classic viral script structures for women's wear, men's wear, shoes, bags, accessories, etc.
  */
 
-import type { Shot } from "@/lib/db/schema";
 import type { ScriptTemplate } from "./beauty";
 
 export const fashionTemplates: ScriptTemplate[] = [

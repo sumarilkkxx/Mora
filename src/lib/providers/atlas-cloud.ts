@@ -116,6 +116,7 @@ export class AtlasCloudProvider extends BaseProvider {
   }
 
   async generateImage(_options: ImageOptions): Promise<ImageResult> {
+    void _options
     throw new ProviderError('Atlas Cloud 当前在 Mora 中仅启用已校验的视频模型', 'UNSUPPORTED_MEDIA_TYPE', this.name)
   }
 

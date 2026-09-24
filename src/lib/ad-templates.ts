@@ -19,12 +19,13 @@
  * Pure data + pure functions. Names/taglines are bilingual data, not i18n keys
  * (same convention as BUILTIN_STYLE_PACKS / camera-presets / look-presets).
  */
-import type { Shot } from "@/lib/db/schema";
+import type { Shot } from "@/lib/domain/script";
 import type { StylePackCompose } from "@/lib/style-packs";
 import { getCameraPreset } from "@/lib/camera-presets";
 import { getLookPreset } from "@/lib/look-presets";
 import { isCaptionPreset } from "@/lib/caption-presets";
 import { checkAdCompliance } from "@/lib/ad-compliance";
+export { adTemplateAppliedKey, adTemplateStorageKey } from "@/lib/ad-template-storage";
 
 /**
  * Template groups — the browse taxonomy for a large library. Mirrors how
@@ -5735,16 +5736,6 @@ export function adTemplateScriptDirective(template: AdTemplate): string {
     lines.push(`运镜编排（对应类型的分镜按此填写 camera 字段）：${planLines.join("；")}。`);
   }
   return lines.join("");
-}
-
-/** localStorage key carrying a project's chosen ad template (client-side, same convention as template store). */
-export function adTemplateStorageKey(projectId: string): string {
-  return `mora-ad-template:${projectId}`;
-}
-
-/** localStorage key marking that the video page already applied the template's compose recipe once. */
-export function adTemplateAppliedKey(projectId: string): string {
-  return `mora-ad-template-applied:${projectId}`;
 }
 
 /* ==================== Shareable recipe format (template economy) ==================== */

@@ -3,7 +3,7 @@
  * Classic viral script structures for skincare, makeup, beauty devices, etc.
  */
 
-import type { Shot } from "@/lib/db/schema";
+import type { Shot } from "@/lib/domain/script";
 
 /** Script template structure for the beauty category */
 export interface ScriptTemplate {

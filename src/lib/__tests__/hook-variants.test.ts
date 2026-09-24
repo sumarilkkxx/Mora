@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildHookVariants } from "@/lib/script-engine/hook-variants";
-import type { Shot } from "@/lib/db/schema";
+import type { Shot } from "@/lib/domain/script";
 
 const mk = (o: Partial<Shot>): Shot => ({
   shotId: 1,

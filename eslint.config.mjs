@@ -5,6 +5,12 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    files: ["electron/**/*.{js,cjs,mjs}", "scripts/**/*.{js,cjs,mjs}", "bin/**/*.mjs"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
@@ -13,9 +19,6 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Electron main process and build scripts are Node CommonJS/ESM entry points, not subject to Next app lint rules
-    "electron/**",
-    "scripts/**",
     "release/**",
   ]),
 ]);

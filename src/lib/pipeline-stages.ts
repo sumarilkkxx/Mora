@@ -24,6 +24,17 @@ export function stagesFrom(from: unknown): PipelineStage[] {
   return PIPELINE_STAGES.slice(idx) as PipelineStage[];
 }
 
+/**
+ * Paid/best-effort stages are not replayed after an ambiguous process interruption.
+ * They may already have reached the provider even when the local completion write did not.
+ * Compose is local and recoverable, so it remains safe to retry.
+ */
+export function resumeStageAfterInterruption(stage: PipelineStage): PipelineStage {
+  if (stage === "judge") return "stock_fill";
+  if (stage === "stock_fill") return "compose";
+  return "compose";
+}
+
 /** script-namespace i18n key for each stage's progress line. */
 export const STAGE_LABEL_KEYS: Record<PipelineStage, string> = {
   judge: "autoJudging",

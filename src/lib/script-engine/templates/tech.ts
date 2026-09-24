@@ -3,7 +3,6 @@
  * Classic viral script structures for phone accessories, smart devices, PC peripherals, home appliances, etc.
  */
 
-import type { Shot } from "@/lib/db/schema";
 import type { ScriptTemplate } from "./beauty";
 
 export const techTemplates: ScriptTemplate[] = [

@@ -8,7 +8,7 @@
  *
  * Pure functions, unit-testable.
  */
-import type { ScriptCharacter } from "@/lib/db/schema";
+import type { ScriptCharacter } from "@/lib/domain/script";
 
 /**
  * Distinct-sounding zh-CN Edge voice pools. Order matters (assignment is positional per gender).

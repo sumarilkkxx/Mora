@@ -163,6 +163,13 @@
       "when": 1789257600000,
       "tag": "0023_review_recovery",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1790172253000,
+      "tag": "0024_agent_eval_projects",
+      "breakpoints": true
     }
   ]
 }

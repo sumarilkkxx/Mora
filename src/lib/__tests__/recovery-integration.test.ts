@@ -74,6 +74,16 @@ describe("recovery with migrated SQLite", () => {
     const saved = await readFile(join(directory, "uploads", task.keyframePath!.slice("/api/files/".length)));
     expect(saved.toString("base64")).toBe(imageUrl.split(",")[1]);
   });
+  it("does not report a paid submission as recoverable when its task row cannot be persisted", async () => {
+    sqlite.exec("CREATE TRIGGER reject_ai_task_insert BEFORE INSERT ON ai_tasks BEGIN SELECT RAISE(ABORT, 'fixture persistence failure'); END");
+    submit.mockResolvedValue({ taskId: "untracked-paid-task", modelId: "fixture" });
+    const response = await videoPost(new NextRequest("http://localhost/api/ai/video", {
+      method: "POST",
+      body: JSON.stringify({ provider: "fixture", model: "fixture", apiKey: "fixture", prompt: "fixture", projectId: "missing-project", shotId: 1, background: true }),
+    }));
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ taskId: "untracked-paid-task", persistenceFailed: true, recoverable: false });
+  });
   it("isolates two simultaneous renders' narration and cleans both workspaces after success/failure", async () => {
     await mkdir(join(directory, "uploads", "p"), { recursive: true });
     await writeFile(join(directory, "uploads", "p", "image.png"), "fixture");
@@ -123,6 +133,19 @@ describe("recovery with migrated SQLite", () => {
     expect(feed.active).toEqual([]);
     expect(feed.attention).toEqual([]);
     expect(feed.recent).toEqual([]);
+  });
+  it("keeps evaluation projects out of the user task center", async () => {
+    db.insert(schema.projects).values({ id: "evaluation", name: "[Eval] hidden", isInternal: true }).run();
+    db.insert(schema.pipelineRuns).values({
+      id: "evaluation-pipeline",
+      projectId: "evaluation",
+      status: "running",
+      stage: "compose",
+      createdAt: new Date(),
+    }).run();
+    const feed = await (await GET()).json();
+    expect(feed.active).toEqual([]);
+    expect(feed.attention).toEqual([]);
   });
   it.each([true, false])("retains keyframe after recovered video persistence (snapshot=%s)", async (snapshot) => {
     db.insert(schema.assets).values({ projectId: "p", shotId: 1, type: "ai_generated", filePath: "/api/files/p/newer.png", status: "done" }).run();

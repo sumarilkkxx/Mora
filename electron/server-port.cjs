@@ -12,7 +12,13 @@ function probePort(port) {
     server.unref();
     server.once("error", reject);
     server.listen(port, "127.0.0.1", () => {
-      const selected = server.address().port;
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        server.close();
+        reject(new Error("Unable to determine the selected local port"));
+        return;
+      }
+      const selected = address.port;
       server.close((error) => error ? reject(error) : resolve(selected));
     });
   });

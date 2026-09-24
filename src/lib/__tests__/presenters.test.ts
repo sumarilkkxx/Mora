@@ -3,7 +3,7 @@ import {PRESENTER_PRESETS, REAL_FACE_CONSTRAINT, realFaceLine, presenterPromptBl
 import { buildMotionPrompt } from "@/lib/motion-prompt";
 import { stylePrompts } from "@/lib/script-engine/prompts";
 import { buildAssetRows } from "@/lib/assets-view";
-import type { Shot } from "@/lib/db/schema";
+import type { Shot } from "@/lib/domain/script";
 
 describe("内置主播库与真实人脸约束", () => {
   it("6 个预设：id 唯一、性别合法、外观全部带素人特征描述", () => {

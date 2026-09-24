@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { checkPublishReadiness } from "@/lib/publish-readiness";
-import type { Shot } from "@/lib/db/schema";
+import type { Shot } from "@/lib/domain/script";
 
 const mk = (o: Partial<Shot>): Shot => ({
   shotId: 1,

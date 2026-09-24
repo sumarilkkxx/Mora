@@ -27,15 +27,17 @@ app.whenReady().then(async () => {
   });
   await new Promise((resolve, reject) => {
     server.once("error", reject);
-    server.listen(port, "127.0.0.1", resolve);
+    server.listen(port, "127.0.0.1", () => resolve(undefined));
   });
-  const origin = `http://127.0.0.1:${server.address().port}`;
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("Desktop storage fixture did not expose a TCP port");
+  const origin = `http://127.0.0.1:${address.port}`;
   window = new BrowserWindow({ show: false, webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });
   await window.loadURL(origin);
   if (phase === "seed") {
     await window.webContents.executeJavaScript('localStorage.setItem("mora-storage-regression", "preserved");');
     fs.mkdirSync(path.join(directory, "logs"), { recursive: true });
-    fs.writeFileSync(path.join(directory, "logs", "server.log"), `[main] fork 本地服务 pid=123 port=${server.address().port} entry=fixture\n`);
+    fs.writeFileSync(path.join(directory, "logs", "server.log"), `[main] fork 本地服务 pid=123 port=${address.port} entry=fixture\n`);
     fs.writeFileSync(path.join(directory, "expected-origin.txt"), origin);
   } else {
     assert.equal(origin, fs.readFileSync(path.join(directory, "expected-origin.txt"), "utf8"));

@@ -15,7 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { useT, useLocale } from "@/lib/i18n";
 import { RENDER_PRESETS, DEFAULT_RENDER_PRESET, type RenderPreset } from "@/lib/compose-presets";
 import { BUILTIN_STYLE_PACKS, parseStylePack, serializeStylePack, STYLE_PACK_FORMAT, type StylePack } from "@/lib/style-packs";
-import { decodeStoredAdTemplate, adTemplateStorageKey, adTemplateAppliedKey } from "@/lib/ad-templates";
+import { adTemplateStorageKey, adTemplateAppliedKey } from "@/lib/ad-template-storage";
 import { buildHookVariants } from "@/lib/script-engine/hook-variants";
 import type { ProductCategory } from "@/lib/script-engine/templates";
 import { CAPTION_PRESET_IDS } from "@/lib/caption-presets";
@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Shot } from "@/lib/db/schema";
+import type { Shot } from "@/lib/domain/script";
 
 // 视频片段
 interface VideoClipItem {
@@ -345,21 +345,34 @@ export default function VideoPage() {
   // template's compose recipe ONCE per project, through the same whitelisted style-pack
   // path — later manual tweaks are never overwritten on revisit.
   useEffect(() => {
+    let cancelled = false;
     try {
       const stored = localStorage.getItem(adTemplateStorageKey(id));
       if (!stored || localStorage.getItem(adTemplateAppliedKey(id))) return;
-      // decodes both builtin ids and inline AI custom templates (custom:<json>)
-      const tpl = decodeStoredAdTemplate(stored);
-      if (!tpl) return;
-      applyStylePack({
-        format: STYLE_PACK_FORMAT,
-        name: locale === "zh" ? tpl.name.zh : tpl.name.en,
-        compose: tpl.compose,
-      });
-      localStorage.setItem(adTemplateAppliedKey(id), "1");
+      void (async () => {
+        try {
+          const response = await fetch("/api/ad-template/resolve", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ stored }),
+          });
+          if (!response.ok || cancelled) return;
+          const { template: tpl } = await response.json() as { template?: { name: { zh: string; en: string }; compose: StylePack["compose"] } };
+          if (!tpl || cancelled) return;
+          applyStylePack({
+            format: STYLE_PACK_FORMAT,
+            name: locale === "zh" ? tpl.name.zh : tpl.name.en,
+            compose: tpl.compose,
+          });
+          localStorage.setItem(adTemplateAppliedKey(id), "1");
+        } catch {
+          // Template pre-fill is a convenience; keep the editor usable offline.
+        }
+      })();
     } catch {
       // localStorage unavailable — the pre-fill is a convenience, never a blocker
     }
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -578,7 +591,7 @@ export default function VideoPage() {
       const url: string = await new Promise((resolve, reject) => {
         const poll = setInterval(async () => {
           try {
-            const r = await fetch(`/api/project/${id}/compose`);
+            const r = await fetch(`/api/project/${id}/compose?compositionId=${encodeURIComponent(data.compositionId)}`);
             const d = await r.json();
             const c = d.composition;
             if (!c) return;

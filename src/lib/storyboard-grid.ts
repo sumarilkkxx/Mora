@@ -12,7 +12,7 @@
  *
  * Pure functions (prompt building + crop geometry); the route does the I/O.
  */
-import type { Shot, ScriptCharacter } from "@/lib/db/schema";
+import type { Shot, ScriptCharacter } from "@/lib/domain/script";
 import { REAL_FACE_CONSTRAINT, UGC_FIRST_FRAME_RULES } from "@/lib/presenters";
 
 export const GRID_ROWS = 3;

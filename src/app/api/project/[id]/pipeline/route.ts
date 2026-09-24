@@ -4,7 +4,8 @@ import { getDb } from "@/lib/db";
 import { pipelineRuns } from "@/lib/db/schema";
 import { apiError } from "@/lib/api-error";
 import { startPipelineRun, isPipelineRunActive, type PipelineLlmConfig } from "@/lib/pipeline-runner";
-import { isPipelineStage } from "@/lib/pipeline-stages";
+import { isPipelineStage, resumeStageAfterInterruption } from "@/lib/pipeline-stages";
+import { trustedInternalApiOrigin } from "@/lib/internal-api";
 
 const SAFE_ID = /^[a-zA-Z0-9\-]+$/;
 
@@ -66,9 +67,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const runId = await startPipelineRun({
       projectId: id,
       scriptId: scriptId ?? (resuming ? latest?.scriptId ?? undefined : undefined),
-      origin: process.env.MORA_SERVER_ORIGIN ?? req.nextUrl.origin,
+      origin: trustedInternalApiOrigin(req.nextUrl),
       llmConfig,
-      ...(resuming ? { fromStage: latest.stage } : {}),
+      ...(resuming ? { fromStage: resumeStageAfterInterruption(latest.stage) } : {}),
     });
     return NextResponse.json({ runId, resumed: resuming }, { status: 202 });
   } catch (error) {

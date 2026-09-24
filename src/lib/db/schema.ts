@@ -9,6 +9,7 @@ import type {
 } from "@/lib/production-system";
 import type { TimeRange, TranscriptDocument, TranscriptEditPlan } from "@/lib/transcript-editor";
 import type { GuidedEditPlanDocument, GuidedScene } from "@/lib/guided-edit";
+import type { CharacterVoiceProfile, ScriptCharacter, Shot } from "@/lib/domain/script";
 
 // Projects table
 export const projects = sqliteTable("projects", {
@@ -51,6 +52,9 @@ export const projects = sqliteTable("projects", {
   mediaInsights: text("media_insights", { mode: "json" }).$type<ProjectMediaInsight[]>().default([]),
   productionWorkflow: text("production_workflow", { mode: "json" }).$type<WorkflowStagePlan[]>(),
   versionSnapshots: text("version_snapshots", { mode: "json" }).$type<ProductionSnapshot[]>().default([]),
+  // Internal projects support source-only developer workflows without entering
+  // user-facing project, task, insight, or works feeds.
+  isInternal: integer("is_evaluation", { mode: "boolean" }).notNull().default(false),
   deletedAt: integer("deleted_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
@@ -396,63 +400,7 @@ export const settings = sqliteTable("settings", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
-// ===== Type definitions =====
-
-/** Video mode: determines the asset generation strategy */
-export type VideoMode =
-  | "product_closeup"   // Product close-up: original product image + motion effects, highest realism
-  | "graphic_montage"   // Graphic montage: product image + text cards + transition animations
-  | "scene_demo"        // Scene demo: AI-generated usage scenario (no faces)
-  | "live_presenter";   // Live presenter: on-screen character explains the product (requires a character or user-uploaded footage)
-
-/**
- * Script-defined character for dialogue-driven scripts (drama style): the LLM invents the cast per
- * script, so characters live inside the script row (NOT the global `characters` presenter library).
- * `gender` drives free multi-voice TTS assignment; `appearance` is the visual anchor injected into
- * every shot prompt featuring this character for cross-shot consistency.
- */
-export interface ScriptCharacter {
-  id: string;
-  name: string;
-  gender: "female" | "male";
-  /** One-line persona, e.g. "毒舌闺蜜，嘴狠心软" */
-  persona?: string;
-  /** Visual anchor: hair + outfit color + age band, e.g. "黑色长直发、米色针织衫、25岁" */
-  appearance?: string;
-}
-
-export interface Shot {
-  shotId: number;
-  type: "hook" | "pain_point" | "product_reveal" | "demo" | "social_proof" | "cta";
-  duration: number; // Seconds
-  description: string; // Scene description
-  camera: string; // Camera movement
-  visualSource: "ai_generate" | "product_image" | "user_upload";
-  transition: "ai_start_end" | "ai_reference" | "direct_concat" | "ffmpeg_fade";
-  voiceover: string; // Voiceover copy
-  prompt?: string; // AI image/video generation prompt
-  /** English stock-footage keywords for this shot (1-3), used to auto-match footage from free libraries (key for topic-based videos without a product) */
-  stockKeywords?: string[];
-  /** On-screen character ID, references the characters table (optional) */
-  characterId?: string;
-  /** Motion effect, only used for the product_image type */
-  motion?: "zoom_in_slow" | "pan_left" | "pan_right" | "ken_burns" | "static";
-  /** Text overlay (graphic montage mode) */
-  textOverlay?: {
-    text: string;
-    style: "title" | "subtitle" | "highlight" | "price";
-  };
-}
-
-/** Character voice preferences */
-export interface CharacterVoiceProfile {
-  /** Voice style description, e.g. "温柔女声" / "专业男声" */
-  style: string;
-  /** Speech-rate preference 0.8–1.5 */
-  speed?: number;
-  /** Emotional tone */
-  emotion?: "neutral" | "happy" | "serious" | "energetic";
-}
+// ===== Persistence-only type definitions =====
 
 /** Watermark configuration */
 export interface WatermarkConfig {

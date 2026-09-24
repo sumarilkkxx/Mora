@@ -18,7 +18,7 @@
  * Pure data + pure functions, no I/O. Preset names/prompts are bilingual data, not i18n
  * keys (same convention as BUILTIN_STYLE_PACKS / PRESENTER_PRESETS).
  */
-import type { Shot } from "@/lib/db/schema";
+import type { Shot } from "@/lib/domain/script";
 import { hasCameraConflict } from "@/lib/motion-prompt";
 
 export type CameraPresetCategory =

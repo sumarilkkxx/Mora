@@ -11,6 +11,7 @@ let sqlite: Database.Database;
 let db: ReturnType<typeof drizzle<typeof schema>>;
 vi.mock("@/lib/db", () => ({ getDb: () => db }));
 import { GET } from "@/app/api/project/route";
+import { GET as getWorks } from "@/app/api/works/route";
 
 beforeEach(() => {
   sqlite = new Database(":memory:");
@@ -23,12 +24,14 @@ it("keeps completed posters in trash without adding deleted projects to the acti
   db.insert(schema.projects).values([
     { id: "trash", name: "Deleted edit", deletedAt: new Date() },
     { id: "active", name: "Draft", productImages: ["/product.jpg"] },
+    { id: "evaluation", name: "[Eval] hidden", isInternal: true },
   ]).run();
   db.insert(schema.compositions).values([
     { id: "old", projectId: "trash", status: "done", thumbnailPath: "/output/trash/old.jpg", createdAt: new Date(1000) },
     { id: "latest", projectId: "trash", status: "done", thumbnailPath: "D:\\output\\trash\\final cover.jpg", createdAt: new Date(2000) },
     { id: "pending", projectId: "trash", status: "pending", createdAt: new Date(3000) },
     { id: "failed", projectId: "trash", status: "failed", thumbnailPath: "/output/trash/failed.jpg", createdAt: new Date(4000) },
+    { id: "evaluation-work", projectId: "evaluation", status: "done", outputPath: "/output/evaluation/result.mp4", thumbnailPath: "/output/evaluation/result.jpg", createdAt: new Date(5000) },
   ]).run();
 
   const trash = await (await GET(new NextRequest("http://localhost/api/project?trash=1"))).json();
@@ -38,4 +41,7 @@ it("keeps completed posters in trash without adding deleted projects to the acti
   const active = await (await GET(new NextRequest("http://localhost/api/project"))).json();
   expect(active).toHaveLength(1);
   expect(active[0]).toMatchObject({ id: "active", thumbnailUrl: null, productImages: ["/product.jpg"] });
+
+  const works = await (await getWorks()).json();
+  expect(works.works).toEqual([]);
 });

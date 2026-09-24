@@ -1,4 +1,4 @@
-import type { Shot } from "@/lib/db/schema";
+import type { Shot } from "@/lib/domain/script";
 
 /**
  * Asset page view row: derived from "shots of the selected script" + "persisted assets".

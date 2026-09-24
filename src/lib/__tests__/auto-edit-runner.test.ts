@@ -11,6 +11,7 @@ import { NextRequest } from "next/server";
 import { autoEditRuns, compositions, mediaSources, projects } from "../db/schema";
 import type { Action } from "../auto-edit/model";
 import type { Analysis, Checkpoint, EditBrief, EditPlan } from "../auto-edit/contract";
+import { createLimiter } from "../concurrency";
 
 const fake = vi.hoisted(() => ({ db: undefined as unknown as BetterSQLite3Database, action: vi.fn(), json: vi.fn(), render: vi.fn(), check: vi.fn() }));
 vi.mock("../db", () => ({ getDb: () => fake.db }));
@@ -121,6 +122,27 @@ describe("persisted AI editing lifecycle with controlled model responses", () =>
     expect(readRun(run.id).owner).toBe("another"); expect(fake.action).not.toHaveBeenCalled();
     await cancelAutoEdit(run.id, "p");
   });
+  it("runs two evaluation jobs without increasing default product concurrency", async () => {
+    fake.action.mockImplementation((_context, signal: AbortSignal) => new Promise((_, reject) => signal.addEventListener("abort", () => reject(new Error("Aborted")), { once: true })));
+    const evalRuns = [addRun("eval-concurrency-1"), addRun("eval-concurrency-2"), addRun("eval-concurrency-3")];
+    const productRun = addRun("product-concurrency");
+    const batchSchedule = createLimiter(2);
+    for (const run of evalRuns) startAutoEdit(run, credentials, { schedule: batchSchedule });
+    startAutoEdit(productRun, credentials);
+    await vi.waitFor(() => expect(fake.action).toHaveBeenCalledTimes(3));
+    expect(evalRuns.map(run => readRun(run.id).status).sort()).toEqual(["queued", "running", "running"]);
+    expect(readRun(productRun.id).status).toBe("running");
+    await Promise.all([...evalRuns, productRun].map(run => cancelAutoEdit(run.id, "p")));
+    await Promise.all([...evalRuns, productRun].map(run => waitRun(run.id)));
+  });
+  it("runs autonomous evaluations without asking for preferences or rewriting the fixed brief", async () => {
+    const run = addRun("autonomous-evaluation");
+    startAutoEdit(run, credentials, { interactionPolicy: "autonomous" });
+    expect((await waitRun(run.id)).status).toBe("done");
+    const allowedTools = fake.action.mock.calls.map(call => call[2] as string[]);
+    expect(allowedTools.every(tools => !tools.includes("request_input"))).toBe(true);
+    expect(allowedTools.every(tools => !tools.includes("update_edit_settings"))).toBe(true);
+  });
   it("exports and retries a saved manual operation without invoking the planning model", async () => {
     const manual = addRun("manual", { operation: "manual", plan }); startAutoEdit(manual, credentials);
     expect((await waitRun(manual.id)).status).toBe("done"); expect(fake.action).not.toHaveBeenCalled();
@@ -140,5 +162,24 @@ describe("persisted AI editing lifecycle with controlled model responses", () =>
     fake.check.mockResolvedValue({ technical: false, issues: ["bad duration"], review: [], duration: 31 });
     const run = addRun("budget"); startAutoEdit(run, credentials); expect((await waitRun(run.id)).status).toBe("failed");
     expect(fake.render.mock.calls.length).toBeLessThanOrEqual(3); expect(readRun(run.id).compositionId).toBeNull();
+  });
+  it("publishes the last verified evaluation render for review when later optimization exhausts its steps", async () => {
+    let revised = false;
+    fake.action.mockImplementation((context): Action => {
+      if (!context.currentPlan) return { tool: "validate_edit_plan", arguments: { plan } };
+      if (!context.render) {
+        if (revised) return { tool: "validate_edit_plan", arguments: { plan: { ...plan, clips: [{ ...plan.clips[0], start: 0.1 }] } } };
+        return { tool: "render_edit", arguments: {} };
+      }
+      if (!context.render.inspected) return { tool: "inspect_output", arguments: {} };
+      revised = true;
+      return { tool: "validate_edit_plan", arguments: { plan: { ...plan, clips: [{ ...plan.clips[0], start: 0.1 }] } } };
+    });
+    const run = addRun("evaluation-fallback");
+    startAutoEdit(run, credentials, { interactionPolicy: "autonomous" });
+    const result = await waitRun(run.id);
+    expect(result.status).toBe("needs_review");
+    expect(result.compositionId).not.toBeNull();
+    expect(fake.render).toHaveBeenCalledTimes(1);
   });
 });

@@ -45,9 +45,12 @@ const server = createServer(async (req, res) => {
     res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ id: randomUUID(), object: "chat.completion", created: Math.floor(Date.now()/1000), model: "local-test", choices: [{ index: 0, message: { role: "assistant", content: JSON.stringify(answer) }, finish_reason: "stop" }] }));
   } catch (error) { res.writeHead(500); res.end(String(error)); }
 });
-await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
-const endpoint = `http://127.0.0.1:${server.address().port}/v1`;
+await new Promise(resolve => server.listen(0, "127.0.0.1", () => resolve(undefined)));
+const address = server.address();
+if (!address || typeof address === "string") throw new Error("Local acceptance server did not expose a TCP port");
+const endpoint = `http://127.0.0.1:${address.port}/v1`;
 const credentials = { llm: { baseUrl: endpoint, apiKey: "local-acceptance-only", model: "test-text", visionModel: "test-vision" }, tts: { provider: "openai", baseUrl: endpoint, apiKey: "local-acceptance-only", model: "test-voice", voice: "test" } };
+/** @returns {Promise<any>} */
 async function request(path, body, options) {
   const response = await fetch(base + path, options || (body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}));
   const data = await response.json(); if (!response.ok) throw new Error(JSON.stringify(data)); return data;

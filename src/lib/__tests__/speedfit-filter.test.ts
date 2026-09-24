@@ -3,7 +3,7 @@ import { buildComposeInvocation, SPEEDFIT_MAX_RATIO, SPEEDFIT_MIN_RATIO, type Co
 import { buildAssetRows, nextChainKeyframe } from "@/lib/assets-view";
 import { modelSupportsLastFrame } from "@/lib/video-composer/transitions";
 import { buildMotionPrompt } from "@/lib/motion-prompt";
-import type { Shot } from "@/lib/db/schema";
+import type { Shot } from "@/lib/domain/script";
 
 /** Minimal compose config with a single video clip; overrides tweak the clip under test. */
 function cfg(clip: Partial<ComposeConfig["clips"][number]>): ComposeConfig {

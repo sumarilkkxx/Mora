@@ -111,7 +111,11 @@ export function defaultVoiceForTopic(topic) {
   return "en-US-AriaNeural";
 }
 
-/** Call the Mora HTTP API; throws with the backend error message on non-2xx responses */
+/**
+ * Call the Mora HTTP API; throws with the backend error message on non-2xx responses.
+ * @param {string} path
+ * @param {{ method?: string, body?: unknown, timeoutMs?: number }} [options]
+ */
 async function api(path, { method = "GET", body, timeoutMs = 600000 } = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -146,6 +150,8 @@ async function api(path, { method = "GET", body, timeoutMs = 600000 } = {}) {
  * concurrent composes (retries, A/B variants) exist. No-id fallback kept for older servers whose
  * GET does not support ?compositionId=. Client deadline (660s) intentionally exceeds the server-side
  * render timeout (600s, composer COMPOSE_TIMEOUT_MS) so slow-but-successful renders aren't misreported.
+ * @param {string} projectId
+ * @param {{ compositionId?: string, timeoutMs?: number, intervalMs?: number }} [options]
  */
 async function pollCompose(projectId, { compositionId, timeoutMs = 660000, intervalMs = 2500 } = {}) {
   const deadline = Date.now() + timeoutMs;

@@ -4,7 +4,8 @@ import { join } from "path";
 import { access } from "fs/promises";
 import { getDb } from "@/lib/db";
 import { getDataDir } from "@/lib/paths";
-import { scripts as scriptsTable, assets as assetsTable, type Shot } from "@/lib/db/schema";
+import { scripts as scriptsTable, assets as assetsTable } from "@/lib/db/schema";
+import type { Shot } from "@/lib/domain/script";
 import { fillShotStock, searchShotCandidates, persistCandidate, type ScoredStockCandidate } from "@/lib/stock-fill";
 import {
   shotQuery,
