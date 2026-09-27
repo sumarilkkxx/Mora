@@ -22,7 +22,10 @@ describe("desktop smoke checks", () => {
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const address = server.address() as { port: number };
     try {
-      const check = checkServer(`http://127.0.0.1:${address.port}`, "fixture", 100);
+      // Successful fixture requests still share a busy CI event loop with the
+      // full Vitest suite; keep only the intentional timeout case aggressive.
+      const timeoutMs = mode === "timeout" ? 100 : 2_000;
+      const check = checkServer(`http://127.0.0.1:${address.port}`, "fixture", timeoutMs);
       if (mode === "ok") await expect(check).resolves.toBeUndefined();
       else await expect(check).rejects.toThrow();
     } finally { server.closeAllConnections(); await new Promise<void>((resolve) => server.close(() => resolve())); }
