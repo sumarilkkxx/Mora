@@ -32,6 +32,12 @@ const workflow = readFileSync(workflowPath, "utf8");
 for (const marker of ["verify-e2e-matrix.mjs", "repeat: [1, 2]", "playwright-report-", "e2e-server.log", "NEXT_TELEMETRY_DISABLED"]) {
   if (!workflow.includes(marker)) throw new Error(`E2E matrix CI workflow is missing marker: ${marker}`);
 }
+const mediaPrepareIndex = workflow.indexOf("pnpm media:prepare");
+const matrixRunIndex = workflow.indexOf("pnpm test:e2e:run");
+if (mediaPrepareIndex < 0) throw new Error("E2E matrix CI workflow must prepare media binaries before running Playwright");
+if (matrixRunIndex < 0 || mediaPrepareIndex > matrixRunIndex) {
+  throw new Error("E2E matrix CI workflow must prepare media binaries before the hermetic matrix run");
+}
 if (/\$\{\{\s*secrets\./.test(workflow)) throw new Error("Hermetic E2E workflow must not consume repository secrets");
 
 const output = {
