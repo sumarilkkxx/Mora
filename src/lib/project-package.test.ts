@@ -108,6 +108,54 @@ describe("ProjectPackageService", () => {
     expect(snapshot).toContain("mora-file://output/final.mp4");
   });
 
+  it("normalizes Windows-style persisted paths and restores legacy backslash package URIs", async () => {
+    const projectId = "windows-path-project";
+    const uploads = join(root, "uploads", projectId);
+    await mkdir(uploads, { recursive: true });
+    await writeFile(join(uploads, "source.mp4"), "windows-source");
+    sqlite.prepare("insert into projects (id, name, product_images, media_insights, version_snapshots, is_evaluation) values (?, ?, ?, ?, ?, ?)")
+      .run(projectId, "Windows path project", "[]", "[]", "[]", 0);
+    sqlite.prepare("insert into media_sources (id, project_id, original_name, file_path, mime_type, size_bytes, duration, width, height, has_audio, status, progress, scene_status, scenes) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .run("windows-source", projectId, "source.mp4", `${uploads}\\source.mp4`, "video/mp4", 14, 1000, 1, 1, 0, "ready", 100, "ready", "[]");
+
+    const packagePath = join(root, "windows-path.mora");
+    const service = new ProjectPackageService({ database: sqlite, dataDir: root });
+    await service.export(projectId, packagePath);
+    const archive = new AdmZip(packagePath);
+    const snapshot = archive.readAsText("data/project.json");
+    expect(snapshot).toContain("mora-file://uploads/source.mp4");
+    expect(snapshot).not.toContain("mora-file://uploads\\\\source.mp4");
+
+    const legacySnapshot = Buffer.from(snapshot.replace("mora-file://uploads/source.mp4", "mora-file://uploads\\\\source.mp4"));
+    archive.updateFile("data/project.json", legacySnapshot);
+    const manifest = JSON.parse(archive.readAsText("manifest.json"));
+    const snapshotEntry = manifest.entries.find((entry: { path: string }) => entry.path === "data/project.json");
+    snapshotEntry.size = legacySnapshot.byteLength;
+    snapshotEntry.sha256 = sha256(legacySnapshot);
+    manifest.expandedBytes = manifest.entries.reduce((total: number, entry: { size: number }) => total + entry.size, 0);
+    archive.updateFile("manifest.json", Buffer.from(JSON.stringify(manifest, null, 2)));
+    const legacyPackagePath = join(root, "legacy-windows-path.mora");
+    archive.writeZip(legacyPackagePath);
+
+    const importedRoot = await mkdtemp(join(tmpdir(), "mora-project-windows-import-"));
+    roots.push(importedRoot);
+    const importedSqlite = new Database(":memory:");
+    importedSqlite.pragma("foreign_keys = ON");
+    migrate(drizzle(importedSqlite, { schema }), { migrationsFolder: join(process.cwd(), "drizzle") });
+    try {
+      await new ProjectPackageService({ database: importedSqlite, dataDir: importedRoot }).importPackage(legacyPackagePath);
+      const imported = importedSqlite.prepare("select file_path from media_sources where project_id = ?").get(projectId) as { file_path: string };
+      expect(imported.file_path).toBe(join(importedRoot, "uploads", projectId, "source.mp4"));
+      await expect(readFile(imported.file_path, "utf8")).resolves.toBe("windows-source");
+    } finally {
+      importedSqlite.close();
+    }
+
+    await rm(join(uploads, "source.mp4"));
+    await expect(service.export(projectId, join(root, "missing-windows-source.mora")))
+      .rejects.toMatchObject({ code: "SOURCE_FILE_MISSING" });
+  });
+
   it("round-trips project history and media into a new data root, then remaps a conflicting import", async () => {
     const projectId = "portable-project";
     const uploads = join(root, "uploads", projectId);

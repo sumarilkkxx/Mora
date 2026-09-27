@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import { lstat, mkdir, readdir, readFile, rename, rm, stat, statfs, writeFile } from "node:fs/promises";
-import { basename, dirname, join, resolve, sep } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import AdmZip from "adm-zip";
 import type Database from "better-sqlite3";
 
@@ -177,17 +177,44 @@ function replaceEvery(value: string, search: string, replacement: string): strin
   return search ? value.split(search).join(replacement) : value;
 }
 
+const PORTABLE_URI_ROOTS = [
+  "mora-file://uploads",
+  "mora-file://output",
+  "mora-api://uploads",
+  "mora-api://output",
+] as const;
+
+function normalizePortableUri(value: string): string {
+  for (const root of PORTABLE_URI_ROOTS) {
+    for (const separator of ["/", "\\"]) {
+      const prefix = `${root}${separator}`;
+      if (value.startsWith(prefix)) return `${root}/${value.slice(prefix.length).replace(/\\/g, "/")}`;
+    }
+  }
+  return value;
+}
+
+function replacePathRoot(value: string, root: string, replacement: string): string {
+  const forwardSlashRoot = root.replace(/\\/g, "/");
+  const roots = new Set([root, forwardSlashRoot, forwardSlashRoot.replace(/\//g, "\\")]);
+  let portable = value;
+  for (const candidate of roots) {
+    if (portable === candidate) return replacement;
+    portable = replaceEvery(portable, `${candidate}/`, `${replacement}/`);
+    portable = replaceEvery(portable, `${candidate}\\`, `${replacement}/`);
+  }
+  return portable;
+}
+
 function portableString(value: string, dataDir: string, projectId: string): string {
   const uploadRoot = join(dataDir, "uploads", projectId);
   const outputRoot = join(dataDir, "output", projectId);
   let portable = value;
-  portable = replaceEvery(portable, uploadRoot, "mora-file://uploads");
-  portable = replaceEvery(portable, outputRoot, "mora-file://output");
-  portable = replaceEvery(portable, uploadRoot.split(sep).join("/"), "mora-file://uploads");
-  portable = replaceEvery(portable, outputRoot.split(sep).join("/"), "mora-file://output");
+  portable = replacePathRoot(portable, uploadRoot, "mora-file://uploads");
+  portable = replacePathRoot(portable, outputRoot, "mora-file://output");
   portable = replaceEvery(portable, `/api/files/${projectId}/`, "mora-api://uploads/");
   portable = replaceEvery(portable, `/api/output/${projectId}/`, "mora-api://output/");
-  return portable;
+  return normalizePortableUri(portable);
 }
 
 const SENSITIVE_KEY = /(?:api.?key|access.?token|refresh.?token|authorization|cookie|credential|password|secret)/i;
@@ -243,6 +270,7 @@ function transformStructuredString(value: string, transform: (item: string) => s
 }
 
 function restorePortableString(value: string, dataDir: string, projectId: string): string {
+  const portable = normalizePortableUri(value);
   const mappings = [
     ["mora-file://uploads/", join(dataDir, "uploads", projectId)],
     ["mora-file://output/", join(dataDir, "output", projectId)],
@@ -250,11 +278,11 @@ function restorePortableString(value: string, dataDir: string, projectId: string
     ["mora-api://output/", `/api/output/${projectId}`],
   ] as const;
   for (const [prefix, root] of mappings) {
-    if (!value.startsWith(prefix)) continue;
-    const suffix = assertSafeRelative(value.slice(prefix.length));
+    if (!portable.startsWith(prefix)) continue;
+    const suffix = assertSafeRelative(portable.slice(prefix.length));
     return prefix.startsWith("mora-file") ? join(root, ...suffix.split("/")) : `${root}/${suffix}`;
   }
-  return value;
+  return portable;
 }
 
 function records(table: SnapshotTable | undefined): Record<string, unknown>[] {
@@ -319,6 +347,7 @@ function portableReferences(snapshot: ProjectSnapshot): string[] {
   const found = new Set<string>();
   const visit = (value: unknown): void => {
     if (typeof value === "string") {
+      const portable = normalizePortableUri(value);
       const mappings = [
         ["mora-file://uploads/", "files/uploads/"],
         ["mora-file://output/", "files/output/"],
@@ -326,8 +355,8 @@ function portableReferences(snapshot: ProjectSnapshot): string[] {
         ["mora-api://output/", "files/output/"],
       ] as const;
       for (const [prefix, archivePrefix] of mappings) {
-        if (value.startsWith(prefix)) {
-          const raw = value.slice(prefix.length);
+        if (portable.startsWith(prefix)) {
+          const raw = portable.slice(prefix.length);
           let decoded = raw;
           try { decoded = decodeURIComponent(raw); } catch { /* keep literal path */ }
           found.add(`${archivePrefix}${assertSafeRelative(decoded)}`);
