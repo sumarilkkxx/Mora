@@ -305,13 +305,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
+          mapfile -t release_assets < <(find release-assets -type f -print | sort)
+
           # Browser-created releases already exist when their tag triggers this workflow.
           # Preserve their release notes and attach the verified installers after all builds pass.
           if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
-            gh release upload "${GITHUB_REF_NAME}" release-assets/* \
+            gh release upload "${GITHUB_REF_NAME}" "${release_assets[@]}" \
               --repo "${GITHUB_REPOSITORY}" --clobber
           else
-            gh release create "${GITHUB_REF_NAME}" release-assets/* \
+            gh release create "${GITHUB_REF_NAME}" "${release_assets[@]}" \
               --repo "${GITHUB_REPOSITORY}" \
               --verify-tag \
               --notes-file "docs/releases/${GITHUB_REF_NAME}.md" \

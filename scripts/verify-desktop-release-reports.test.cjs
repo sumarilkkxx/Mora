@@ -37,3 +37,30 @@ test("requires all three verified desktop release reports and matching installer
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("accepts release reports nested by artifact upload while installers stay at the root", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "mora-release-reports-nested-"));
+  const reportDir = path.join(root, "test-results");
+  fs.mkdirSync(reportDir);
+  const report = (platform, arch, artifact) => ({
+    platform,
+    arch,
+    channel: "official",
+    releaseEligible: true,
+    artifact,
+    checkedAt: "2026-09-27T00:00:00.000Z",
+    signingExpectation: "unsigned-open-source",
+  });
+  try {
+    fs.writeFileSync(path.join(root, "Mora.exe"), "installer");
+    fs.writeFileSync(path.join(root, "Mora-arm64.dmg"), "installer");
+    fs.writeFileSync(path.join(root, "Mora-x64.dmg"), "installer");
+    fs.writeFileSync(path.join(reportDir, "desktop-release-windows-x64.json"), JSON.stringify(report("windows", "x64", "Mora.exe")));
+    fs.writeFileSync(path.join(reportDir, "desktop-release-macos-arm64.json"), JSON.stringify(report("macos", "arm64", "Mora-arm64.dmg")));
+    fs.writeFileSync(path.join(reportDir, "desktop-release-macos-x64.json"), JSON.stringify(report("macos", "x64", "Mora-x64.dmg")));
+
+    assert.equal(verifyDesktopReleaseReports(root).length, 3);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

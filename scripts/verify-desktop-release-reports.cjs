@@ -1,12 +1,26 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
+function findReleaseReports(rootDir) {
+  const reports = [];
+  const visit = currentDir => {
+    for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
+      const entryPath = path.join(currentDir, entry.name);
+      if (entry.isDirectory()) {
+        visit(entryPath);
+      } else if (entry.isFile() && /^desktop-release-.+\.json$/.test(entry.name)) {
+        reports.push(entryPath);
+      }
+    }
+  };
+  visit(rootDir);
+  return reports.sort();
+}
+
 function verifyDesktopReleaseReports(reportDir) {
-  const files = fs.readdirSync(reportDir)
-    .filter(name => /^desktop-release-.+\.json$/.test(name))
-    .sort();
+  const files = findReleaseReports(reportDir);
   if (files.length !== 3) throw new Error(`Expected 3 desktop release reports, found ${files.length}`);
-  const reports = files.map(name => JSON.parse(fs.readFileSync(path.join(reportDir, name), "utf8")));
+  const reports = files.map(file => JSON.parse(fs.readFileSync(file, "utf8")));
   const artifacts = new Set();
   for (const report of reports) {
     if (report.channel !== "official" || report.releaseEligible !== true) {
