@@ -49,6 +49,14 @@ if (!workflow.includes("ffmpeg -hide_banner -filters") || !workflow.includes("dr
 }
 if (/\$\{\{\s*secrets\./.test(workflow)) throw new Error("Hermetic E2E workflow must not consume repository secrets");
 
+const serverPath = resolve(root, "e2e/server.mjs");
+const server = readFileSync(serverPath, "utf8");
+for (const variable of ["FFMPEG_PATH", "FFPROBE_PATH"]) {
+  if (!server.includes(`${variable}: process.env.${variable}`)) {
+    throw new Error(`Isolated E2E server must forward the explicit media binary override: ${variable}`);
+  }
+}
+
 const output = {
   schemaVersion: 1,
   generatedAt: new Date().toISOString(),
