@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
 // brand configuration
 export interface BrandConfig {
@@ -27,7 +26,6 @@ interface BrandState {
 }
 
 export const useBrandStore = create<BrandState>()(
-  persist(
     (set) => ({
       brand: {
         id: crypto.randomUUID(),
@@ -57,9 +55,5 @@ export const useBrandStore = create<BrandState>()(
             watermark: { ...state.brand.watermark, ...updates },
           },
         })),
-    }),
-    {
-      name: "daihuo-jianshou-brand",
-    }
-  )
+    })
 );

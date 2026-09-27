@@ -8,6 +8,7 @@
 import { join, dirname } from "path";
 import { mkdir } from "fs/promises";
 import { ffmpegBin } from "@/lib/ffmpeg-path";
+import { runMediaProcess } from "@/lib/media-runtime";
 import { buildDrawtext, wrapCaption, resolveChineseFontFile, unshellFilter } from "./composer";
 
 export interface CardVfOpts {
@@ -99,9 +100,6 @@ export async function generateCard(o: {
   backgroundImagePath?: string;
   imageOverlay?: string;
 }): Promise<void> {
-  const { execFile } = await import("child_process");
-  const { promisify } = await import("util");
-  const run = promisify(execFile);
   const [c0, c1] = o.gradient ?? CARD_THEMES.xiaohongshu[0].gradient;
   const vf = buildCardVf({ text: o.text, width: o.width, fontFile: o.fontFile, fontSize: o.fontSize, fontColor: o.fontColor });
   await mkdir(dirname(o.outPath), { recursive: true });
@@ -112,10 +110,10 @@ export async function generateCard(o: {
       `drawbox=x=0:y=0:w=iw:h=ih:color=${o.imageOverlay ?? "black@0.38"}:t=fill`,
       vf,
     ].join(",");
-    await run(ffmpegBin(), ["-y", "-i", o.backgroundImagePath, "-vf", imageVf, "-frames:v", "1", o.outPath]);
+    await runMediaProcess(ffmpegBin(), ["-y", "-i", o.backgroundImagePath, "-vf", imageVf, "-frames:v", "1", o.outPath], { timeoutMs: 60_000, maxBuffer: 8 * 1024 * 1024 });
     return;
   }
-  await run(ffmpegBin(), [
+  await runMediaProcess(ffmpegBin(), [
     "-y",
     "-f",
     "lavfi",
@@ -126,7 +124,7 @@ export async function generateCard(o: {
     "-frames:v",
     "1",
     o.outPath,
-  ]);
+  ], { timeoutMs: 60_000, maxBuffer: 8 * 1024 * 1024 });
 }
 
 /** Maximum cards per carousel (Xiaohongshu allows up to ~18 images; cap conservatively). */

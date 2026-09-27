@@ -1,8 +1,7 @@
-import { execFile } from "child_process";
 import { mkdir, rm, writeFile } from "fs/promises";
 import { dirname, join } from "path";
-import { promisify } from "util";
 import { ffmpegBin } from "@/lib/ffmpeg-path";
+import { MediaRuntimeError, runMediaProcess } from "@/lib/media-runtime";
 import { getOutputDir } from "@/lib/paths";
 import {
   karaokeLinesFromWords,
@@ -21,7 +20,6 @@ import {
 import { buildKaraokeAss } from "@/lib/video-composer/karaoke";
 import { validateMediaFile } from "@/lib/media-validate";
 
-const execFileAsync = promisify(execFile);
 export const TRANSCRIPT_RENDER_TIMEOUT_MS = 15 * 60 * 1000;
 
 export interface TranscriptRenderInvocation {
@@ -148,13 +146,13 @@ export async function renderTranscriptEdit(input: RenderTranscriptEditInput): Pr
   await writeFile(filterPath, invocation.filterComplex, "utf8");
   const args = [...invocation.inputArgs, "-filter_complex_script", filterPath, ...invocation.outputArgs];
   try {
-    await withComposeSlot(() => execFileAsync(ffmpegBin(), args, { timeout: TRANSCRIPT_RENDER_TIMEOUT_MS, maxBuffer: 50 * 1024 * 1024 }));
+    await withComposeSlot(() => runMediaProcess(ffmpegBin(), args, { timeoutMs: TRANSCRIPT_RENDER_TIMEOUT_MS, maxBuffer: 50 * 1024 * 1024 }));
     if (!(await validateMediaFile(input.outputPath, "video"))) throw new Error("剪辑结果校验失败，请重试");
     return input.outputPath;
   } catch (error) {
     await rm(input.outputPath, { force: true }).catch(() => {});
     const details = error as { killed?: boolean; signal?: string; stderr?: string; message?: string };
-    if (details.killed || details.signal === "SIGTERM") throw new Error("文字剪辑超时，请缩短素材后重试");
+    if ((error instanceof MediaRuntimeError && error.code === "timeout") || details.killed || details.signal === "SIGTERM") throw new Error("文字剪辑超时，请缩短素材后重试");
     if (/no space left|ENOSPC/i.test(`${details.stderr || ""} ${details.message || ""}`)) throw new Error("磁盘空间不足，无法输出剪辑版本");
     throw error;
   } finally {

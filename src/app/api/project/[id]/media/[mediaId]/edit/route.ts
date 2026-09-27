@@ -71,7 +71,7 @@ export async function POST(
         compositionId: composition.id,
         status: "rendering",
       }).returning().get();
-      tx.update(projects).set({ status: "composing", productionMode: "local", updatedAt: new Date() }).where(eq(projects.id, id)).run();
+      tx.update(projects).set({ status: "composing", workflowMode: "transcript_edit", productionMode: "local", updatedAt: new Date() }).where(eq(projects.id, id)).run();
       return { revision, composition, edit };
     });
 

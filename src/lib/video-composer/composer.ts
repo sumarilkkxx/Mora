@@ -1,6 +1,7 @@
 import { join, dirname } from "path";
 import { getDataDir } from "@/lib/paths";
 import { ffmpegBin } from "@/lib/ffmpeg-path";
+import { runMediaProcess } from "@/lib/media-runtime";
 import { mkdir, writeFile, rm } from "fs/promises";
 import { existsSync } from "fs";
 import type { TransitionMode } from "./transitions";
@@ -936,8 +937,8 @@ export function withComposeSlot<T>(fn: () => Promise<T> | T): Promise<T> {
 }
 
 /** Classify low-level ffmpeg composition errors into actionable messages (pure function, unit-testable); returns null for unknown error types (to be rethrown as-is) */
-export function composeErrorMessage(e: { killed?: boolean; signal?: string; stderr?: string; message?: string }): string | null {
-  if (e.killed || e.signal === "SIGTERM") return "视频合成超时（已超过 10 分钟）——可能分镜过多或机器繁忙，请减少分镜或降到「快速」画质重试";
+export function composeErrorMessage(e: { code?: string; killed?: boolean; signal?: string; stderr?: string; message?: string }): string | null {
+  if (e.code === "timeout" || e.killed || e.signal === "SIGTERM") return "视频合成超时（已超过 10 分钟）——可能分镜过多或机器繁忙，请减少分镜或降到「快速」画质重试";
   const msg = `${e.stderr || ""} ${e.message || ""}`;
   if (/no space left|ENOSPC/i.test(msg)) return "磁盘空间不足，无法写出成片——请清理磁盘后重试";
   return null;
@@ -960,19 +961,15 @@ export async function composeVideo(config: ComposeConfig): Promise<string> {
   await writeFile(filterFile, inv.filterComplex, "utf8");
   const args = [...inv.inputArgs, "-filter_complex_script", filterFile, ...inv.outputArgs];
 
-  const { execFile } = await import("child_process");
-  const { promisify } = await import("util");
-  const execFileAsync = promisify(execFile);
-
   try {
     // Only the expensive ffmpeg run goes through the gate (cheap setup above runs unguarded);
     // execFile's timeout starts inside the limited fn, so time spent queueing never counts against it.
     // apply timeout (sends SIGTERM if exceeded); disk-full / timeout errors are mapped to readable messages
     await withComposeSlot(() =>
-      execFileAsync(ffmpegBin(), args, { maxBuffer: 50 * 1024 * 1024, timeout: COMPOSE_TIMEOUT_MS })
+      runMediaProcess(ffmpegBin(), args, { maxBuffer: 50 * 1024 * 1024, timeoutMs: COMPOSE_TIMEOUT_MS })
     );
   } catch (e) {
-    const friendly = composeErrorMessage(e as { killed?: boolean; signal?: string; stderr?: string; message?: string });
+    const friendly = composeErrorMessage(e as { code?: string; killed?: boolean; signal?: string; stderr?: string; message?: string });
     if (friendly) throw new Error(friendly);
     throw e;
   } finally {

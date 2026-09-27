@@ -462,6 +462,9 @@
   .studio-page { padding:46px 40px 88px; }
 }
 
+/* Project routes own their context chrome through app/project/[id]/layout.tsx. */
+.studio-content-column:has([data-project-workspace]) > .studio-desktop-topbar { display:none; }
+
 @media (max-width:1000px) {
   .studio-page-header[data-variant="compact"] { grid-template-columns:minmax(0,1fr); gap:16px; }
 }

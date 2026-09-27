@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createProvider } from "@/lib/providers";
 import type { MediaType, Model } from "@/lib/providers/types";
+import { withModelCapability } from "@/lib/provider-capability-contract";
 
 /**
  * Aggregates the available model list from all enabled providers.
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
   const models: Model[] = [];
   results.forEach((r, i) => {
     if (r.status === "fulfilled") {
-      models.push(...r.value);
+      models.push(...r.value.map(withModelCapability));
     } else {
       console.warn(`获取 ${providers[i]?.name} 模型列表失败:`, r.reason);
     }

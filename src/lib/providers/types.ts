@@ -62,6 +62,8 @@ export interface Model {
   supportsAudio?: boolean
   /** Additional model metadata */
   extra?: Record<string, unknown>
+  /** Versioned capabilities shared by selectors and server-side preflight. */
+  capability?: import('../provider-capability-contract').ProviderCapabilityContract
 }
 
 // ==================== image-related types ====================

@@ -18,6 +18,11 @@ describe("API request boundary", () => {
     }
     expect(proxy(new NextRequest(url)).status).toBe(200);
   });
+  it("allows the project-package MIME only on the dedicated import route", () => {
+    const headers = { "content-type": "application/vnd.mora.project+zip" };
+    expect(proxy(new NextRequest("http://localhost:3457/api/project/package", { method: "POST", headers })).status).toBe(200);
+    expect(proxy(new NextRequest("http://localhost:3457/api/project/other", { method: "POST", headers })).status).toBe(415);
+  });
   it("requires a configured token for UI, downloads and CLI", () => {
     vi.stubEnv("MORA_API_TOKEN", "fixture-secret");
     expect(proxy(new NextRequest(url)).status).toBe(401);

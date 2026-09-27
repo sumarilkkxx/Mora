@@ -11,7 +11,6 @@ import { useSettingsStore } from "@/lib/stores/settings-store";
 import { buildPublishPack, buildAiDeclaration, type CommentKit } from "@/lib/publish-pack";
 import { buildShopLink } from "@/lib/shop-link";
 import { useT, useLocale } from "@/lib/i18n";
-import { ProjectHeader } from "@/components/project-header";
 import { PerformanceFeedback } from "@/components/performance-feedback";
 import { Checkbox } from "@/components/ui/checkbox";
 import { exportDurationSeconds } from "@/lib/export-metadata";
@@ -83,7 +82,6 @@ export default function ExportPage() {
   const locale = useLocale();
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
-  const fromTaskCenter = searchParams.get("from") === "tasks";
   const requestedTaskId = searchParams.get("taskId");
   const [toast, setToast] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -123,6 +121,7 @@ export default function ExportPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            requestId: crypto.randomUUID(),
             resolution: composition?.resolution === "720p" ? "720p" : "1080p",
             aspectRatio: composition?.aspectRatio || "9:16",
             freeTts: { enabled: true },
@@ -578,22 +577,9 @@ export default function ExportPage() {
     ? new Date(composition.createdAt).toLocaleDateString("zh-CN")
     : "";
 
-  // slim context strip (shared by loading, empty and normal states); global chrome lives in AppShell
-  const headerBar = (
-    <ProjectHeader
-      projectName={projectName || t("projectFallback")}
-      productionMode={productionMode}
-      showStepper={!fromTaskCenter}
-      centerLabel={fromTaskCenter ? t("headerTitle") : undefined}
-      backHref={fromTaskCenter ? "/tasks" : "/projects"}
-      backLabel={t(fromTaskCenter ? "backToTasks" : "backToProjects")}
-    />
-  );
-
   if (loading) {
     return (
       <div className="min-h-screen grid-bg legacy-studio-page">
-        {headerBar}
         <div className="flex flex-col items-center justify-center py-32 text-muted-foreground">
           <LoaderCircle className="w-8 h-8 animate-spin mb-3" />
           <p className="text-sm">{t("loadingComposition")}</p>
@@ -610,7 +596,6 @@ export default function ExportPage() {
       : "";
     return (
       <div className="min-h-screen grid-bg legacy-studio-page">
-        {headerBar}
         <main className="mx-auto flex max-w-2xl flex-col items-center px-6 py-20 text-center sm:py-28">
           <div
             className={`grid h-20 w-20 place-items-center rounded-[24px] border shadow-[0_18px_50px_rgba(64,74,92,.1)] ${
@@ -669,7 +654,6 @@ export default function ExportPage() {
   if (!composition || !composition.url) {
     return (
       <div className="min-h-screen grid-bg legacy-studio-page">
-        {headerBar}
         <div className="mx-auto max-w-md flex flex-col items-center justify-center py-28 px-6 text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/40 mb-5">
             <Film className="w-8 h-8 text-muted-foreground" />
@@ -703,7 +687,6 @@ export default function ExportPage() {
         </div>
       )}
 
-      {headerBar}
 
       <main className="mx-auto max-w-3xl px-6 py-10">
         {/* completion banner */}

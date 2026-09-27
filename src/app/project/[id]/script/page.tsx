@@ -23,7 +23,6 @@ import { resolveDefaultModelTarget, buildImageOptions, buildVideoOptions, toEdit
 import { useT, useLocale } from "@/lib/i18n";
 import { STAGE_LABEL_KEYS } from "@/lib/pipeline-stages";
 import { friendlyError } from "@/lib/friendly-error";
-import { ProjectHeader } from "@/components/project-header";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { normalizeProductionMode, type ProductionMode } from "@/lib/production-mode";
 
@@ -438,7 +437,7 @@ export default function ScriptPage() {
         const labelKey = STAGE_LABEL_KEYS[run.stage as keyof typeof STAGE_LABEL_KEYS];
         setAutoFinishStage(labelKey ? t(labelKey) : t("autoFinishSelecting"));
         if (run.status === "done") { router.push(`/project/${id}/export`); return; }
-        if (run.status === "failed") {
+        if (run.status === "failed" || run.status === "cancelled") {
           setResumableRun({ id: run.id, stage: run.stage, interrupted: run.interrupted });
           throw new Error(run.error === "interrupted" ? t("pipelineInterrupted") : run.error || t("autoFinishFailed"));
         }
@@ -462,6 +461,7 @@ export default function ScriptPage() {
       const res = await fetch(`/api/project/${id}/pipeline`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          requestId: crypto.randomUUID(),
           ...(resume ? { resume: true } : { scriptId: currentScript!.id }),
           // LLM config opt-in: enables the judge quality pass + semantic footage rerank
           ...(llm.baseUrl && llm.model ? { llmConfig: { baseUrl: llm.baseUrl, apiKey: llm.apiKey, model: llm.model } } : {}),
@@ -488,7 +488,7 @@ export default function ScriptPage() {
       const run = d?.run;
       if (run?.status === "running") {
         void attachPipeline();
-      } else if (run?.status === "failed") {
+      } else if (run?.status === "failed" || run?.status === "cancelled") {
         setResumableRun({ id: run.id, stage: run.stage, interrupted: run.interrupted });
       }
     })();
@@ -795,14 +795,10 @@ export default function ScriptPage() {
     }
   };
 
-  // slim context strip (shared by loading, empty and normal states); global chrome lives in AppShell
-  const headerBar = <ProjectHeader projectName={projectName || t("defaultProjectName")} productionMode={productionMode} />;
-
   // loading: skeleton screen (mimics the script card layout; feels faster than a spinner and reduces perceived wait)
   if (loading) {
     return (
       <div className="min-h-screen grid-bg legacy-studio-page">
-        {headerBar}
         <div className="max-w-4xl mx-auto px-6 py-8 space-y-4" aria-busy="true" aria-label={t("loadingScripts")}>
           {[0, 1, 2].map((i) => (
             <Card key={i} className="glass-card animate-pulse">
@@ -829,7 +825,6 @@ export default function ScriptPage() {
   if (scripts.length === 0) {
     return (
       <div className="min-h-screen grid-bg legacy-studio-page">
-        {headerBar}
         <div className="mx-auto max-w-md flex flex-col items-center justify-center py-28 px-6 text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/40 mb-5">
             <Wand className="w-8 h-8 text-muted-foreground" />
@@ -878,7 +873,6 @@ export default function ScriptPage() {
     const overCap = !!filmPreview.estimate && spendCapUsd > 0 && filmPreview.estimate.maxUsd > spendCapUsd;
     return (
       <div className="min-h-screen grid-bg legacy-studio-page">
-        {headerBar}
         <main className="mx-auto max-w-2xl px-6 py-12">
           <Card className="glass-card">
             <CardContent className="space-y-4 p-6">
@@ -976,7 +970,6 @@ export default function ScriptPage() {
   if (aiFilming) {
     return (
       <div className="min-h-screen grid-bg legacy-studio-page">
-        {headerBar}
         <main className="mx-auto flex max-w-lg flex-col items-center px-6 py-24 text-center">
           <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl brand-gradient">
             <LoaderCircle className="size-6 animate-spin text-white motion-reduce:animate-none" aria-hidden="true" />
@@ -995,7 +988,6 @@ export default function ScriptPage() {
 
   return (
     <div className="min-h-screen grid-bg legacy-studio-page">
-      {headerBar}
 
       <main className="mx-auto max-w-7xl px-6 py-8">
         {/* breakpoint choice: a failed/interrupted server-side run offers resume (default) or a

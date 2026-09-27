@@ -59,6 +59,7 @@ interface RecentProject {
   status: string;
   workflowType?: "generate" | "edit";
   productionMode?: ProductionMode;
+  continuation?: { href: string };
   updatedAt: string | null;
 }
 
@@ -908,7 +909,7 @@ export default function StartPage() {
                 {recent.map((p) => {
                   const rel = formatRelativeTime(p.updatedAt, locale);
                   return (
-                    <Link key={p.id} href={projectContinuePath(p.id, p.status, p.productionMode, p.workflowType)} className="cf-pj">
+                    <Link key={p.id} href={p.continuation?.href ?? projectContinuePath(p.id, p.status, p.productionMode, p.workflowType)} className="cf-pj">
                       <span className="dot" />
                       <span className="col">
                         <span className="nm">{p.name || p.productName || t("untitledProject")}</span>

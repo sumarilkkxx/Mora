@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
 // product entry
 export interface ProductItem {
@@ -24,7 +23,6 @@ interface ProductLibraryState {
 }
 
 export const useProductLibraryStore = create<ProductLibraryState>()(
-  persist(
     (set) => ({
       products: [],
 
@@ -53,28 +51,5 @@ export const useProductLibraryStore = create<ProductLibraryState>()(
             p.id === id ? { ...p, videoCount: p.videoCount + 1 } : p
           ),
         })),
-    }),
-    {
-      name: "daihuo-jianshou-products",
-      // JSON serialization converts Date to string; restore it when reading back
-      storage: {
-        getItem: (name) => {
-          const str = localStorage.getItem(name);
-          if (!str) return null;
-          const parsed = JSON.parse(str);
-          if (parsed?.state?.products) {
-            parsed.state.products = parsed.state.products.map(
-              (p: Record<string, unknown>) => ({
-                ...p,
-                createdAt: new Date(p.createdAt as string),
-              })
-            );
-          }
-          return parsed;
-        },
-        setItem: (name, value) => localStorage.setItem(name, JSON.stringify(value)),
-        removeItem: (name) => localStorage.removeItem(name),
-      },
-    }
-  )
+    })
 );

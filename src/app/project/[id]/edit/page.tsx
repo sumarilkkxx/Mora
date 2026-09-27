@@ -5,13 +5,16 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
+  ArrowDown,
   ArrowRight,
+  ArrowUp,
   AudioLines,
   Captions,
   Check,
   Download,
   Film,
   LoaderCircle,
+  Music,
   Focus,
   MoveHorizontal,
   Plus,
@@ -57,8 +60,14 @@ import {
   type GuidedEditStyle,
   type GuidedPromotionGoal,
   type GuidedTemplateId,
+  type GuidedTimelineClip,
   type SceneLabel,
 } from "@/lib/guided-edit";
+import {
+  moveGuidedTimelineClip,
+  replaceGuidedTimelineClip,
+  trimGuidedTimelineClip,
+} from "@/lib/guided-edit-state";
 
 interface MediaSourceRow {
   id: string;
@@ -76,7 +85,7 @@ interface MediaSourceRow {
 interface PlanRow {
   id: string;
   revision: number;
-  status: "draft" | "ready" | "rendering" | "done" | "failed";
+  status: "draft" | "ready" | "rendering" | "done" | "failed" | "cancelled";
   active?: boolean;
   error?: string | null;
   document: GuidedEditPlanDocument;
@@ -110,6 +119,7 @@ export default function GuidedEditWorkspace() {
   const locale = useLocale();
   const inputRef = useRef<HTMLInputElement>(null);
   const voiceoverRef = useRef<HTMLInputElement>(null);
+  const bgmRef = useRef<HTMLInputElement>(null);
   const voiceoverSectionRef = useRef<HTMLDivElement>(null);
   const renderSectionRef = useRef<HTMLDivElement>(null);
   const [projectName, setProjectName] = useState("");
@@ -118,22 +128,42 @@ export default function GuidedEditWorkspace() {
   const [brief, setBrief] = useState<GuidedEditBrief>(DEFAULT_GUIDED_EDIT_BRIEF);
   const [scenes, setScenes] = useState<GuidedScene[]>([]);
   const [beats, setBeats] = useState<GuidedScriptBeat[]>([]);
+  const [timeline, setTimeline] = useState<GuidedTimelineClip[]>([]);
+  const [selectedClipId, setSelectedClipId] = useState("");
   const [draftBeats, setDraftBeats] = useState<GuidedScriptBeat[] | null>(null);
   const [activeBeatId, setActiveBeatId] = useState("");
   const [planId, setPlanId] = useState("");
   const [latestPlan, setLatestPlan] = useState<PlanRow | null>(null);
+  const [plans, setPlans] = useState<PlanRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState<"upload" | "voiceover" | "analyze" | "save" | "render" | null>(null);
+  const [busy, setBusy] = useState<"upload" | "voiceover" | "bgm" | "analyze" | "save" | "render" | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [scriptNeedsUpdate, setScriptNeedsUpdate] = useState(false);
   const [planNeedsUpdate, setPlanNeedsUpdate] = useState(false);
   const [actualOutputDuration, setActualOutputDuration] = useState<number | null>(null);
+  const draftKeyRef = useRef("");
 
   const selectedSource = sources.find((source) => source.id === sourceId) ?? sources[0] ?? null;
   const fromTaskCenter = searchParams.get("from") === "tasks";
   const backHref = fromTaskCenter ? "/tasks" : "/projects";
   const exportHref = `/project/${id}/export${fromTaskCenter ? "?from=tasks" : ""}`;
+
+  const applyPlan = useCallback((plan: PlanRow, availableSources: MediaSourceRow[]) => {
+    const loadedBrief = sanitizeGuidedEditBrief(plan.document.brief);
+    setPlanId(plan.id);
+    setLatestPlan(plan);
+    setSourceId(plan.document.timeline[0]?.sourceId || availableSources[0]?.id || "");
+    setBrief(loadedBrief);
+    setScenes(plan.document.scenes);
+    setBeats(plan.document.beats);
+    setTimeline(plan.document.timeline);
+    setSelectedClipId(plan.document.timeline[0]?.id || "");
+    setDraftBeats(null);
+    setScriptNeedsUpdate(false);
+    setPlanNeedsUpdate(false);
+    setActiveBeatId(plan.document.beats[0]?.id || "");
+  }, []);
 
   const loadWorkspace = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -151,21 +181,14 @@ export default function GuidedEditWorkspace() {
       }
       const nextSources = Array.isArray(mediaData.sources) ? mediaData.sources as MediaSourceRow[] : [];
       const plans = Array.isArray(planData.plans) ? planData.plans as PlanRow[] : [];
-      const plan = plans[0] ?? null;
+      const requestedPlanId = searchParams.get("plan");
+      const plan = plans.find((item) => item.id === requestedPlanId) ?? plans[0] ?? null;
       setProjectName(project.name || "");
       setSources(nextSources);
+      setPlans(plans);
       setLatestPlan(plan);
       if (plan) {
-        const loadedBrief = sanitizeGuidedEditBrief(plan.document.brief);
-        setPlanId(plan.id);
-        setSourceId(plan.document.timeline[0]?.sourceId || nextSources[0]?.id || "");
-        setBrief(loadedBrief);
-        setScenes(plan.document.scenes);
-        setBeats(plan.document.beats);
-        setDraftBeats(null);
-        setScriptNeedsUpdate(false);
-        setPlanNeedsUpdate(false);
-        setActiveBeatId((current) => current && plan.document.beats.some((beat) => beat.id === current) ? current : plan.document.beats[0]?.id || "");
+        applyPlan(plan, nextSources);
       } else {
         setSourceId((current) => current || nextSources[0]?.id || "");
         setBrief((current) => ({
@@ -181,7 +204,7 @@ export default function GuidedEditWorkspace() {
     } finally {
       if (!quiet) setLoading(false);
     }
-  }, [id, locale, t]);
+  }, [applyPlan, id, locale, searchParams, t]);
 
   // Render polling deliberately updates only server-owned task/output state. Re-loading the full
   // workspace here used to overwrite promotion copy, scene bindings and settings typed while a
@@ -192,7 +215,8 @@ export default function GuidedEditWorkspace() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || t("loadFailed"));
       const plans = Array.isArray(data.plans) ? data.plans as PlanRow[] : [];
-      setLatestPlan(plans[0] ?? null);
+      setPlans(plans);
+      setLatestPlan((current) => plans.find((plan) => plan.id === current?.id) ?? plans[0] ?? null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("loadFailed"));
     }
@@ -212,9 +236,12 @@ export default function GuidedEditWorkspace() {
   }, [refreshRenderStatus, rendering]);
 
   const estimatedDuration = useMemo(() => beats.reduce((sum, beat) => sum + beat.estimatedDuration, 0), [beats]);
+  const plannedDuration = timeline.at(-1)?.outputEnd ?? estimatedDuration;
   const speechRate = brief.speechRate ?? 1;
   const editStyle = brief.editStyle ?? "natural";
-  const durationTooLong = estimatedDuration > MAX_GUIDED_OUTPUT_SECONDS + 0.01;
+  const durationTooLong = plannedDuration > MAX_GUIDED_OUTPUT_SECONDS + 0.01;
+  const draftKey = useMemo(() => JSON.stringify({ sourceId, brief, scenes, beats, timeline }), [sourceId, brief, scenes, beats, timeline]);
+  draftKeyRef.current = draftKey;
 
   function patchBrief(patch: Partial<GuidedEditBrief>) {
     setBrief((current) => ({ ...current, ...patch }));
@@ -227,6 +254,7 @@ export default function GuidedEditWorkspace() {
     patchBrief(patch);
     setScriptNeedsUpdate(true);
     setDraftBeats(null);
+    setTimeline([]);
   }
 
   function scrollToStep(target: React.RefObject<HTMLElement | null>) {
@@ -238,6 +266,7 @@ export default function GuidedEditWorkspace() {
 
   function alignBeatsToVoiceover(duration: unknown) {
     setBeats((current) => scaleGuidedBeatDurations(current, duration));
+    setTimeline([]);
   }
 
   function changeSpeechRate(value: number) {
@@ -248,6 +277,7 @@ export default function GuidedEditWorkspace() {
       ...(current.audioMode === "local_voice" ? { voiceoverFile: undefined, voiceoverName: undefined } : {}),
     }));
     setBeats((current) => applyGuidedSpeechRate(current, nextRate));
+    setTimeline([]);
     setPlanNeedsUpdate(true);
     setActualOutputDuration(null);
     setMessage("");
@@ -265,6 +295,7 @@ export default function GuidedEditWorkspace() {
       if (!response.ok) throw new Error(data.error || t("createFailed"));
       setSourceId(data.id);
       setScenes([]);
+      setTimeline([]);
       await loadWorkspace(true);
     } catch (cause) { setError(cause instanceof Error ? cause.message : t("createFailed")); }
     finally { setBusy(null); if (inputRef.current) inputRef.current.value = ""; }
@@ -278,6 +309,7 @@ export default function GuidedEditWorkspace() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || t("loadFailed"));
       setScenes(data.scenes);
+      setTimeline([]);
       setSources((current) => current.map((source) => source.id === selectedSource.id ? { ...source, sceneStatus: "ready", scenes: data.scenes } : source));
     } catch (cause) { setError(cause instanceof Error ? cause.message : t("loadFailed")); }
     finally { setBusy(null); }
@@ -298,6 +330,19 @@ export default function GuidedEditWorkspace() {
       scrollToStep(renderSectionRef);
     } catch (cause) { setError(cause instanceof Error ? cause.message : t("voiceoverUploadFailed")); }
     finally { setBusy(null); if (voiceoverRef.current) voiceoverRef.current.value = ""; }
+  }
+
+  async function uploadBgm(file: File) {
+    setBusy("bgm"); setError("");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const response = await fetch(`/api/project/${id}/bgm`, { method: "POST", headers: { "Accept-Language": locale }, body: form });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || t("bgmUploadFailed"));
+      patchBrief({ bgmFile: data.path, bgmName: data.name });
+    } catch (cause) { setError(cause instanceof Error ? cause.message : t("bgmUploadFailed")); }
+    finally { setBusy(null); if (bgmRef.current) bgmRef.current.value = ""; }
   }
 
   async function synthesizeLocalVoice() {
@@ -344,6 +389,7 @@ export default function GuidedEditWorkspace() {
     }));
     if (!next.length) { setError(t("copyRequired")); return; }
     setBeats(next);
+    setTimeline([]);
     setDraftBeats(null);
     setActiveBeatId(next[0]?.id || "");
     setScriptNeedsUpdate(false);
@@ -363,52 +409,135 @@ export default function GuidedEditWorkspace() {
       ...beat,
       sceneIds: beat.sceneIds.includes(sceneId) ? beat.sceneIds.filter((id) => id !== sceneId) : [...beat.sceneIds, sceneId],
     }));
+    setTimeline([]);
   }
 
-  async function savePlan(): Promise<string | null> {
+  function workingDocument(): GuidedEditPlanDocument {
+    return {
+      version: 1,
+      brief,
+      scenes,
+      beats,
+      timeline,
+      outputDuration: timeline.at(-1)?.outputEnd ?? estimatedDuration,
+    };
+  }
+
+  function applyTimelineEdit(document: GuidedEditPlanDocument, clipId: string) {
+    setTimeline(document.timeline);
+    setSelectedClipId(clipId);
+    setPlanNeedsUpdate(true);
+    setActualOutputDuration(null);
+    setMessage("");
+  }
+
+  function moveClip(clipId: string, direction: -1 | 1) {
+    const index = timeline.findIndex((clip) => clip.id === clipId);
+    if (index < 0) return;
+    applyTimelineEdit(moveGuidedTimelineClip(workingDocument(), clipId, index + direction), clipId);
+  }
+
+  function replaceClip(clipId: string, sceneId: string) {
+    applyTimelineEdit(replaceGuidedTimelineClip(workingDocument(), clipId, sceneId), clipId);
+  }
+
+  function trimClip(clipId: string, range: { start: number; end: number }) {
+    applyTimelineEdit(trimGuidedTimelineClip(workingDocument(), clipId, range), clipId);
+  }
+
+  function updateBeat(beatId: string, patch: Partial<GuidedScriptBeat>, narrationChanged = false) {
+    setBeats((current) => current.map((beat) => beat.id === beatId ? {
+      ...beat,
+      ...patch,
+      ...(narrationChanged ? { estimatedDuration: estimateSpeechDuration(String(patch.voiceoverText ?? beat.voiceoverText ?? beat.text), speechRate) } : {}),
+    } : beat));
+    if (narrationChanged && (brief.audioMode === "local_voice" || brief.audioMode === "uploaded_voice")) {
+      setBrief((current) => ({ ...current, voiceoverFile: undefined, voiceoverName: undefined }));
+    }
+    setPlanNeedsUpdate(true);
+    setActualOutputDuration(null);
+    setMessage("");
+  }
+
+  async function cancelRender() {
+    if (!latestPlan || latestPlan.status !== "rendering") return;
+    setError("");
+    const response = await fetch(`/api/project/${id}/edit-plan/${latestPlan.id}/render`, { method: "DELETE", headers: { "Accept-Language": locale } });
+    const data = await response.json();
+    if (!response.ok) { setError(data.error || t("cancelFailed")); return; }
+    setLatestPlan((current) => current ? { ...current, status: "cancelled" } : current);
+    setPlans((current) => current.map((plan) => plan.id === latestPlan.id ? { ...plan, status: "cancelled" } : plan));
+    setMessage(t("renderCancelled"));
+  }
+
+  async function savePlan(intent: "draft" | "ready" = "ready", quiet = false): Promise<string | null> {
     if (!selectedSource) { setError(t("sourceRequired")); return null; }
     if (!beats.length) { setError(t("planRequired")); return null; }
-    if (durationTooLong) { setError(t("durationTooLong", { seconds: Math.ceil(estimatedDuration), max: MAX_GUIDED_OUTPUT_SECONDS })); return null; }
-    setBusy("save"); setError(""); setMessage("");
+    if (durationTooLong) { setError(t("durationTooLong", { seconds: Math.ceil(plannedDuration), max: MAX_GUIDED_OUTPUT_SECONDS })); return null; }
+    const snapshot = draftKey;
+    if (!quiet) setBusy("save");
+    setError("");
+    if (!quiet) setMessage("");
     try {
       const response = await fetch(`/api/project/${id}/edit-plan`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "Accept-Language": locale },
-        body: JSON.stringify({ planId: planId || undefined, sourceId: selectedSource.id, brief, scenes, beats }),
+        body: JSON.stringify({ planId: planId || undefined, sourceId: selectedSource.id, brief, scenes, beats, timeline, intent }),
       });
       const plan = await response.json() as PlanRow & { error?: string };
       if (!response.ok) throw new Error(plan.error || t("saveFailed"));
       setPlanId(plan.id);
       setLatestPlan(plan);
-      setBrief(plan.document.brief);
-      setScenes(plan.document.scenes);
-      setBeats(plan.document.beats);
-      setPlanNeedsUpdate(false);
-      setMessage(t("ready"));
+      setPlans((current) => [plan, ...current.filter((item) => item.id !== plan.id)].sort((left, right) => right.revision - left.revision));
+      if (draftKeyRef.current === snapshot) {
+        if (intent === "ready") {
+          setBrief(plan.document.brief);
+          setScenes(plan.document.scenes);
+          setBeats(plan.document.beats);
+          setTimeline(plan.document.timeline);
+          setSelectedClipId((current) => current && plan.document.timeline.some((clip) => clip.id === current) ? current : plan.document.timeline[0]?.id || "");
+        }
+        setPlanNeedsUpdate(false);
+      }
+      if (!quiet) setMessage(t(intent === "draft" ? "draftSaved" : "ready"));
       return plan.id;
     } catch (cause) { setError(cause instanceof Error ? cause.message : t("saveFailed")); return null; }
-    finally { setBusy(null); }
+    finally { if (!quiet) setBusy(null); }
   }
 
   async function render() {
-    const savedId = await savePlan();
+    const savedId = await savePlan("ready");
     if (!savedId) return;
     setBusy("render"); setMessage(""); setError("");
     try {
-      const response = await fetch(`/api/project/${id}/edit-plan/${savedId}/render`, { method: "POST", headers: { "Accept-Language": locale } });
+      const response = await fetch(`/api/project/${id}/edit-plan/${savedId}/render`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept-Language": locale },
+        body: "{}",
+      });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || t("renderFailed"));
       setLatestPlan((current) => current ? { ...current, status: "rendering" } : current);
+      setPlans((current) => current.map((plan) => plan.id === savedId ? { ...plan, status: "rendering" } : plan));
       await refreshRenderStatus();
     } catch (cause) { setError(cause instanceof Error ? cause.message : t("renderFailed")); }
     finally { setBusy(null); }
   }
 
+  useEffect(() => {
+    if (loading || !planNeedsUpdate || busy !== null || !selectedSource || !beats.length || durationTooLong) return;
+    const timer = window.setTimeout(() => { void savePlan("draft", true); }, 900);
+    return () => window.clearTimeout(timer);
+    // draftKey is the complete serializable edit state; changes restart the debounce.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busy, draftKey, durationTooLong, loading, planNeedsUpdate, selectedSource]);
+
   if (loading) return <PageFrame width="full"><div className="flex min-h-[60vh] items-center justify-center"><LoaderCircle className="size-7 animate-spin text-primary motion-reduce:animate-none" /></div></PageFrame>;
 
   const activeBeat = beats.find((beat) => beat.id === activeBeatId) ?? null;
-  const output = latestPlan?.composition?.status === "done" ? latestPlan.composition : null;
-  const currentOutput = output && !planNeedsUpdate ? output : null;
+  const playablePlan = plans.find((plan) => plan.status === "done" && plan.composition?.status === "done") ?? null;
+  const output = playablePlan?.composition ?? null;
+  const currentOutput = output && latestPlan?.id === playablePlan?.id && !planNeedsUpdate ? output : null;
   const needsVoiceover = brief.audioMode === "uploaded_voice" || brief.audioMode === "local_voice";
   const scriptReady = beats.length > 0 && !scriptNeedsUpdate;
   const voiceoverReady = scriptReady && (!needsVoiceover || Boolean(brief.voiceoverFile));
@@ -436,8 +565,9 @@ export default function GuidedEditWorkspace() {
       : t("render");
   const workflowActionDisabled = busy !== null || rendering || (workflowStep === 3 && !renderReady);
   const currentActualDuration = planNeedsUpdate ? null : actualOutputDuration;
-  const displayedDuration = currentActualDuration ?? estimatedDuration;
+  const displayedDuration = currentActualDuration ?? plannedDuration;
   const durationKind = currentActualDuration ? "actual" : brief.voiceoverFile ? "voiceover" : "estimate";
+  const planStatusLabel = (status: PlanRow["status"]) => t(`versionStatus_${status}`);
 
   return (
     <PageFrame width="full" className="guided-edit-workspace">
@@ -459,10 +589,14 @@ export default function GuidedEditWorkspace() {
               {currentOutput ? t("workflowDone") : rendering ? t("workflowRendering") : t(`workflowStep${workflowStep}Hint`)}
             </p>
           </div>
-          {currentOutput ? <Link href={exportHref}><Button variant="outline"><ArrowRight />{t("openExport")}</Button></Link> : <Button size="lg" onClick={runWorkflowAction} disabled={workflowActionDisabled}>
-            {busy !== null || rendering ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : workflowStep === 3 ? <Scissors /> : <ArrowRight />}
-            {rendering ? t("rendering") : workflowActionLabel}
-          </Button>}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {plans.length ? <label className="flex items-center gap-2 text-xs text-muted-foreground"><span>{t("versionHistory")}</span><select value={planId} onChange={(event) => { const plan = plans.find((item) => item.id === event.target.value); if (plan) applyPlan(plan, sources); }} className="h-9 rounded-[10px] border border-input bg-card px-2 text-xs text-foreground">{plans.map((plan) => <option key={plan.id} value={plan.id}>R{plan.revision} · {planStatusLabel(plan.status)}</option>)}</select></label> : null}
+            {rendering ? <Button variant="outline" onClick={() => void cancelRender()}>{t("cancelRender")}</Button> : null}
+            {currentOutput ? <Link href={exportHref}><Button variant="outline"><ArrowRight />{t("openExport")}</Button></Link> : <Button size="lg" onClick={runWorkflowAction} disabled={workflowActionDisabled}>
+              {busy !== null || rendering ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : workflowStep === 3 ? <Scissors /> : <ArrowRight />}
+              {rendering ? t("rendering") : workflowActionLabel}
+            </Button>}
+          </div>
         </div>
         <ol className="mt-4 grid gap-2 sm:grid-cols-3" aria-label={t("workflowTitle")}>
           {[t("workflowStepScript"), t("workflowStepVoice"), t("workflowStepRender")].map((label, index) => {
@@ -485,7 +619,7 @@ export default function GuidedEditWorkspace() {
             <Button variant="outline" size="sm" disabled={busy === "upload"} onClick={() => inputRef.current?.click()}>{busy === "upload" ? <LoaderCircle className="animate-spin" /> : <Upload />}{t("uploadSource")}</Button>
             <Button size="sm" disabled={!selectedSource || busy === "analyze"} onClick={() => void analyzeScenes()}>{busy === "analyze" ? <LoaderCircle className="animate-spin" /> : <Film />}{busy === "analyze" ? t("analyzingScenes") : t("analyzeScenes")}</Button>
           </div>
-          {sources.length > 1 ? <select className="mb-4 h-9 w-full rounded-[10px] border border-input bg-card px-3 text-sm" value={sourceId} onChange={(event) => { const next = sources.find((source) => source.id === event.target.value); setSourceId(event.target.value); setScenes(next?.scenes ?? []); }}>
+          {sources.length > 1 ? <select className="mb-4 h-9 w-full rounded-[10px] border border-input bg-card px-3 text-sm" value={sourceId} onChange={(event) => { const next = sources.find((source) => source.id === event.target.value); setSourceId(event.target.value); setScenes(next?.scenes ?? []); setTimeline([]); setPlanNeedsUpdate(true); }}>
             {sources.map((source) => <option key={source.id} value={source.id}>{source.originalName}</option>)}
           </select> : null}
           {!selectedSource ? <div className="flex min-h-48 flex-col items-center justify-center rounded-xl border border-dashed border-border text-center"><Upload className="mb-3 size-7 text-muted-foreground" /><p className="text-sm font-medium">{t("noSource")}</p></div> : scenes.length === 0 ? <div className="relative flex min-h-48 overflow-hidden rounded-xl border border-border/70 bg-muted text-white shadow-sm">
@@ -510,7 +644,7 @@ export default function GuidedEditWorkspace() {
                     <span className="absolute bottom-1 left-1 rounded bg-black/65 px-1.5 py-0.5 text-[10px] text-white">{seconds(scene.start)}–{seconds(scene.end)}s</span>
                     {bound ? <span className="absolute right-1 top-1 grid size-5 place-items-center rounded-full bg-primary text-primary-foreground"><Check className="size-3" /></span> : null}
                   </button>
-                  <select value={scene.label} onChange={(event) => { setPlanNeedsUpdate(true); setScenes((current) => current.map((item) => item.id === scene.id ? { ...item, label: event.target.value as SceneLabel, selected: event.target.value !== "unused" } : item)); }} className="h-8 w-full border-0 bg-card px-2 text-[11px] outline-none">
+                  <select value={scene.label} onChange={(event) => { setPlanNeedsUpdate(true); setTimeline([]); setScenes((current) => current.map((item) => item.id === scene.id ? { ...item, label: event.target.value as SceneLabel, selected: event.target.value !== "unused" } : item)); }} className="h-8 w-full border-0 bg-card px-2 text-[11px] outline-none">
                     {SCENE_LABELS.map((label) => <option key={label} value={label}>{t(`sceneLabel_${label}`)}</option>)}
                   </select>
                 </div>;
@@ -567,6 +701,21 @@ export default function GuidedEditWorkspace() {
               <p className="mt-2 text-sm leading-6 text-foreground">{beat.text}</p><p className="mt-1.5 text-[10px] text-muted-foreground">{t("boundScenes", { n: beat.sceneIds.length })}</p>
             </button>)}
           </div> : null}
+          {timeline.length ? <div className="mt-5 space-y-3 border-t border-border/60 pt-5">
+            <div><h3 className="text-sm font-semibold text-foreground">{t("shotCardsTitle")}</h3><p className="mt-1 text-[11px] leading-4 text-muted-foreground">{t("shotCardsHint")}</p></div>
+            <div className="flex h-10 gap-1 rounded-xl border border-border/70 bg-muted/25 p-1" aria-label={t("readOnlyTimeline")}>
+              {timeline.map((clip, index) => <button key={clip.id} type="button" onClick={() => { setSelectedClipId(clip.id); setActiveBeatId(clip.beatId); }} aria-pressed={selectedClipId === clip.id} title={`${seconds(clip.outputStart)}–${seconds(clip.outputEnd)}s`} style={{ flexGrow: Math.max(0.2, clip.outputEnd - clip.outputStart) }} className={`min-w-7 rounded-lg text-[10px] font-semibold transition-colors ${selectedClipId === clip.id ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-primary/10 hover:text-primary"}`}>{index + 1}</button>)}
+            </div>
+            <div className="space-y-3">{timeline.map((clip, index) => {
+              const beat = beats.find((item) => item.id === clip.beatId);
+              if (!beat) return null;
+              return <div key={clip.id} onClick={() => { setSelectedClipId(clip.id); setActiveBeatId(clip.beatId); }} className={`rounded-xl border p-3 ${selectedClipId === clip.id ? "border-primary bg-primary/[.035] ring-2 ring-primary/10" : "border-border/70 bg-card"}`}>
+                <div className="mb-3 flex items-center justify-between gap-2"><div><strong className="text-xs text-foreground">{t("shotCard", { n: index + 1 })}</strong><span className="ml-2 text-[10px] tabular-nums text-muted-foreground">{seconds(clip.outputStart)}–{seconds(clip.outputEnd)}s</span></div><div className="flex gap-1"><Button type="button" variant="ghost" size="icon-sm" aria-label={t("moveShotUp")} disabled={index === 0} onClick={(event) => { event.stopPropagation(); moveClip(clip.id, -1); }}><ArrowUp /></Button><Button type="button" variant="ghost" size="icon-sm" aria-label={t("moveShotDown")} disabled={index === timeline.length - 1} onClick={(event) => { event.stopPropagation(); moveClip(clip.id, 1); }}><ArrowDown /></Button></div></div>
+                <div className="grid gap-2 sm:grid-cols-3"><label className="space-y-1 text-[10px] font-medium text-muted-foreground"><span>{t("replaceShot")}</span><select value={clip.sceneId} onChange={(event) => replaceClip(clip.id, event.target.value)} className="h-9 w-full rounded-lg border border-input bg-card px-2 text-xs text-foreground">{scenes.filter((scene) => scene.selected && scene.label !== "unused").map((scene) => <option key={scene.id} value={scene.id}>{t(`sceneLabel_${scene.label}`)} · {seconds(scene.start)}s</option>)}</select></label><label className="space-y-1 text-[10px] font-medium text-muted-foreground"><span>{t("inPoint")}</span><Input type="number" min={scenes.find((scene) => scene.id === clip.sceneId)?.start ?? 0} max={clip.end - 0.2} step="0.1" value={clip.start} onChange={(event) => trimClip(clip.id, { start: Number(event.target.value), end: clip.end })} /></label><label className="space-y-1 text-[10px] font-medium text-muted-foreground"><span>{t("outPoint")}</span><Input type="number" min={clip.start + 0.2} max={scenes.find((scene) => scene.id === clip.sceneId)?.end} step="0.1" value={clip.end} onChange={(event) => trimClip(clip.id, { start: clip.start, end: Number(event.target.value) })} /></label></div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2"><label className="space-y-1 text-[10px] font-medium text-muted-foreground"><span>{t("voiceoverText")}</span><Textarea value={beat.voiceoverText ?? beat.text} onChange={(event) => updateBeat(beat.id, { voiceoverText: event.target.value }, true)} className="min-h-20 bg-card text-xs" /></label><label className="space-y-1 text-[10px] font-medium text-muted-foreground"><span>{t("captionText")}</span><Textarea value={beat.captionText ?? beat.text} onChange={(event) => updateBeat(beat.id, { captionText: event.target.value })} className="min-h-20 bg-card text-xs" /></label></div>
+              </div>;
+            })}</div>
+          </div> : null}
         </Surface>
 
         <aside className="min-w-0 space-y-5">
@@ -588,14 +737,18 @@ export default function GuidedEditWorkspace() {
                 <div className="rounded-xl border border-primary/15 bg-gradient-to-br from-primary/[.07] to-transparent px-3 py-3"><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-primary">{t("styleEffect")}</p><p className="mt-1 text-[11px] leading-5 text-foreground/80">{t(`editStyle_${editStyle}Hint`)}</p></div>
               </div>
               <label className="block space-y-1.5 text-xs font-medium text-muted-foreground"><span>{t("aspectRatio")}</span><select value={brief.aspectRatio} onChange={(event) => patchBrief({ aspectRatio: event.target.value as GuidedEditBrief["aspectRatio"] })} className="h-10 w-full rounded-[10px] border border-input bg-card px-3 text-sm text-foreground"><option value="9:16">9:16</option><option value="16:9">16:9</option><option value="1:1">1:1</option></select></label>
+              <label className="block space-y-1.5 text-xs font-medium text-muted-foreground"><span>{t("outputQuality")}</span><select value={brief.outputQuality ?? "1080p"} onChange={(event) => patchBrief({ outputQuality: event.target.value as GuidedEditBrief["outputQuality"] })} className="h-10 w-full rounded-[10px] border border-input bg-card px-3 text-sm text-foreground"><option value="1080p">1080p</option><option value="720p">720p</option></select></label>
               <label className="block space-y-1.5 text-xs font-medium text-muted-foreground"><span>{t("audioMode")}</span><select value={brief.audioMode} onChange={(event) => { const audioMode = event.target.value as GuidedEditBrief["audioMode"]; patchBrief({ audioMode, ...(audioMode === brief.audioMode ? {} : { voiceoverFile: undefined, voiceoverName: undefined }) }); }} className="h-10 w-full rounded-[10px] border border-input bg-card px-3 text-sm text-foreground"><option value="muted">{t("audioMuted")}</option><option value="original">{t("audioOriginal")}</option><option value="uploaded_voice">{t("audioUploadedVoice")}</option><option value="local_voice">{t("audioLocalVoice")}</option></select></label>
+              {brief.audioMode === "original" ? <label className="block space-y-2"><span className="flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground"><span>{t("originalVolume")}</span><strong className="tabular-nums text-foreground">{Math.round((brief.originalVolume ?? 1) * 100)}%</strong></span><input type="range" min="0" max="1" step="0.05" value={brief.originalVolume ?? 1} onChange={(event) => patchBrief({ originalVolume: Number(event.target.value) })} className="h-1.5 w-full cursor-pointer accent-primary" /></label> : null}
+              {brief.audioMode === "uploaded_voice" || brief.audioMode === "local_voice" ? <label className="block space-y-2"><span className="flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground"><span>{t("voiceoverVolume")}</span><strong className="tabular-nums text-foreground">{Math.round((brief.voiceoverVolume ?? 1) * 100)}%</strong></span><input type="range" min="0" max="1" step="0.05" value={brief.voiceoverVolume ?? 1} onChange={(event) => patchBrief({ voiceoverVolume: Number(event.target.value) })} className="h-1.5 w-full cursor-pointer accent-primary" /></label> : null}
               {brief.audioMode === "uploaded_voice" ? <div ref={voiceoverSectionRef} aria-current={workflowStep === 2 ? "step" : undefined} className={`scroll-mt-24 rounded-xl border p-3 transition-[border-color,background-color,box-shadow] ${workflowStep === 2 ? "border-primary/50 bg-primary/[.055] ring-4 ring-primary/10" : "border-border/70 bg-muted/25"}`}><div className="mb-2 flex items-center justify-between"><span className={`text-[11px] font-semibold ${workflowStep === 2 ? "text-primary" : "text-muted-foreground"}`}>{workflowStep === 2 ? t("nextStep") : voiceoverReady ? t("stepComplete") : t("workflowStepVoice")}</span>{voiceoverReady ? <Check className="size-4 text-emerald-600" /> : null}</div><input ref={voiceoverRef} type="file" accept=".mp3,.wav,.m4a,.aac,.ogg,.flac,audio/*" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadVoiceover(file); }} /><Button type="button" variant={workflowStep === 2 ? "default" : "outline"} size="sm" className="w-full" disabled={busy === "voiceover" || !scriptReady} onClick={() => voiceoverRef.current?.click()}>{busy === "voiceover" ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : <Upload />}{brief.voiceoverName || t("workflowStep2UploadAction")}</Button><p className="mt-2 text-[11px] leading-4 text-muted-foreground">{scriptReady ? t("voiceoverHint") : t("planRequired")}</p></div> : null}
               {brief.audioMode === "local_voice" ? <div ref={voiceoverSectionRef} aria-current={workflowStep === 2 ? "step" : undefined} className={`scroll-mt-24 rounded-xl border p-3 transition-[border-color,background-color,box-shadow] ${workflowStep === 2 ? "border-primary/50 bg-primary/[.055] ring-4 ring-primary/10" : "border-border/70 bg-muted/25"}`}><div className="mb-2 flex items-center justify-between"><span className={`text-[11px] font-semibold ${workflowStep === 2 ? "text-primary" : "text-muted-foreground"}`}>{workflowStep === 2 ? t("nextStep") : voiceoverReady ? t("stepComplete") : t("workflowStepVoice")}</span>{voiceoverReady ? <Check className="size-4 text-emerald-600" /> : null}</div><label className="mb-2 block space-y-1.5 text-[11px] font-medium text-muted-foreground"><span>{t("microsoftVoice")}</span><select value={brief.voiceoverVoice ?? DEFAULT_FREE_VOICE} onChange={(event) => patchBrief({ voiceoverVoice: event.target.value, voiceoverFile: undefined, voiceoverName: undefined })} className="h-9 w-full rounded-[9px] border border-input bg-card px-2 text-xs text-foreground">{FREE_TTS_VOICES.map((voice) => <option key={voice.value} value={voice.value}>{voice.label}</option>)}</select></label><Button type="button" variant={workflowStep === 2 ? "default" : "outline"} size="sm" className="w-full" disabled={busy === "voiceover" || !scriptReady} onClick={() => void synthesizeLocalVoice()}>{busy === "voiceover" ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : <AudioLines />}{brief.voiceoverFile ? t("regenerateLocalVoice") : t("workflowStep2Action")}</Button><p className="mt-2 text-[11px] leading-4 text-muted-foreground">{!scriptReady ? t("planRequired") : brief.voiceoverFile ? t("localVoiceReady") : t("localVoiceHint")}</p></div> : null}
+              <div className="rounded-xl border border-border/70 bg-muted/25 p-3"><input ref={bgmRef} type="file" accept=".mp3,.wav,.m4a,.aac,audio/*" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadBgm(file); }} /><div className="flex items-center justify-between gap-2"><div className="min-w-0"><p className="flex items-center gap-2 text-xs font-semibold text-foreground"><Music className="size-3.5 text-primary" />{t("bgm")}</p><p className="mt-1 truncate text-[10px] text-muted-foreground">{brief.bgmName || t("bgmNone")}</p></div><div className="flex gap-1"><Button type="button" variant="outline" size="sm" disabled={busy === "bgm"} onClick={() => bgmRef.current?.click()}>{busy === "bgm" ? <LoaderCircle className="animate-spin" /> : <Upload />}{brief.bgmFile ? t("bgmReplace") : t("bgmUpload")}</Button>{brief.bgmFile ? <Button type="button" variant="ghost" size="icon-sm" aria-label={t("bgmRemove")} onClick={() => patchBrief({ bgmFile: undefined, bgmName: undefined })}><Trash2 /></Button> : null}</div></div>{brief.bgmFile ? <label className="mt-3 block space-y-2"><span className="flex items-center justify-between gap-2 text-[10px] font-medium text-muted-foreground"><span>{t("bgmVolume")}</span><strong className="tabular-nums text-foreground">{Math.round((brief.bgmVolume ?? 0.2) * 100)}%</strong></span><input type="range" min="0" max="1" step="0.05" value={brief.bgmVolume ?? 0.2} onChange={(event) => patchBrief({ bgmVolume: Number(event.target.value) })} className="h-1.5 w-full cursor-pointer accent-primary" /></label> : null}</div>
               <Checkbox checked={brief.burnSubtitles} onChange={(event) => patchBrief({ burnSubtitles: event.target.checked })} label={<span className="flex items-center gap-2"><Captions className="text-primary" />{t("burnSubtitles")}</span>} description={t("burnSubtitlesHint")} />
               {brief.burnSubtitles ? <div className="grid grid-cols-2 gap-3 rounded-xl border border-border/70 bg-muted/25 p-3"><label className="space-y-1.5 text-[11px] font-medium text-muted-foreground"><span>{t("captionLanguage")}</span><select value={brief.captionLanguage} onChange={(event) => patchBrief({ captionLanguage: event.target.value as GuidedEditBrief["captionLanguage"] })} className="h-9 w-full rounded-[9px] border border-input bg-card px-2 text-xs text-foreground"><option value="auto">{t("captionLanguageAuto")}</option><option value="zh">{t("captionLanguageZh")}</option><option value="en">{t("captionLanguageEn")}</option></select></label><label className="space-y-1.5 text-[11px] font-medium text-muted-foreground"><span>{t("captionSize")}</span><select value={brief.captionSize} onChange={(event) => patchBrief({ captionSize: event.target.value as GuidedEditBrief["captionSize"] })} className="h-9 w-full rounded-[9px] border border-input bg-card px-2 text-xs text-foreground"><option value="small">{t("captionSizeSmall")}</option><option value="medium">{t("captionSizeMedium")}</option><option value="large">{t("captionSizeLarge")}</option></select></label><p className="col-span-2 text-[11px] leading-4 text-muted-foreground">{t("captionFontHint")}</p></div> : null}
             </div>
-            <div className={`mt-5 rounded-xl border p-3 ${durationTooLong ? "border-destructive/20 bg-destructive/8" : durationKind === "actual" ? "border-emerald-500/20 bg-emerald-500/[.06]" : "border-border/60 bg-muted/35"}`}><p className="text-sm font-semibold tabular-nums">{t(`outputDuration_${durationKind}`, { seconds: seconds(displayedDuration) })}</p><p className={`mt-1 text-xs leading-5 ${durationTooLong ? "text-destructive" : "text-muted-foreground"}`}>{durationTooLong ? t("durationTooLong", { seconds: Math.ceil(estimatedDuration), max: MAX_GUIDED_OUTPUT_SECONDS }) : t(`outputDuration_${durationKind}Hint`, { max: MAX_GUIDED_OUTPUT_SECONDS })}</p></div>
-            <div ref={renderSectionRef} aria-current={workflowStep === 3 && !currentOutput ? "step" : undefined} className={`mt-4 grid scroll-mt-24 gap-2 rounded-xl border p-3 transition-[border-color,background-color,box-shadow] ${workflowStep === 3 && !currentOutput ? "border-primary/50 bg-primary/[.055] ring-4 ring-primary/10" : "border-border/60 bg-muted/15"}`}><div className="flex items-center justify-between"><span className={`text-[11px] font-semibold ${workflowStep === 3 && !currentOutput ? "text-primary" : "text-muted-foreground"}`}>{currentOutput ? t("stepComplete") : workflowStep === 3 ? t("finalStep") : t("workflowStepRender")}</span>{currentOutput ? <Check className="size-4 text-emerald-600" /> : null}</div><Button variant="outline" disabled={!scriptReady || durationTooLong || busy === "save" || rendering} onClick={() => void savePlan()}>{busy === "save" ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : <Save />}{busy === "save" ? t("savingPlan") : t("savePlan")}</Button><Button size="lg" disabled={!renderReady || busy !== null || rendering} onClick={() => void render()}>{busy === "render" || rendering ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : <Scissors />}{busy === "render" || rendering ? t("rendering") : currentOutput ? t("rerender") : t("workflowStep3Action")}</Button>{!renderReady && !rendering ? <p className="text-center text-[11px] leading-4 text-muted-foreground">{!scriptReady ? t("planRequired") : !selectedSource ? t("sourceRequired") : !voiceoverReady ? t("voiceoverRequired") : t("durationTooLong", { seconds: Math.ceil(estimatedDuration), max: MAX_GUIDED_OUTPUT_SECONDS })}</p> : <p className="text-center text-[11px] leading-4 text-muted-foreground">{currentOutput ? t("renderCompleteHint") : t("renderActionHint")}</p>}</div>
+            <div className={`mt-5 rounded-xl border p-3 ${durationTooLong ? "border-destructive/20 bg-destructive/8" : durationKind === "actual" ? "border-emerald-500/20 bg-emerald-500/[.06]" : "border-border/60 bg-muted/35"}`}><p className="text-sm font-semibold tabular-nums">{t(`outputDuration_${durationKind}`, { seconds: seconds(displayedDuration) })}</p><p className={`mt-1 text-xs leading-5 ${durationTooLong ? "text-destructive" : "text-muted-foreground"}`}>{durationTooLong ? t("durationTooLong", { seconds: Math.ceil(plannedDuration), max: MAX_GUIDED_OUTPUT_SECONDS }) : t(`outputDuration_${durationKind}Hint`, { max: MAX_GUIDED_OUTPUT_SECONDS })}</p></div>
+            <div ref={renderSectionRef} aria-current={workflowStep === 3 && !currentOutput ? "step" : undefined} className={`mt-4 grid scroll-mt-24 gap-2 rounded-xl border p-3 transition-[border-color,background-color,box-shadow] ${workflowStep === 3 && !currentOutput ? "border-primary/50 bg-primary/[.055] ring-4 ring-primary/10" : "border-border/60 bg-muted/15"}`}><div className="flex items-center justify-between"><span className={`text-[11px] font-semibold ${workflowStep === 3 && !currentOutput ? "text-primary" : "text-muted-foreground"}`}>{currentOutput ? t("stepComplete") : workflowStep === 3 ? t("finalStep") : t("workflowStepRender")}</span>{currentOutput ? <Check className="size-4 text-emerald-600" /> : null}</div><Button variant="outline" disabled={!scriptReady || durationTooLong || busy === "save" || rendering} onClick={() => void savePlan()}>{busy === "save" ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : <Save />}{busy === "save" ? t("savingPlan") : t("savePlan")}</Button><Button size="lg" disabled={!renderReady || busy !== null || rendering} onClick={() => void render()}>{busy === "render" || rendering ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : <Scissors />}{busy === "render" || rendering ? t("rendering") : currentOutput ? t("rerender") : t("workflowStep3Action")}</Button>{!renderReady && !rendering ? <p className="text-center text-[11px] leading-4 text-muted-foreground">{!scriptReady ? t("planRequired") : !selectedSource ? t("sourceRequired") : !voiceoverReady ? t("voiceoverRequired") : t("durationTooLong", { seconds: Math.ceil(plannedDuration), max: MAX_GUIDED_OUTPUT_SECONDS })}</p> : <p className="text-center text-[11px] leading-4 text-muted-foreground">{currentOutput ? t("renderCompleteHint") : t("renderActionHint")}</p>}</div>
           </Surface>
           {output?.outputUrl ? <Surface className="overflow-hidden p-3"><h2 className="mb-3 px-1 text-sm font-semibold">{t("latestVersion")}</h2><video controls preload="metadata" src={output.outputUrl} onLoadedMetadata={(event) => { const duration = event.currentTarget.duration; if (Number.isFinite(duration) && duration > 0) setActualOutputDuration(duration); }} className="aspect-video w-full rounded-xl bg-black object-contain" /><a href={output.downloadUrl || output.outputUrl} className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-[10px] border border-border bg-card text-sm font-semibold hover:bg-muted/60"><Download />{t("download")}</a></Surface> : null}
           {latestPlan?.error ? <Notice tone="danger">{latestPlan.error}</Notice> : null}

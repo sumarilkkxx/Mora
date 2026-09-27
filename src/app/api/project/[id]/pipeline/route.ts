@@ -6,6 +6,7 @@ import { apiError } from "@/lib/api-error";
 import { startPipelineRun, isPipelineRunActive, type PipelineLlmConfig } from "@/lib/pipeline-runner";
 import { isPipelineStage, resumeStageAfterInterruption } from "@/lib/pipeline-stages";
 import { trustedInternalApiOrigin } from "@/lib/internal-api";
+import { OperationRunRepository, operationOwner } from "@/lib/operation-run";
 
 const SAFE_ID = /^[a-zA-Z0-9\-]+$/;
 
@@ -28,6 +29,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       scriptId?: unknown;
       llmConfig?: { baseUrl?: unknown; apiKey?: unknown; model?: unknown };
       resume?: unknown;
+      cancel?: unknown;
+      requestId?: unknown;
     };
 
     const db = getDb();
@@ -38,12 +41,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .orderBy(desc(pipelineRuns.createdAt))
       .limit(1);
 
+    if (body.cancel === true && latest) {
+      const status = new OperationRunRepository(db, { owner: operationOwner }).requestCancel(latest.id);
+      return status ? NextResponse.json({ runId: latest.id, status }, { status: 202 }) : apiError(req, "任务不存在", "Run not found", 404);
+    }
+
     // idempotency: one live run per project
     if (latest && latest.status === "running" && isPipelineRunActive(latest.id)) {
       return NextResponse.json({ runId: latest.id, stage: latest.stage, reused: true }, { status: 200 });
     }
     // orphaned running row (process died mid-run) → settle it as failed before starting anew
     if (latest && latest.status === "running" && !isPipelineRunActive(latest.id)) {
+      new OperationRunRepository(db, { owner: operationOwner }).interruptIfOrphaned(latest.id);
       await db
         .update(pipelineRuns)
         .set({ status: "failed", error: "interrupted", updatedAt: new Date() })
@@ -70,6 +79,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       origin: trustedInternalApiOrigin(req.nextUrl),
       llmConfig,
       ...(resuming ? { fromStage: resumeStageAfterInterruption(latest.stage) } : {}),
+      ...(typeof body.requestId === "string" && body.requestId ? { requestKey: `pipeline:${id}:${body.requestId}` } : {}),
     });
     return NextResponse.json({ runId, resumed: resuming }, { status: 202 });
   } catch (error) {
@@ -98,6 +108,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (latest.status === "running" && !isPipelineRunActive(latest.id)) {
       // executor gone (restart) — settle the row so every consumer sees one truth
       interrupted = true;
+      new OperationRunRepository(db, { owner: operationOwner }).interruptIfOrphaned(latest.id);
       await db
         .update(pipelineRuns)
         .set({ status: "failed", error: "interrupted", updatedAt: new Date() })

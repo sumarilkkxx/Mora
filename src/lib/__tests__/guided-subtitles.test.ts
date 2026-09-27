@@ -69,4 +69,13 @@ describe("guided subtitles", () => {
       expect(lines[index].startTime).toBeCloseTo(lines[index - 1].endTime, 6);
     }
   });
+
+  it("renders the caption override without changing narration copy", () => {
+    const edited = document("原始旁白");
+    edited.beats[0].captionText = "屏幕字幕";
+
+    expect(buildGuidedSubtitleLines(edited).map((line) => line.text).join(""))
+      .toBe("屏幕字幕");
+    expect(edited.beats[0].text).toBe("原始旁白");
+  });
 });

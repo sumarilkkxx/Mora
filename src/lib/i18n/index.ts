@@ -3,7 +3,7 @@
 /**
  * Lightweight frontend i18n (zero dependencies).
  *
- * The locale is stored in the zustand settings store (persisted in localStorage); Chinese is the default.
+ * The locale is exposed by the Zustand settings view and persisted by the SQLite local-state repository; Chinese is the default.
  * Usage: `const t = useT("home"); <h1>{t("title")}</h1>` — missing keys fall back to the default locale, then to the key itself.
  * Supports interpolation: `t("count", { n: 3 })` matches an entry like "total: {n} items".
  */

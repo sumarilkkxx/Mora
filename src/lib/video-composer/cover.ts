@@ -6,7 +6,8 @@
 
 import { dirname } from "path";
 import { mkdir } from "fs/promises";
-import { ffmpegBin, ffprobeBin } from "@/lib/ffmpeg-path";
+import { ffmpegBin } from "@/lib/ffmpeg-path";
+import { probeMedia, runMediaProcess } from "@/lib/media-runtime";
 import { buildDrawtext, wrapCaption, resolveChineseFontFile, unshellFilter } from "./composer";
 
 export interface CoverVfOpts {
@@ -71,24 +72,10 @@ export function buildCoverVf(o: CoverVfOpts): string {
 
 /** Probe the video's pixel dimensions via ffprobe (falls back to portrait 1080p). */
 async function probeDimensions(videoPath: string): Promise<{ width: number; height: number }> {
-  const { execFile } = await import("child_process");
-  const { promisify } = await import("util");
-  const run = promisify(execFile);
   try {
-    const { stdout } = await run(ffprobeBin(), [
-      "-v",
-      "error",
-      "-select_streams",
-      "v:0",
-      "-show_entries",
-      "stream=width,height",
-      "-of",
-      "csv=p=0:s=x",
-      videoPath,
-    ]);
-    const [w, h] = String(stdout).trim().split("x").map((v) => parseInt(v, 10));
-    return Number.isFinite(w) && w > 0 && Number.isFinite(h) && h > 0
-      ? { width: w, height: h }
+    const probe = await probeMedia(videoPath);
+    return probe.width > 0 && probe.height > 0
+      ? { width: probe.width, height: probe.height }
       : { width: 1080, height: 1920 };
   } catch {
     return { width: 1080, height: 1920 };
@@ -105,9 +92,6 @@ export async function generateCover(opts: {
   position?: CoverVfOpts["position"];
   style?: CoverVfOpts["style"];
 }): Promise<void> {
-  const { execFile } = await import("child_process");
-  const { promisify } = await import("util");
-  const run = promisify(execFile);
   const { width, height } = await probeDimensions(opts.videoPath);
   const t = Math.max(0, opts.frameAtSec ?? 1);
   const titleVf = buildCoverVf({ title: opts.title, width, fontFile: resolveChineseFontFile(), position: opts.position, style: opts.style });
@@ -119,5 +103,5 @@ export async function generateCover(opts: {
   const inputArgs = opts.backgroundImagePath
     ? ["-i", opts.backgroundImagePath]
     : ["-ss", String(t), "-i", opts.videoPath];
-  await run(ffmpegBin(), ["-y", ...inputArgs, "-frames:v", "1", "-vf", vf, opts.outPath]);
+  await runMediaProcess(ffmpegBin(), ["-y", ...inputArgs, "-frames:v", "1", "-vf", vf, opts.outPath], { timeoutMs: 60_000, maxBuffer: 8 * 1024 * 1024 });
 }

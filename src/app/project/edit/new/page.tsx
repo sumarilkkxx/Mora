@@ -46,6 +46,7 @@ export default function NewGuidedEditPage() {
             name: projectName.trim() || productName.trim() || file.name.replace(/\.[^.]+$/, ""),
             productName: productName.trim(),
             workflowType: "edit",
+            workflowMode: aiEdit ? "auto_edit" : "guided_edit",
           }),
         });
         const project = await projectResponse.json();

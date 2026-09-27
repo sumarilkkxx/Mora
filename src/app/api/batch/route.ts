@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { desc, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
-import { batchJobItems, batchJobs } from "@/lib/db/schema";
+import { batchJobItems, batchJobs, operationRuns } from "@/lib/db/schema";
 import { apiError } from "@/lib/api-error";
 import { batchBusy, batchOperationActive, claimBatch, releaseBatch, renewBatch } from "@/lib/batch-execution";
+import { randomUUID } from "node:crypto";
+import { OperationRunRepository } from "@/lib/operation-run";
 
 /**
  * Batch job persistence (batch_jobs / batch_job_items).
@@ -22,6 +24,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => ({}))) as {
       config?: Record<string, unknown>;
+      requestId?: unknown;
       items?: Array<{ productId?: unknown; productName?: unknown; variation?: unknown }>;
     };
     const items = Array.isArray(body.items)
@@ -30,6 +33,14 @@ export async function POST(req: NextRequest) {
     if (items.length === 0) return apiError(req, "缺少批量条目", "Missing batch items");
 
     const db = getDb();
+    const jobId = randomUUID();
+    const requestId = typeof body.requestId === "string" && body.requestId.length <= 200 ? body.requestId : jobId;
+    const requestKey = `batch:${requestId}`;
+    const existing = db.select().from(operationRuns).where(eq(operationRuns.requestKey, requestKey)).get();
+    if (existing) {
+      const rows = db.select().from(batchJobItems).where(eq(batchJobItems.jobId, existing.id)).all();
+      return NextResponse.json({ jobId: existing.id, items: rows, reused: true }, { status: 200 });
+    }
     const result = db.transaction(tx => {
       const running = tx.select().from(batchJobs).where(eq(batchJobs.status, "running")).all();
       if (running.some(job => (job.executionUntil ?? 0) > Date.now() || batchOperationActive(job.id))) return null;
@@ -37,8 +48,9 @@ export async function POST(req: NextRequest) {
       tx.update(batchJobs).set({ status: "cancelled", updatedAt: new Date() }).where(eq(batchJobs.status, "running")).run();
       const job = tx
         .insert(batchJobs)
-        .values({ status: "running", total: items.length, config: body.config ?? {} })
+        .values({ id: jobId, status: "running", total: items.length, config: body.config ?? {} })
         .returning().get()!;
+      tx.insert(operationRuns).values({ id: job.id, kind: "batch", subjectId: job.id, requestKey, stage: "queued", status: "queued" }).run();
       const rows = tx
         .insert(batchJobItems)
         .values(
@@ -75,6 +87,20 @@ export async function PATCH(req: NextRequest) {
     };
     const db = getDb();
     const owner = typeof body.owner === "string" && body.owner.length <= 100 ? body.owner : "";
+    if (typeof body.jobId === "string" && body.status === "cancelled") {
+      const operation = new OperationRunRepository(db, { owner });
+      const current = operation.read(body.jobId);
+      if (!current) return apiError(req, "任务不存在", "Batch not found", 404);
+      if (current.status === "queued" || current.status === "interrupted") {
+        operation.requestCancel(body.jobId);
+      } else {
+        if (!owner || current.owner !== owner) return batchBusy();
+        operation.requestCancel(body.jobId);
+        operation.finish(body.jobId, "cancelled");
+      }
+      db.update(batchJobs).set({ status: "cancelled", updatedAt: new Date() }).where(eq(batchJobs.id, body.jobId)).run();
+      return NextResponse.json({ ok: true });
+    }
     if (!owner) return batchBusy();
     if (typeof body.jobId === "string" && body.action) {
       const ok = body.action === "claim" ? claimBatch(body.jobId, owner)
@@ -100,6 +126,9 @@ export async function PATCH(req: NextRequest) {
           updatedAt: new Date(),
         })
         .where(eq(batchJobItems.id, body.itemId)).run();
+      const operation = new OperationRunRepository(db, { owner });
+      const current = operation.read(item.jobId);
+      operation.checkpoint(item.jobId, { ...(current?.checkpoint ?? {}), itemId: body.itemId, itemStatus: p.status }, `item:${body.itemId}`);
       return NextResponse.json({ ok: true });
     }
 
@@ -111,6 +140,10 @@ export async function PATCH(req: NextRequest) {
         .update(batchJobs)
         .set({ status: body.status as "running" | "done" | "cancelled", updatedAt: new Date() })
         .where(eq(batchJobs.id, body.jobId)).run();
+      const operation = new OperationRunRepository(db, { owner });
+      if (body.status === "done") {
+        operation.finish(body.jobId, "done", { done: items.length });
+      }
       return NextResponse.json({ ok: true });
     }
 

@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { execFile } from "child_process";
-import { promisify } from "util";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { getDataDir } from "@/lib/paths";
@@ -11,6 +9,7 @@ import { createProvider } from "@/lib/providers";
 import { toRemoteUsableImage } from "@/lib/remote-image";
 import { buildStoryboardGridPrompt, computeGridCells, GRID_MAX_SHOTS } from "@/lib/storyboard-grid";
 import { ffmpegBin } from "@/lib/ffmpeg-path";
+import { runMediaProcess } from "@/lib/media-runtime";
 import { probeMedia } from "@/lib/media-probe";
 import { apiError, errText } from "@/lib/api-error";
 import { detectImageMime, imageExtension } from "@/lib/image-format";
@@ -19,7 +18,6 @@ import { validateOrDelete } from "@/lib/media-validate";
 import { MAX_DOWNLOAD_BYTES } from "@/lib/providers/stock-types";
 import { readResponseBuffer, safeFetch } from "@/lib/ssrf-guard";
 
-const execFileAsync = promisify(execFile);
 
 /** Download or decode the generated grid image into the project uploads dir; returns the physical path + public path. */
 async function persistGridImage(projectId: string, sourceUrl: string): Promise<{ absPath: string; publicPath: string }> {
@@ -150,13 +148,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const cell = cells[i];
       const fileName = `asset-${shots[i].shotId}-${Date.now()}-grid.png`;
       const outPath = join(dir, fileName);
-      await execFileAsync(ffmpegBin(), [
+      await runMediaProcess(ffmpegBin(), [
         "-y",
         "-i", absPath,
         "-vf", `crop=${cell.w}:${cell.h}:${cell.x}:${cell.y}`,
         "-frames:v", "1",
         outPath,
-      ]);
+      ], { timeoutMs: 60_000, maxBuffer: 8 * 1024 * 1024 });
       const filePath = `/api/files/${id}/${fileName}`;
       // upsert per (projectId, shotId) — same contract as the assets save route
       await db.delete(assets).where(and(eq(assets.projectId, id), eq(assets.shotId, shots[i].shotId)));

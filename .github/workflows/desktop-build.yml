@@ -62,18 +62,27 @@ jobs:
             command: pnpm dist:win
             artifact: Mora-Windows-x64
             files: release/*.exe
+            platform: windows
+            arch: x64
+            report_key: windows-x64
           - label: macOS Apple Silicon
             runner: macos-15
             command: pnpm dist:mac
             artifact: Mora-macOS-arm64
             files: release/*.dmg
             expected_arch: arm64
+            platform: macos
+            arch: arm64
+            report_key: macos-arm64
           - label: macOS Intel
             runner: macos-15-intel
             command: pnpm dist:mac
             artifact: Mora-macOS-x64
             files: release/*.dmg
             expected_arch: x86_64
+            platform: macos
+            arch: x64
+            report_key: macos-x64
 
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
@@ -99,8 +108,8 @@ jobs:
       - name: Prepare and verify bundled media binaries
         run: pnpm media:prepare
 
-      - name: Test desktop payload pruning
-        run: node --test scripts/desktop-payload.test.cjs
+      - name: Test desktop delivery contracts
+        run: pnpm test:desktop
 
       - name: Test
         run: pnpm test
@@ -108,13 +117,56 @@ jobs:
       - name: Type-check Electron and Node scripts
         run: pnpm typecheck:js
 
+      - name: Preflight desktop release contract
+        id: release_contract
+        run: node scripts/desktop-release-report.cjs preflight --platform=${{ matrix.platform }} --arch=${{ matrix.arch }} --channel=${{ startsWith(github.ref, 'refs/tags/') && 'official' || 'development' }} --report=test-results/desktop-release-${{ matrix.report_key }}.json
+        env:
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_KEYCHAIN: ${{ secrets.APPLE_KEYCHAIN }}
+          APPLE_KEYCHAIN_PROFILE: ${{ secrets.APPLE_KEYCHAIN_PROFILE }}
+
+      - name: Materialize Apple API key for notarization
+        if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY }}
+        run: |
+          if [[ -n "$APPLE_API_KEY_CONTENT" ]]; then
+            api_key_path="$RUNNER_TEMP/mora-notarization-key.p8"
+            printf '%s' "$APPLE_API_KEY_CONTENT" > "$api_key_path"
+            chmod 600 "$api_key_path"
+            echo "APPLE_API_KEY=$api_key_path" >> "$GITHUB_ENV"
+          fi
+
       - name: Build package
         run: ${{ matrix.command }}
         env:
-          # v0.2.0.0 intentionally ships unsigned: the project does not use paid Apple/Windows
-          # signing certificates yet. Passing empty CSC_* values makes electron-builder treat
-          # the workspace directory as a certificate path, so signing must be disabled explicitly.
-          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          # Pull requests and manual builds are always unsigned development artifacts. Tagged
+          # open-source releases may also be unsigned; complete credentials enable optional signing.
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ steps.release_contract.outputs.force_code_signing }}
+          WIN_CSC_LINK: ${{ startsWith(github.ref, 'refs/tags/') && secrets.WIN_CSC_LINK || '' }}
+          WIN_CSC_KEY_PASSWORD: ${{ startsWith(github.ref, 'refs/tags/') && secrets.WIN_CSC_KEY_PASSWORD || '' }}
+          CSC_LINK: ${{ startsWith(github.ref, 'refs/tags/') && secrets.CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ startsWith(github.ref, 'refs/tags/') && secrets.CSC_KEY_PASSWORD || '' }}
+          APPLE_API_KEY_ID: ${{ startsWith(github.ref, 'refs/tags/') && secrets.APPLE_API_KEY_ID || '' }}
+          APPLE_API_ISSUER: ${{ startsWith(github.ref, 'refs/tags/') && secrets.APPLE_API_ISSUER || '' }}
+          APPLE_ID: ${{ startsWith(github.ref, 'refs/tags/') && secrets.APPLE_ID || '' }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ startsWith(github.ref, 'refs/tags/') && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ startsWith(github.ref, 'refs/tags/') && secrets.APPLE_TEAM_ID || '' }}
+          APPLE_KEYCHAIN: ${{ startsWith(github.ref, 'refs/tags/') && secrets.APPLE_KEYCHAIN || '' }}
+          APPLE_KEYCHAIN_PROFILE: ${{ startsWith(github.ref, 'refs/tags/') && secrets.APPLE_KEYCHAIN_PROFILE || '' }}
+
+      - name: Label signed or unsigned installer
+        run: node scripts/label-desktop-artifacts.cjs release ${{ steps.release_contract.outputs.artifact_suffix }}
 
       - name: Smoke test packaged app (Windows)
         if: runner.os == 'Windows'
@@ -135,6 +187,12 @@ jobs:
           if ($smoke.ExitCode -ne 0) {
             throw "Smoke test failed with exit code $($smoke.ExitCode)"
           }
+
+          $installer = Get-ChildItem release -File -Filter '*.exe' | Select-Object -First 1
+          if (-not $installer) { throw 'Mora installer not found' }
+          node scripts/desktop-release-report.cjs verify `
+            --report=test-results/desktop-release-${{ matrix.report_key }}.json `
+            "--artifact=$($installer.FullName)"
 
       - name: Verify DMG and smoke test installed app (macOS)
         if: runner.os == 'macOS'
@@ -163,6 +221,11 @@ jobs:
 
           HEADLESS_SMOKE=1 "$app_binary" --user-data-dir="$RUNNER_TEMP/mora-smoke"
 
+          node scripts/desktop-release-report.cjs verify \
+            --report=test-results/desktop-release-${{ matrix.report_key }}.json \
+            --artifact="$dmg_path" \
+            --app="$app_path"
+
           hdiutil detach "$mount_dir"
           trap - EXIT
 
@@ -174,7 +237,9 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.artifact }}
-          path: ${{ matrix.files }}
+          path: |
+            ${{ matrix.files }}
+            test-results/desktop-release-${{ matrix.report_key }}.json
           if-no-files-found: error
 
   release:
@@ -200,6 +265,8 @@ jobs:
       - name: Verify release assets and generate checksums
         shell: bash
         run: |
+          node scripts/verify-desktop-release-reports.cjs release-assets
+
           mapfile -t installers < <(find release-assets -maxdepth 1 -type f \( -name '*.exe' -o -name '*.dmg' \) -print | sort)
           if [[ "${#installers[@]}" -ne 3 ]]; then
             echo "Expected 3 installers, found ${#installers[@]}."
@@ -209,6 +276,22 @@ jobs:
 
           cd release-assets
           sha256sum ./*.exe ./*.dmg > SHA256SUMS.txt
+
+          cat > INSTALLATION-NOTES.md <<'EOF'
+          # Mora desktop installation notes
+
+          Mora is an open-source project. Release installers may be unsigned and are labeled
+          `-unsigned`; verify the matching SHA-256 value in `SHA256SUMS.txt` before opening them.
+
+          - Windows: Microsoft Defender SmartScreen may show an unknown publisher warning. After
+            verifying the checksum, choose **More info → Run anyway** if you trust this GitHub release.
+          - macOS: move Mora to Applications, then Control-click Mora and choose **Open**. If macOS
+            still blocks it, use **System Settings → Privacy & Security → Open Anyway** after verifying
+            the checksum.
+
+          Signed artifacts may be added later as an optional trust improvement; signing is not a
+          prerequisite for this project's GitHub releases.
+          EOF
 
       - name: Publish installers to GitHub pre-release
         env:

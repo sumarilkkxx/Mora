@@ -3,16 +3,14 @@ import { getDataDir, fileNameOf } from "@/lib/paths";
 import { ffmpegBin } from "@/lib/ffmpeg-path";
 import { join } from "path";
 import { existsSync } from "fs";
-import { exec } from "child_process";
-import { promisify } from "util";
 import { getDb } from "@/lib/db";
 import { compositions } from "@/lib/db/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { PLATFORM_SPECS } from "@/lib/platform-specs";
-import { vbvArgs, fpsCapArgs, buildBitrateReport, probeEncodeStats } from "@/lib/export-guard";
+import { vbvArgList, fpsCapArgList, buildBitrateReport, probeEncodeStats } from "@/lib/export-guard";
 import { apiError, errText } from "@/lib/api-error";
+import { runMediaProcess } from "@/lib/media-runtime";
 
-const execAsync = promisify(exec);
 
 // Target dimensions per platform (single source of truth in platform-specs.ts, including TikTok Shop)
 const PLATFORM_SIZE = PLATFORM_SPECS;
@@ -60,17 +58,21 @@ export async function POST(
       `[bg][fg]overlay=(W-w)/2:(H-h)/2`;
     // fps ceiling: only downsample when the source actually exceeds the platform limit
     const srcStats = await probeEncodeStats(src).catch(() => null);
-    const fpsCap = fpsCapArgs(srcStats?.fps ?? 0, target.maxFps);
+    const fpsCap = fpsCapArgList(srcStats?.fps ?? 0, target.maxFps);
     // -map_metadata 0 explicitly carries source metadata into the output (important: this propagates the implicit AIGC compliance markers to the platform export — this is what the user actually uploads)
     // CRF + VBV dual constraint: CRF picks quality, maxrate/bufsize hard-caps bitrate peaks under
     // the platform's recompression line so the upload is served as-is instead of being re-transcoded
-    const cmd =
-      `"${ffmpegBin()}" -y -i "${src}" -filter_complex "${filter}" ` +
-      `-map_metadata 0 -c:v libx264 -preset medium -crf 20 ${vbvArgs(target.maxVideoKbps)} ` +
-      `${fpsCap ? fpsCap + " " : ""}-pix_fmt yuv420p -movflags +faststart ` +
-      `-c:a aac -b:a 192k "${outFile}"`;
-
-    await execAsync(cmd, { maxBuffer: 50 * 1024 * 1024 });
+    await runMediaProcess(ffmpegBin(), [
+      "-y", "-i", src,
+      "-filter_complex", filter,
+      "-map_metadata", "0",
+      "-c:v", "libx264", "-preset", "medium", "-crf", "20",
+      ...vbvArgList(target.maxVideoKbps),
+      ...fpsCap,
+      "-pix_fmt", "yuv420p", "-movflags", "+faststart",
+      "-c:a", "aac", "-b:a", "192k",
+      outFile,
+    ], { timeoutMs: 15 * 60_000, maxBuffer: 50 * 1024 * 1024 });
 
     // verify what we actually produced — the report tells the user whether this file will
     // survive upload without platform recompression

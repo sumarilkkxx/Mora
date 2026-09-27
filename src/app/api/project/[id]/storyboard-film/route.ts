@@ -448,6 +448,6 @@ async function persistFilm(
       status: "done",
     })
     .returning();
-  await db.update(projects).set({ status: "done", productionMode: "ai", updatedAt: new Date() }).where(eq(projects.id, projectId));
+  await db.update(projects).set({ status: "done", workflowMode: "cloud_generate", productionMode: "ai", updatedAt: new Date() }).where(eq(projects.id, projectId));
   return { url: `/api/output/${projectId}/${fileName}`, compositionId: comp.id, fileName };
 }

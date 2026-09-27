@@ -19,7 +19,6 @@ import { adTemplateStorageKey, adTemplateAppliedKey } from "@/lib/ad-template-st
 import { buildHookVariants } from "@/lib/script-engine/hook-variants";
 import type { ProductCategory } from "@/lib/script-engine/templates";
 import { CAPTION_PRESET_IDS } from "@/lib/caption-presets";
-import { ProjectHeader } from "@/components/project-header";
 import { normalizeProductionMode, type ProductionMode } from "@/lib/production-mode";
 import { buildAssetRows, type SavedAssetRow } from "@/lib/assets-view";
 import {
@@ -230,10 +229,6 @@ export default function VideoPage() {
           setProjectName(project.name ?? project.productName ?? "");
           setProductionMode(projectMode);
           setProjectCategory(typeof project.productCategory === "string" ? project.productCategory : "");
-          if (Array.isArray(project.productionWorkflow)) {
-            const voiceStage = project.productionWorkflow.find((stage: { id?: unknown }) => stage.id === "voice");
-            if (voiceStage) setConfig((current) => ({ ...current, ttsEnabled: voiceStage.enabled !== false }));
-          }
         }
         const selected = Array.isArray(scripts)
           ? scripts.find((s: { selected?: boolean }) => s.selected) ?? scripts[0]
@@ -488,6 +483,7 @@ export default function VideoPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            requestId: crypto.randomUUID(),
             resolution: config.resolution,
             renderPreset: config.renderPreset,
             aspectRatio: config.aspectRatio,
@@ -560,6 +556,7 @@ export default function VideoPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          requestId: crypto.randomUUID(),
           resolution: config.resolution,
           renderPreset: config.renderPreset,
           aspectRatio: config.aspectRatio,
@@ -628,17 +625,6 @@ export default function VideoPage() {
 
   return (
     <div className="min-h-screen grid-bg legacy-studio-page">
-      {/* project context strip: name + CLICKABLE step navigation — replaces the legacy
-          inline non-clickable stepper this page carried while owned by a parallel session */}
-      <ProjectHeader
-        projectName={projectName || t("defaultProjectName")}
-        productionMode={productionMode}
-        showStepper={!auxiliaryCompose}
-        centerLabel={auxiliaryCompose ? t("workspaceTitle") : undefined}
-        backHref={auxiliaryCompose ? `/project/${id}/assets` : undefined}
-        backLabel={auxiliaryCompose ? t("backToAiFlow") : undefined}
-      />
-
       <main className="mx-auto max-w-7xl px-6 py-8">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/15 px-4 py-3">
           <div>

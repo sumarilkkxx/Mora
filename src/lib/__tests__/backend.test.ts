@@ -788,6 +788,7 @@ describe("composeErrorMessage（ffmpeg 合成错误归类）", () => {
   it("超时(SIGTERM/killed) → 超时提示", () => {
     expect(composeErrorMessage({ killed: true, signal: "SIGTERM" })).toMatch(/超时/);
     expect(composeErrorMessage({ signal: "SIGTERM" })).toMatch(/超时/);
+    expect(composeErrorMessage({ code: "timeout" })).toMatch(/超时/);
   });
   it("磁盘满(ENOSPC/no space) → 磁盘提示", () => {
     expect(composeErrorMessage({ stderr: "av_interleaved_write_frame(): No space left on device" })).toMatch(/磁盘/);

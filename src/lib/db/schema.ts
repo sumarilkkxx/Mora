@@ -17,6 +17,9 @@ export const projects = sqliteTable("projects", {
   name: text("name").notNull(),
   status: text("status", { enum: ["draft", "scripting", "assets", "video", "composing", "done"] }).notNull().default("draft"),
   workflowType: text("workflow_type", { enum: ["generate", "edit"] }).notNull().default("generate"),
+  // Stable workflow identity used by project continuation. Nullable only for
+  // databases created before migration 0025; runtime evidence supplies a safe fallback.
+  workflowMode: text("workflow_mode", { enum: ["auto_edit", "guided_edit", "transcript_edit", "local_generate", "cloud_generate"] }),
   // Initial choice before a render exists; once a final-video job starts, the newest
   // non-failed composition's videoOrigin becomes the authoritative workflow mode.
   // Asset provenance (AI image, upload, stock, TTS) must never decide this field.
@@ -249,7 +252,7 @@ export const guidedEditPlans = sqliteTable("guided_edit_plans", {
   revision: integer("revision").notNull().default(1),
   document: text("document", { mode: "json" }).$type<GuidedEditPlanDocument>().notNull(),
   compositionId: text("composition_id").references(() => compositions.id, { onDelete: "set null" }),
-  status: text("status", { enum: ["draft", "ready", "rendering", "done", "failed"] }).notNull().default("draft"),
+  status: text("status", { enum: ["draft", "ready", "rendering", "done", "failed", "cancelled"] }).notNull().default("draft"),
   error: text("error"),
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
@@ -282,7 +285,7 @@ export const pipelineRuns = sqliteTable("pipeline_runs", {
   scriptId: text("script_id"),
   // the stage currently executing — on failure it marks the breakpoint to resume from
   stage: text("stage", { enum: ["judge", "stock_fill", "compose"] }).notNull().default("judge"),
-  status: text("status", { enum: ["running", "done", "failed"] }).notNull().default("running"),
+  status: text("status", { enum: ["running", "done", "failed", "cancelled"] }).notNull().default("running"),
   compositionId: text("composition_id"),
   error: text("error"),
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
@@ -323,6 +326,25 @@ export const batchJobItems = sqliteTable("batch_job_items", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
+// Shared lifecycle envelope for long-running work. Domain payloads stay in their
+// own tables; this table owns only execution semantics and small checkpoints.
+export const operationRuns = sqliteTable("operation_runs", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  kind: text("kind", { enum: ["batch", "pipeline", "compose", "auto_edit"] }).notNull(),
+  subjectId: text("subject_id").notNull(),
+  requestKey: text("request_key").notNull().unique(),
+  status: text("status", { enum: ["queued", "running", "waiting_input", "cancel_requested", "done", "failed", "cancelled", "interrupted"] }).notNull().default("queued"),
+  stage: text("stage").notNull().default("queued"),
+  attempt: integer("attempt").notNull().default(0),
+  owner: text("owner"),
+  leaseUntil: integer("lease_until"),
+  checkpoint: text("checkpoint", { mode: "json" }).$type<Record<string, unknown>>(),
+  result: text("result", { mode: "json" }).$type<Record<string, unknown>>(),
+  error: text("error"),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).$defaultFn(() => new Date()),
+});
+
 // Products table — product information reused across projects
 export const products = sqliteTable("products", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -347,6 +369,9 @@ export const brandSettings = sqliteTable("brand_settings", {
   secondaryColor: text("secondary_color"), // Brand secondary color
   fontFamily: text("font_family"), // Preferred font family
   watermark: text("watermark", { mode: "json" }).$type<WatermarkConfig>(), // Watermark configuration
+  introEnabled: integer("intro_enabled", { mode: "boolean" }).default(false),
+  outroEnabled: integer("outro_enabled", { mode: "boolean" }).default(false),
+  outroText: text("outro_text"),
   introTemplatePath: text("intro_template_path"), // Intro template path
   outroTemplatePath: text("outro_template_path"), // Outro template path
   isDefault: integer("is_default", { mode: "boolean" }).default(true),
@@ -362,6 +387,7 @@ export const scriptTemplates = sqliteTable("script_templates", {
   videoMode: text("video_mode"), // Applicable video mode
   styleType: text("style_type"), // Script style
   shots: text("shots", { mode: "json" }).$type<Shot[]>().default([]), // Script structure (shot prompts will be replaced on use)
+  totalDuration: integer("total_duration"),
   sourceProjectId: text("source_project_id"), // Source project
   useCount: integer("use_count").default(0), // Times used
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),

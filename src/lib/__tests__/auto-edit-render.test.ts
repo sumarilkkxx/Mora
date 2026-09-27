@@ -5,7 +5,7 @@ import { tmpdir } from "os";
 import { createHash } from "crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ffmpegBin } from "../ffmpeg-path";
-import { execMedia } from "../auto-edit/media";
+import { runMediaProcess } from "../media-runtime";
 import { renderAutoEdit, checkOutput } from "../auto-edit/render";
 import type { EditBrief, EditPlan } from "../auto-edit/contract";
 
@@ -18,7 +18,7 @@ const plan: EditPlan = { version: 1, title: "test", explanation: "test", clips: 
 beforeAll(async () => {
   directory = await mkdtemp(join(tmpdir(), "mora-auto-edit-"));
   source = join(directory, "source.mp4");
-  await execMedia(ffmpegBin(), ["-nostdin", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=30:duration=4", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100:duration=4", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", source]);
+  await runMediaProcess(ffmpegBin(), ["-nostdin", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=30:duration=4", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100:duration=4", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", source]);
   fingerprint = createHash("sha256").update(await readFile(source)).digest("hex");
 }, 30000);
 afterAll(async () => {

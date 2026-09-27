@@ -29,7 +29,7 @@ export function guidedSubtitleStyle(document: GuidedEditPlanDocument): GuidedSub
       : { width: 1080, height: 1920 };
   const scale = document.brief.captionSize === "small" ? 0.88 : document.brief.captionSize === "large" ? 1.15 : 1;
   const base = ratio === "9:16" ? 62 : ratio === "16:9" ? 56 : 54;
-  const text = document.beats.map((beat) => beat.text).join(" ");
+  const text = document.beats.map((beat) => beat.captionText ?? beat.text).join(" ");
   const detected = detectGuidedCaptionLanguage(text);
   const language = document.brief.captionLanguage === "zh" || document.brief.captionLanguage === "en"
     ? document.brief.captionLanguage
@@ -113,8 +113,9 @@ export function buildGuidedSubtitleLines(document: GuidedEditPlanDocument): Kara
     if (!clips.length) return [];
     const start = Math.min(...clips.map((clip) => clip.outputStart));
     const end = Math.max(...clips.map((clip) => clip.outputEnd));
-    const beatLanguage = document.brief.captionLanguage === "auto" ? detectGuidedCaptionLanguage(beat.text) : document.brief.captionLanguage;
-    const cards = chunkCaption(beat.text, start, end).flatMap((card) => {
+    const captionText = beat.captionText ?? beat.text;
+    const beatLanguage = document.brief.captionLanguage === "auto" ? detectGuidedCaptionLanguage(captionText) : document.brief.captionLanguage;
+    const cards = chunkCaption(captionText, start, end).flatMap((card) => {
       const parts = repairCaptionParts(splitToWidth(card.text, maxWeight, beatLanguage, beat.role));
       if (parts.length <= 1) return [{ ...card, text: parts[0] ?? card.text }];
       return allocateParts(parts, card.startTime, card.endTime);

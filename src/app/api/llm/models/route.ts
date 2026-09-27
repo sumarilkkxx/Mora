@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { errText } from "@/lib/api-error";
 import { isOllama, listModelsDetailed, type ModelCapability, type ModelListResult } from "@/lib/llm-models";
+import { resolveCapabilityContract } from "@/lib/provider-capability-contract";
+
+function providerId(baseUrl: string): string {
+  try {
+    const host = new URL(baseUrl).hostname.toLowerCase();
+    if (host === "openrouter.ai") return "openrouter";
+    if (host === "api.openai.com") return "openai";
+    if (host === "localhost" || host === "127.0.0.1") return "ollama";
+    return host;
+  } catch {
+    return "openai-compatible";
+  }
+}
 
 function modelListError(req: NextRequest, result: ModelListResult, localOllama: boolean): string {
   if (localOllama && (result.code === "CONNECTION_REFUSED" || result.models.length === 0)) {
@@ -48,7 +61,16 @@ export async function POST(req: NextRequest) {
         error: modelListError(req, result, localOllama),
       });
     }
-    return NextResponse.json({ ok: true, models: result.models, capability });
+    const provider = providerId(String(baseUrl));
+    return NextResponse.json({
+      ok: true,
+      models: result.models.map((id) => ({
+        id,
+        name: id,
+        capability: resolveCapabilityContract({ capability, provider, modelId: id }),
+      })),
+      capability,
+    });
   } catch (error) {
     return NextResponse.json({
       ok: false,

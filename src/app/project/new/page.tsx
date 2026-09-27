@@ -144,7 +144,7 @@ export default function NewProjectPage() {
 
   // ad template (Higgsfield-Ads-style end-to-end recipe): pre-fills style/mode here,
   // injects the camera/look plan into script generation, and hands the compose recipe
-  // to the video page via localStorage
+  // to the video page via a disposable localStorage handoff draft
   const [selectedAdTemplateId, setSelectedAdTemplateId] = useState<string>("");
   const [adTemplateGroup, setAdTemplateGroup] = useState<AdTemplateGroupId | "all" | "mine">("all");
   const [adTemplateQuery, setAdTemplateQuery] = useState("");
@@ -546,7 +546,7 @@ export default function NewProjectPage() {
       const project = await projectRes.json();
 
       // ad template: apply the global look now and hand the compose recipe to the
-      // video page (localStorage, same client-side convention as the template store);
+      // video page (a disposable localStorage handoff, not the reusable template repository);
       // AI custom and "my templates" are stored inline (custom:<json>) since they have no builtin id
       const adTemplate = resolveAdTemplate(selectedAdTemplateId);
       if (adTemplate) {

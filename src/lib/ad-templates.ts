@@ -12,9 +12,9 @@
  *   visual look (preset id)    → applied as the global look for keyframes + i2v
  *   compose recipe             → pre-fills the video-page config (StylePackCompose shape)
  *
- * Selection is persisted per project in localStorage (`mora-ad-template:<projectId>`),
- * matching the existing convention that template state lives client-side
- * (ScriptTemplate store is localStorage too) — no DB migration needed.
+ * The one-page handoff selection is a disposable localStorage draft
+ * (`mora-ad-template:<projectId>`). Reusable ScriptTemplate records are persisted
+ * through the SQLite local-state repository instead.
  *
  * Pure data + pure functions. Names/taglines are bilingual data, not i18n keys
  * (same convention as BUILTIN_STYLE_PACKS / camera-presets / look-presets).

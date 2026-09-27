@@ -1,12 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getDataDir } from "@/lib/paths";
 import { apiError } from "@/lib/api-error";
-import { parseRangeHeader } from "@/lib/http-range";
 import { open, stat } from "fs/promises";
 import { join, normalize, sep } from "path";
-import { createReadStream, existsSync } from "fs";
-import { Readable } from "stream";
+import { existsSync } from "fs";
 import { detectImageMime } from "@/lib/image-format";
+import { createMediaFileResponse } from "@/lib/media-runtime";
 
 // Static file server - serves uploaded images/videos.
 // Streams from disk (no whole-file buffering) and supports single-range HTTP Range requests (206),
@@ -36,8 +35,6 @@ export async function GET(
   if (!fileStat.isFile()) {
     return apiError(req, "文件不存在", "File not found", 404);
   }
-  const size = fileStat.size;
-
   const ext = filePath.split(".").pop()?.toLowerCase();
 
   const mimeTypes: Record<string, string> = {
@@ -65,45 +62,10 @@ export async function GET(
     }
   }
 
-  const baseHeaders: Record<string, string> = {
-    "Content-Type": contentType,
-    "Cache-Control": "public, max-age=31536000",
-    "Accept-Ranges": "bytes",
-  };
-
-  const range = parseRangeHeader(req.headers.get("range"), size);
-
-  if (range === "unsatisfiable") {
-    return new NextResponse(null, {
-      status: 416,
-      headers: {
-        "Content-Range": `bytes */${size}`,
-        "Accept-Ranges": "bytes",
-      },
-    });
-  }
-
-  if (range) {
-    // Partial content: stream only the requested byte window
-    const stream = Readable.toWeb(
-      createReadStream(filePath, { start: range.start, end: range.end })
-    ) as ReadableStream;
-    return new NextResponse(stream, {
-      status: 206,
-      headers: {
-        ...baseHeaders,
-        "Content-Range": `bytes ${range.start}-${range.end}/${size}`,
-        "Content-Length": String(range.end - range.start + 1),
-      },
-    });
-  }
-
-  // Full content: still stream from disk instead of buffering the whole file in memory
-  const stream = Readable.toWeb(createReadStream(filePath)) as ReadableStream;
-  return new NextResponse(stream, {
-    headers: {
-      ...baseHeaders,
-      "Content-Length": String(size),
-    },
+  return createMediaFileResponse(filePath, {
+    contentType,
+    rangeHeader: req.headers.get("range"),
+    cacheControl: "public, max-age=31536000",
+    signal: req.signal,
   });
 }

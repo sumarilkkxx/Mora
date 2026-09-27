@@ -7,6 +7,8 @@ import { and, desc, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { productionModeForCreation, productionModeForVideoOrigin } from "@/lib/production-mode";
 import { normalizeTargetVideoDuration } from "@/lib/target-video-duration";
 import { userVisibleProjects } from "@/lib/project-visibility";
+import { resolveProjectContinuation, productionModeForWorkflow, workflowModeForCreation } from "@/lib/project-continuation";
+import { loadProjectContinuationEvidence } from "@/lib/project-continuation-repository";
 
 // fetch project list, most recently edited first (the /start "continue" cards rely on this order)
 export async function GET(req: NextRequest) {
@@ -20,14 +22,15 @@ export async function GET(req: NextRequest) {
 
     // One batched query (not N+1): the newest non-failed final-video job owns the
     // current workflow. Image/audio provenance is intentionally absent here.
-    const compositionRows = await db
+    const projectIds = result.map((project) => project.id);
+    const [compositionRows, continuationEvidence] = await Promise.all([db
       .select({ projectId: compositions.projectId, videoOrigin: compositions.videoOrigin, thumbnailPath: compositions.thumbnailPath, status: compositions.status })
       .from(compositions)
       .where(and(
-        inArray(compositions.projectId, result.map((project) => project.id)),
+        inArray(compositions.projectId, projectIds),
         ne(compositions.status, "failed"),
       ))
-      .orderBy(desc(compositions.createdAt));
+      .orderBy(desc(compositions.createdAt)), loadProjectContinuationEvidence(projectIds)]);
     const latestOrigin = new Map<string, string>();
     const posters = new Map<string, string>();
     for (const row of compositionRows) {
@@ -37,11 +40,22 @@ export async function GET(req: NextRequest) {
         posters.set(row.projectId, `/api/output/${row.projectId}/${encodeURIComponent(thumbnail)}`);
       }
     }
-    return NextResponse.json(result.map((project) => ({
-      ...project,
-      thumbnailUrl: posters.get(project.id) ?? null,
-      productionMode: productionModeForVideoOrigin(latestOrigin.get(project.id), project.productionMode),
-    })));
+    return NextResponse.json(result.map((project) => {
+      const productionMode = productionModeForVideoOrigin(latestOrigin.get(project.id), project.productionMode);
+      return {
+        ...project,
+        thumbnailUrl: posters.get(project.id) ?? null,
+        productionMode,
+        continuation: resolveProjectContinuation({
+          projectId: project.id,
+          workflowType: project.workflowType,
+          workflowMode: project.workflowMode,
+          productionMode,
+          projectStatus: project.status,
+          ...continuationEvidence.get(project.id),
+        }),
+      };
+    }));
   } catch (error) {
     console.error("获取项目列表失败:", error);
     return NextResponse.json(
@@ -66,13 +80,16 @@ async function handlePost(req: NextRequest) {
     const videoMode = VIDEO_MODES.includes(body.videoMode) ? body.videoMode : undefined;
     const sourceType = body.sourceType === "clone" ? "clone" : undefined;
     const workflowType = body.workflowType === "edit" ? "edit" : "generate";
-    const productionMode = productionModeForCreation(body.productionMode);
+    const requestedProductionMode = productionModeForCreation(body.productionMode);
+    const workflowMode = workflowModeForCreation(workflowType, requestedProductionMode, body.workflowMode);
+    const productionMode = workflowType === "generate" ? productionModeForWorkflow(workflowMode) : requestedProductionMode;
 
     const newProject = await db
       .insert(projects)
       .values({
         name: body.name || "未命名项目",
         workflowType,
+        workflowMode,
         productionMode,
         targetDuration: normalizeTargetVideoDuration(body.targetDuration),
         productName: body.productName,

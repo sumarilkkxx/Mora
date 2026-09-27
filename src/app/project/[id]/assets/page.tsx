@@ -32,7 +32,6 @@ import { LOOK_PRESETS, getLookPreset, lookImageSuffix } from "@/lib/look-presets
 import { realFaceLine } from "@/lib/presenters";
 import { modelSupportsLastFrame } from "@/lib/video-composer/transitions";
 import { useT, useLocale } from "@/lib/i18n";
-import { ProjectHeader } from "@/components/project-header";
 import { ModelCapabilityPreflight } from "@/components/model-capability-preflight";
 import {
   checkPromptConsistency,
@@ -45,6 +44,7 @@ import {
 import { normalizeProductionMode, type ProductionMode } from "@/lib/production-mode";
 import { ATLAS_VIDEO_FAMILIES, atlasVideoFamilyId } from "@/lib/atlas-video-models";
 import { estimateVideoSpend } from "@/lib/video-spend";
+import { preflightCapabilityRequest, resolveCapabilityContract, type ProviderCapabilityContract } from "@/lib/provider-capability-contract";
 
 // shot type labels (label changed to i18n key in the assets namespace, resolved per locale)
 const shotTypeLabels: Record<Shot["type"], { key: string; color: string }> = {
@@ -63,6 +63,7 @@ interface ImageModelTarget {
   apiKey: string;
   baseUrl?: string;
   supportsAudio?: boolean;
+  capability?: ProviderCapabilityContract;
 }
 
 // persisted cloud AI task row (from /api/ai/tasks, issue #16 recovery flow)
@@ -104,7 +105,6 @@ export default function AssetsPage() {
   const [productSafe, setProductSafe] = useState(true);
   // after image generation, automatically run image-to-video to produce real motion shots (i2v quality path, replacing fake Ken-Burns camera moves). Only active when a video model is configured.
   const [autoMotion, setAutoMotion] = useState(true);
-  const [projectName, setProjectName] = useState("");
   const [productionMode, setProductionMode] = useState<ProductionMode>("local");
   const [projectTargetDuration, setProjectTargetDuration] = useState(15);
   // Long films must never fall back to independent clips: tail continuation reuses the
@@ -207,7 +207,6 @@ export default function AssetsPage() {
         const imgs: string[] = project && Array.isArray(project.productImages) ? project.productImages : [];
         const projectMode = normalizeProductionMode(project?.productionMode);
         if (project) {
-          setProjectName(project.name ?? project.productName ?? "");
           setProductionMode(projectMode);
           setProjectTargetDuration(typeof project.targetDuration === "number" ? project.targetDuration : 15);
           setProductImages(imgs);
@@ -215,10 +214,6 @@ export default function AssetsPage() {
           setProjectCategory(typeof project.productCategory === "string" ? project.productCategory : "");
           setProjectCreativeIntent(sanitizeCreativeIntent(project.creativeIntent));
           setProjectVisualBible(sanitizeVisualBible(project.visualBible));
-          if (Array.isArray(project.productionWorkflow)) {
-            const motionStage = project.productionWorkflow.find((stage: { id?: unknown }) => stage.id === "motion");
-            if (motionStage) setAutoMotion(motionStage.enabled !== false);
-          }
         }
 
         // use the selected script (fall back to the first one if none is marked selected)
@@ -427,7 +422,7 @@ export default function AssetsPage() {
         if (cancelled || !model) return;
         const prov = enabled.find((e) => e.name === model.provider);
         if (prov) {
-          setModelTarget({ provider: prov.name, model: defaultImageModel, apiKey: prov.apiKey, baseUrl: prov.baseUrl });
+          setModelTarget({ provider: prov.name, model: defaultImageModel, apiKey: prov.apiKey, baseUrl: prov.baseUrl, capability: model.capability });
         }
       } catch {
         // ignore; generateOne will surface the "not configured" error when called
@@ -463,7 +458,7 @@ export default function AssetsPage() {
         if (cancelled || !model) return;
         const prov = enabled.find((e) => e.name === model.provider);
         if (prov) {
-          setVideoModelTarget({ provider: prov.name, model: defaultVideoModel, apiKey: prov.apiKey, baseUrl: prov.baseUrl, supportsAudio: model.supportsAudio });
+          setVideoModelTarget({ provider: prov.name, model: defaultVideoModel, apiKey: prov.apiKey, baseUrl: prov.baseUrl, supportsAudio: model.supportsAudio, capability: model.capability });
         }
       } catch {
         // ignore
@@ -664,6 +659,26 @@ export default function AssetsPage() {
       if (asset?.duration) {
         const profileLimit = typeof videoParams.duration === "number" ? videoParams.duration : asset.duration;
         videoOptions.duration = Math.min(15, Math.max(4, Math.round(Math.min(asset.duration, profileLimit))));
+      }
+      const capability = videoModelTarget.capability ?? resolveCapabilityContract({
+        capability: "video",
+        provider: videoModelTarget.provider,
+        modelId: videoModelTarget.model,
+        supportsAudio: videoModelTarget.supportsAudio,
+      });
+      const localPreflight = preflightCapabilityRequest(capability, {
+        mode: "image-to-video",
+        duration: typeof videoOptions.duration === "number" ? videoOptions.duration : undefined,
+        resolution: videoParams.resolution,
+        aspectRatio: videoParams.aspectRatio,
+        lastFrame: Boolean(chainFrame),
+        audioEnabled: videoOptions.audioEnabled === true,
+      });
+      if (!localPreflight.ok) {
+        const reason = localPreflight.issues.map((issue) => `${issue.field}: ${String(issue.requested)}`).join("; ");
+        setAssets((prev) => prev.map((item) => item.shotId === shotId ? { ...item, error: `${t("preflightBlocked")} (${reason})` } : item));
+        setMotionShots((prev) => { const next = new Set(prev); next.delete(shotId); return next; });
+        return;
       }
       try {
         const atlasFamily = videoModelTarget.provider === "atlas-cloud"
@@ -1067,16 +1082,6 @@ export default function AssetsPage() {
 
   return (
     <div className="min-h-screen grid-bg legacy-studio-page">
-      {/* project context strip: name + step navigation (global chrome lives in AppShell) */}
-      <ProjectHeader
-        projectName={projectName || t("untitledProject")}
-        productionMode={productionMode}
-        showStepper={!auxiliaryAiWorkspace}
-        centerLabel={auxiliaryAiWorkspace ? t("aiHelperTitle") : undefined}
-        backHref={auxiliaryAiWorkspace ? `/project/${id}/assets` : undefined}
-        backLabel={auxiliaryAiWorkspace ? t("backToLocalFlow") : undefined}
-      />
-
       {/* single hidden input reused for every per-shot upload; target shot tracked in pendingUploadShot */}
       <input
         ref={uploadInputRef}
@@ -1358,6 +1363,7 @@ export default function AssetsPage() {
             resolution={videoParams.resolution}
             aspectRatio={videoParams.aspectRatio}
             chainMode={chainMode}
+            contract={videoModelTarget.capability}
           />
         )}
 

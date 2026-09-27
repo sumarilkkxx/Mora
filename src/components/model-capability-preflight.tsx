@@ -3,7 +3,8 @@
 import { useMemo } from "react";
 import { Check, CircleHelp, SlidersHorizontal, TriangleAlert } from "lucide-react";
 import type { GenAspectRatio, GenResolution } from "@/lib/gen-params";
-import { preflightVideoGeneration } from "@/lib/model-capabilities";
+import { preflightVideoGeneration, videoCapabilitiesFromContract } from "@/lib/model-capabilities";
+import { preflightCapabilityRequest, type ProviderCapabilityContract } from "@/lib/provider-capability-contract";
 import { useT } from "@/lib/i18n";
 
 export function ModelCapabilityPreflight(props: {
@@ -13,10 +14,23 @@ export function ModelCapabilityPreflight(props: {
   resolution: GenResolution;
   aspectRatio: GenAspectRatio;
   chainMode: "pin" | "tail" | "off";
+  contract?: ProviderCapabilityContract;
 }) {
   const t = useT("assets");
-  const result = useMemo(() => preflightVideoGeneration(props), [props]);
-  const caps = result.capabilities;
+  const legacy = useMemo(() => preflightVideoGeneration(props), [props]);
+  const contractResult = useMemo(() => props.contract ? preflightCapabilityRequest(props.contract, {
+    mode: "image-to-video",
+    duration: props.duration,
+    resolution: props.resolution,
+    aspectRatio: props.aspectRatio,
+    lastFrame: props.chainMode !== "off",
+  }) : undefined, [props]);
+  const caps = props.contract ? videoCapabilitiesFromContract(props.contract) : legacy.capabilities;
+  const issues = contractResult?.issues ?? [];
+  const adjustments = props.contract ? [] : legacy.adjustments;
+  const warnings = props.contract
+    ? (props.contract.confidence === "unknown" ? ["capabilities-unknown" as const] : [])
+    : legacy.warnings;
   const badges = [
     ["imageToVideo", caps.imageToVideo],
     ["lastFrame", caps.lastFrame],
@@ -36,6 +50,12 @@ export function ModelCapabilityPreflight(props: {
             </span>
           </div>
           <p className="mt-1 truncate text-[11px] text-muted-foreground" title={props.modelId}>{props.modelId}</p>
+          {props.contract && (
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {t(props.contract.task.recovery === "durable" ? "preflightRecoveryDurable" : "preflightRecoveryBestEffort")}
+              {props.contract.billing.estimate != null ? ` · ${t("preflightBilling", { value: props.contract.billing.estimate, unit: props.contract.billing.unit })}` : ""}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-1.5">
           {badges.map(([key, supported]) => (
@@ -47,17 +67,26 @@ export function ModelCapabilityPreflight(props: {
         </div>
       </div>
 
-      {result.adjustments.length === 0 && result.warnings.length === 0 ? (
+      {issues.length > 0 ? (
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {issues.map((issue) => (
+            <div key={`${issue.field}-${issue.code}`} className="rounded-lg border border-red-500/25 bg-red-500/8 px-3 py-2 text-xs">
+              <div className="flex items-center gap-1.5 font-medium text-red-300"><TriangleAlert className="h-3.5 w-3.5" aria-hidden="true" />{t("preflightBlocked")}</div>
+              <p className="mt-1 text-muted-foreground">{issue.field}: {String(issue.requested)}{issue.supported?.length ? ` · ${t("preflightSupported")}: ${issue.supported.join(", ")}` : ""}</p>
+            </div>
+          ))}
+        </div>
+      ) : adjustments.length === 0 && warnings.length === 0 ? (
         <p className="mt-3 flex items-center gap-1.5 text-xs text-emerald-400"><Check className="h-3.5 w-3.5" aria-hidden="true" />{t("preflightReady")}</p>
       ) : (
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          {result.adjustments.map((item) => (
+          {adjustments.map((item) => (
             <div key={`${item.field}-${item.code}`} className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-3 py-2 text-xs">
               <div className="flex items-center gap-1.5 font-medium text-amber-300"><TriangleAlert className="h-3.5 w-3.5" aria-hidden="true" />{t(`preflightField_${item.field}`)}</div>
               <p className="mt-1 text-muted-foreground">{String(item.requested)} → <span className="text-foreground">{String(item.effective)}</span> · {t(`preflightCode_${item.code}`)}</p>
             </div>
           ))}
-          {result.warnings.map((warning) => (
+          {warnings.map((warning) => (
             <div key={warning} className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-3 py-2 text-xs text-amber-200">
               {t(`preflightWarning_${warning}`)}
             </div>

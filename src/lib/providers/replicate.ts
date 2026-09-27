@@ -119,8 +119,11 @@ export class ReplicateProvider extends BaseProvider {
     if (status === 'completed' && p.output != null) {
       const urls = Array.isArray(p.output) ? p.output : [p.output]
       const duration = p.metrics?.predict_time ? Math.round(p.metrics.predict_time * 1000) : undefined
-      // use file extension to roughly determine image vs. video
-      const isVideo = urls.some((u) => /\.(mp4|webm|mov)(\?|$)/i.test(u))
+      // Replicate normally returns hosted URLs, but proxies and test fixtures may
+      // return data URLs. Preserve the media kind in both representations.
+      const isVideo = urls.some(
+        (u) => /^data:video\//i.test(u) || /\.(mp4|webm|mov)(\?|$)/i.test(u)
+      )
       base.result = isVideo
         ? ({ taskId, videoUrls: urls, modelId: '', processingTime: duration } as VideoResult)
         : ({ taskId, imageUrls: urls, modelId: '', duration } as ImageResult)

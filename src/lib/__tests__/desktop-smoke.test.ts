@@ -11,6 +11,11 @@ describe("desktop smoke checks", () => {
       if (mode === "timeout") return;
       if (mode === "http500") { res.writeHead(500).end("failed"); return; }
       if (mode === "invalid") { res.end("not json"); return; }
+      if (req.url === "/start") {
+        res.setHeader("Content-Type", "text/html");
+        res.end("<!doctype html><html><head><title>Mora</title></head><body>Mora</body></html>");
+        return;
+      }
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify(req.url === "/api/health" ? { db: { status: "ok", initError: null, migrationError: mode === "migration" ? "broken" : null } } : []));
     });

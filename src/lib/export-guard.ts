@@ -6,7 +6,7 @@
  * Pure helpers (args building / fps parsing / report) are unit-testable; probe shells ffprobe.
  */
 
-import { ffprobeBin } from "@/lib/ffmpeg-path";
+import { probeMedia } from "@/lib/media-runtime";
 import type { PlatformSpec } from "@/lib/platform-specs";
 
 /** Audio + container overhead reserved out of the platform's total-bitrate line (kbps). */
@@ -52,8 +52,12 @@ export function parseFrameRate(raw: string | undefined | null): number {
  * so the *total* file bitrate lands under the platform line even at motion peaks.
  */
 export function vbvArgs(maxVideoKbps: number): string {
+  return vbvArgList(maxVideoKbps).join(" ");
+}
+
+export function vbvArgList(maxVideoKbps: number): string[] {
   const videoCap = Math.max(1000, Math.round(maxVideoKbps) - NON_VIDEO_OVERHEAD_KBPS);
-  return `-maxrate ${videoCap}k -bufsize ${videoCap * 2}k`;
+  return ["-maxrate", `${videoCap}k`, "-bufsize", `${videoCap * 2}k`];
 }
 
 /**
@@ -62,10 +66,14 @@ export function vbvArgs(maxVideoKbps: number): string {
  * the behaviour identical across ffmpeg versions — -fps_max was renamed -fpsmax in ffmpeg 8).
  */
 export function fpsCapArgs(sourceFps: number, maxFps: number): string {
+  return fpsCapArgList(sourceFps, maxFps).join(" ");
+}
+
+export function fpsCapArgList(sourceFps: number, maxFps: number): string[] {
   if (sourceFps > 0 && maxFps > 0 && sourceFps > maxFps + 0.01) {
-    return `-r ${maxFps}`;
+    return ["-r", String(maxFps)];
   }
-  return "";
+  return [];
 }
 
 /** Build the bilingual pass/over report comparing measured output bitrate against the platform line. */
@@ -99,33 +107,19 @@ export function buildBitrateReport(stats: EncodeStats, spec: PlatformSpec): Bitr
 
 /** ffprobe the encode-relevant stats of a video file (bitrate/fps/dimensions/duration). */
 export async function probeEncodeStats(videoPath: string): Promise<EncodeStats> {
-  const { execFile } = await import("child_process");
-  const { promisify } = await import("util");
-  const run = promisify(execFile);
-  const { stdout } = await run(ffprobeBin(), [
-    "-v", "error",
-    "-show_entries", "stream=codec_type,width,height,bit_rate,r_frame_rate:format=duration,bit_rate,size",
-    "-of", "json",
-    videoPath,
-  ]);
-  const parsed = JSON.parse(String(stdout)) as {
-    streams?: Array<{ codec_type?: string; width?: number; height?: number; bit_rate?: string; r_frame_rate?: string }>;
-    format?: { duration?: string; bit_rate?: string; size?: string };
-  };
-  const v = (parsed.streams ?? []).find((s) => s.codec_type === "video");
-  const durationSec = parseFloat(parsed.format?.duration ?? "0") || 0;
-  let totalKbps = Math.round(Number(parsed.format?.bit_rate ?? 0) / 1000) || 0;
+  const probe = await probeMedia(videoPath);
+  const durationSec = probe.duration;
+  let totalKbps = Math.round(probe.totalBitrate / 1000) || 0;
   if (!totalKbps && durationSec > 0) {
     // fallback: derive from file size when the container doesn't expose format bit_rate
-    const sizeBytes = Number(parsed.format?.size ?? 0);
-    if (sizeBytes > 0) totalKbps = Math.round((sizeBytes * 8) / durationSec / 1000);
+    if (probe.sizeBytes > 0) totalKbps = Math.round((probe.sizeBytes * 8) / durationSec / 1000);
   }
   return {
     totalKbps,
-    videoKbps: Math.round(Number(v?.bit_rate ?? 0) / 1000) || 0,
-    fps: parseFrameRate(v?.r_frame_rate),
-    width: v?.width ?? 0,
-    height: v?.height ?? 0,
+    videoKbps: Math.round(probe.videoBitrate / 1000) || 0,
+    fps: parseFrameRate(probe.frameRate),
+    width: probe.width,
+    height: probe.height,
     durationSec,
   };
 }

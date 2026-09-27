@@ -11,7 +11,8 @@
  */
 import { dirname } from "path";
 import { mkdir } from "fs/promises";
-import { ffmpegBin, ffprobeBin } from "@/lib/ffmpeg-path";
+import { ffmpegBin } from "@/lib/ffmpeg-path";
+import { probeMedia, runMediaProcess } from "@/lib/media-runtime";
 
 export type FeelStrength = "subtle" | "medium" | "strong";
 
@@ -111,19 +112,9 @@ export function buildNativeFeelFilter(o: NativeFeelVfOpts): string {
 
 /** ffprobe width/height (falls back to 1080×1920 on failure, matching the vertical default). */
 async function probeSize(videoPath: string): Promise<{ width: number; height: number }> {
-  const { execFile } = await import("child_process");
-  const { promisify } = await import("util");
-  const run = promisify(execFile);
   try {
-    const { stdout } = await run(ffprobeBin(), [
-      "-v", "error",
-      "-select_streams", "v:0",
-      "-show_entries", "stream=width,height",
-      "-of", "csv=p=0",
-      videoPath,
-    ]);
-    const [w, h] = String(stdout).trim().split(",").map((x) => parseInt(x, 10));
-    if (Number.isFinite(w) && w > 0 && Number.isFinite(h) && h > 0) return { width: w, height: h };
+    const probe = await probeMedia(videoPath);
+    if (probe.width > 0 && probe.height > 0) return { width: probe.width, height: probe.height };
   } catch {
     /* fall through to default */
   }
@@ -141,9 +132,6 @@ export async function applyNativeFeel(opts: {
   halation?: boolean;
   phoneCompress?: boolean;
 }): Promise<void> {
-  const { execFile } = await import("child_process");
-  const { promisify } = await import("util");
-  const run = promisify(execFile);
   const { width, height } = await probeSize(opts.videoPath);
   const vf = buildNativeFeelFilter({
     width,
@@ -156,7 +144,7 @@ export async function applyNativeFeel(opts: {
     phoneCompress: opts.phoneCompress,
   });
   await mkdir(dirname(opts.outPath), { recursive: true });
-  await run(ffmpegBin(), [
+  await runMediaProcess(ffmpegBin(), [
     "-y",
     "-i", opts.videoPath,
     "-filter_complex", vf,
@@ -167,5 +155,5 @@ export async function applyNativeFeel(opts: {
     "-c:v", "libx264", "-preset", "medium", "-crf", opts.phoneCompress ? "27" : "20", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
     "-c:a", "copy",
     opts.outPath,
-  ]);
+  ], { timeoutMs: 15 * 60_000, maxBuffer: 50 * 1024 * 1024 });
 }

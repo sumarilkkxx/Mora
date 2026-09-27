@@ -8,6 +8,8 @@ import { and, desc, eq, ne } from "drizzle-orm";
 import { apiError, errText } from "@/lib/api-error";
 import { normalizeTargetVideoDuration } from "@/lib/target-video-duration";
 import { productionModeForVideoOrigin } from "@/lib/production-mode";
+import { PROJECT_WORKFLOW_MODES, resolveProjectContinuation } from "@/lib/project-continuation";
+import { loadProjectContinuationEvidence } from "@/lib/project-continuation-repository";
 
 // Project ids are UUIDs; validate before using one in a filesystem path (guards the rm below against traversal)
 const SAFE_ID = /^[a-zA-Z0-9-]+$/;
@@ -16,6 +18,7 @@ const SAFE_ID = /^[a-zA-Z0-9-]+$/;
 const PATCHABLE_FIELDS = [
   "name",
   "workflowType",
+  "workflowMode",
   "productionMode",
   "targetDuration",
   "productName",
@@ -45,6 +48,7 @@ const VALID_STATUS = new Set([
   "done",
 ]);
 const VALID_WORKFLOW_TYPES = new Set(["generate", "edit"]);
+const VALID_WORKFLOW_MODES = new Set<string>(PROJECT_WORKFLOW_MODES);
 const VALID_PRODUCTION_MODES = new Set(["ai", "local"]);
 
 // Fetch a single project
@@ -68,9 +72,19 @@ export async function GET(
       .orderBy(desc(compositions.createdAt))
       .limit(1);
 
+    const productionMode = productionModeForVideoOrigin(latestComposition?.videoOrigin, result[0].productionMode);
+    const continuationEvidence = await loadProjectContinuationEvidence([id]);
     return NextResponse.json({
       ...result[0],
-      productionMode: productionModeForVideoOrigin(latestComposition?.videoOrigin, result[0].productionMode),
+      productionMode,
+      continuation: resolveProjectContinuation({
+        projectId: id,
+        workflowType: result[0].workflowType,
+        workflowMode: result[0].workflowMode,
+        productionMode,
+        projectStatus: result[0].status,
+        ...continuationEvidence.get(id),
+      }),
     });
   } catch (error) {
     console.error("Failed to fetch project:", error);
@@ -112,6 +126,9 @@ export async function PATCH(
     }
     if ("workflowType" in updates && !VALID_WORKFLOW_TYPES.has(String(updates.workflowType))) {
       return apiError(req, "非法的项目工作流类型", "Invalid project workflow type", 400);
+    }
+    if ("workflowMode" in updates && !VALID_WORKFLOW_MODES.has(String(updates.workflowMode))) {
+      return apiError(req, "非法的项目工作流模式", "Invalid project workflow mode", 400);
     }
     if ("productionMode" in updates && !VALID_PRODUCTION_MODES.has(String(updates.productionMode))) {
       return apiError(req, "制作模式无效", "Invalid production mode", 400);

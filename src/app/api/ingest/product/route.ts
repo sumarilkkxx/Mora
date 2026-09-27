@@ -10,6 +10,7 @@ import { inferExtension, MAX_DOWNLOAD_BYTES } from "@/lib/providers/stock-types"
 import { readResponseBuffer, safeFetch } from "@/lib/ssrf-guard";
 import { apiError, errText } from "@/lib/api-error";
 import { productionModeForCreation } from "@/lib/production-mode";
+import { workflowModeForCreation } from "@/lib/project-continuation";
 import { normalizeTargetVideoDuration } from "@/lib/target-video-duration";
 
 const UA = "Mozilla/5.0 (compatible; Mora/1.0; +https://github.com/xixihhhh/mora)";
@@ -101,6 +102,7 @@ export async function POST(req: NextRequest) {
   // Create a commerce project + download the first few product images and persist them
   const db = getDb();
   const name = (product.title || "导入的商品").slice(0, 60);
+  const productionMode = productionModeForCreation(body.productionMode);
   const [proj] = await db
     .insert(projects)
     .values({
@@ -112,7 +114,8 @@ export async function POST(req: NextRequest) {
       // Preserve the storefront link so it can flow into publish copy (UTM-tagged) and an end-card QR code
       shopUrl: url,
       productImages: [],
-      productionMode: productionModeForCreation(body.productionMode),
+      productionMode,
+      workflowMode: workflowModeForCreation("generate", productionMode, body.workflowMode),
       targetDuration: normalizeTargetVideoDuration(body.targetDuration),
     })
     .returning();
