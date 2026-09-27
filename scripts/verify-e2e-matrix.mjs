@@ -38,6 +38,12 @@ if (mediaPrepareIndex < 0) throw new Error("E2E matrix CI workflow must prepare 
 if (matrixRunIndex < 0 || mediaPrepareIndex > matrixRunIndex) {
   throw new Error("E2E matrix CI workflow must prepare media binaries before the hermetic matrix run");
 }
+if (!workflow.includes("FFMPEG_PATH: /usr/bin/ffmpeg")) {
+  throw new Error("E2E matrix CI workflow must select Ubuntu's drawtext-capable FFmpeg");
+}
+if (!workflow.includes("ffmpeg -hide_banner -filters") || !workflow.includes("drawtext")) {
+  throw new Error("E2E matrix CI workflow must verify drawtext support before running Playwright");
+}
 if (/\$\{\{\s*secrets\./.test(workflow)) throw new Error("Hermetic E2E workflow must not consume repository secrets");
 
 const output = {

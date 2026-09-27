@@ -23,6 +23,7 @@ jobs:
       CI: "1"
       NEXT_TELEMETRY_DISABLED: "1"
       PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/e2e.json
+      FFMPEG_PATH: /usr/bin/ffmpeg
 
     steps:
       - name: Checkout
@@ -44,6 +45,9 @@ jobs:
 
       - name: Prepare media binaries
         run: pnpm media:prepare
+
+      - name: Verify CI FFmpeg features
+        run: ffmpeg -hide_banner -filters | grep -Eq '(^|[[:space:]])drawtext([[:space:]]|$)'
 
       - name: Install Chromium
         run: pnpm exec playwright install --with-deps chromium
