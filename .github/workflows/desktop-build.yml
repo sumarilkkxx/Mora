@@ -147,12 +147,19 @@ jobs:
             echo "APPLE_API_KEY=$api_key_path" >> "$GITHUB_ENV"
           fi
 
-      - name: Build package
+      - name: Build unsigned package
+        if: steps.release_contract.outputs.force_code_signing != 'true'
         run: ${{ matrix.command }}
         env:
-          # Pull requests and manual builds are always unsigned development artifacts. Tagged
-          # open-source releases may also be unsigned; complete credentials enable optional signing.
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ steps.release_contract.outputs.force_code_signing }}
+          # Do not define empty certificate variables here. On tagged macOS builds,
+          # electron-builder treats an empty CSC_LINK as the current directory.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Build signed package
+        if: steps.release_contract.outputs.force_code_signing == 'true'
+        run: ${{ matrix.command }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: true
           WIN_CSC_LINK: ${{ startsWith(github.ref, 'refs/tags/') && secrets.WIN_CSC_LINK || '' }}
           WIN_CSC_KEY_PASSWORD: ${{ startsWith(github.ref, 'refs/tags/') && secrets.WIN_CSC_KEY_PASSWORD || '' }}
           CSC_LINK: ${{ startsWith(github.ref, 'refs/tags/') && secrets.CSC_LINK || '' }}
