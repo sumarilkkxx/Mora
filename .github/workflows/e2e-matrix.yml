@@ -46,6 +46,11 @@ jobs:
       - name: Prepare media binaries
         run: pnpm media:prepare
 
+      - name: Install CI FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes ffmpeg
+
       - name: Verify CI FFmpeg features
         run: ffmpeg -hide_banner -filters | grep -Eq '(^|[[:space:]])drawtext([[:space:]]|$)'
 

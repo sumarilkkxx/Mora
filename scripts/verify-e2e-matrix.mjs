@@ -41,6 +41,9 @@ if (matrixRunIndex < 0 || mediaPrepareIndex > matrixRunIndex) {
 if (!workflow.includes("FFMPEG_PATH: /usr/bin/ffmpeg")) {
   throw new Error("E2E matrix CI workflow must select Ubuntu's drawtext-capable FFmpeg");
 }
+if (!workflow.includes("apt-get install --no-install-recommends --yes ffmpeg")) {
+  throw new Error("E2E matrix CI workflow must install the drawtext-capable Ubuntu FFmpeg package");
+}
 if (!workflow.includes("ffmpeg -hide_banner -filters") || !workflow.includes("drawtext")) {
   throw new Error("E2E matrix CI workflow must verify drawtext support before running Playwright");
 }
