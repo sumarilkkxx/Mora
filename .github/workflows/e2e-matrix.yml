@@ -1,0 +1,78 @@
+name: Hermetic E2E matrix
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, refactor]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  matrix:
+    name: Hermetic E2E repeat ${{ matrix.repeat }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        repeat: [1, 2]
+    env:
+      CI: "1"
+      NEXT_TELEMETRY_DISABLED: "1"
+      PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/e2e.json
+      FFMPEG_PATH: /usr/bin/ffmpeg
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare media binaries
+        run: pnpm media:prepare
+
+      - name: Install CI FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes ffmpeg
+
+      - name: Verify CI FFmpeg features
+        run: ffmpeg -hide_banner -filters | grep -Eq '(^|[[:space:]])drawtext([[:space:]]|$)'
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Verify matrix contract
+        run: node scripts/verify-e2e-matrix.mjs --output=test-results/e2e-matrix-contract.json
+
+      - name: Run hermetic matrix
+        run: pnpm test:e2e:run
+
+      - name: Upload machine report and failure logs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-report-${{ github.run_id }}-${{ matrix.repeat }}
+          path: |
+            test-results/e2e.json
+            test-results/e2e-matrix-contract.json
+            test-results/e2e-server.log
+            test-results/**/trace.zip
+            playwright-report/
+          if-no-files-found: warn
+          retention-days: 14

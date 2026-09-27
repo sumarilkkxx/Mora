@@ -1,5 +1,5 @@
 import type { GenAspectRatio, GenResolution } from "@/lib/gen-params";
-import { modelSupportsLastFrame } from "@/lib/video-composer/transitions";
+import { resolveCapabilityContract, type ProviderCapabilityContract } from "@/lib/provider-capability-contract";
 
 export type CapabilityConfidence = "known" | "inferred" | "unknown";
 
@@ -53,84 +53,27 @@ export function resolveModelResolution(
   return { preferred, effective, adjusted: true };
 }
 
-function inferredModes(modelId: string): Pick<VideoModelCapabilities, "textToVideo" | "imageToVideo" | "referenceVideo"> {
-  const id = modelId.toLowerCase();
-  const explicit = /(?:text-to-video|\/t2v(?:-|$))/.test(id)
-    ? "text"
-    : /(?:image-to-video|\/i2v(?:-|$)|start-end-to-video)/.test(id)
-      ? "image"
-      : /reference-to-video/.test(id)
-        ? "reference"
-        : null;
-  if (!explicit) return { textToVideo: null, imageToVideo: null, referenceVideo: null };
+/** Normalize provider-specific video metadata into one UI-facing capability contract. */
+export function videoCapabilitiesFromContract(contract: ProviderCapabilityContract): VideoModelCapabilities {
+  const modes = contract.parameters.modes;
+  const supports = (mode: string): boolean | null => modes ? modes.includes(mode) : null;
   return {
-    textToVideo: explicit === "text",
-    imageToVideo: explicit === "image",
-    referenceVideo: explicit === "reference",
+    confidence: contract.confidence === "declared" ? "inferred" : contract.confidence,
+    textToVideo: supports("text-to-video"),
+    imageToVideo: supports("image-to-video"),
+    referenceVideo: supports("video-to-video"),
+    lastFrame: contract.references.lastFrame ?? null,
+    nativeAudio: contract.audio.output === "native" ? true : contract.audio.output === "none" ? false : null,
+    durationValues: contract.parameters.durations,
+    resolutionValues: contract.parameters.resolutions,
+    aspectRatioValues: contract.parameters.aspectRatios,
+    maxReferenceImages: contract.references.maxImages,
   };
 }
 
-const KNOWN_VIDEO_CAPABILITIES: Record<string, Omit<VideoModelCapabilities, "confidence">> = {
-  "google/veo3.1/image-to-video": {
-    textToVideo: false, imageToVideo: true, referenceVideo: false,
-    lastFrame: true, nativeAudio: true, durationValues: [4, 6, 8],
-    resolutionValues: ["720p", "1080p"], aspectRatioValues: ["16:9", "9:16"],
-  },
-  "minimax/hailuo-2.3/i2v-standard": {
-    textToVideo: false, imageToVideo: true, referenceVideo: false,
-    lastFrame: false, nativeAudio: false, durationValues: [6, 10],
-  },
-};
-
 /** Normalize provider-specific video metadata into one UI-facing capability contract. */
-export function getVideoModelCapabilities(modelId: string, supportsAudio?: boolean): VideoModelCapabilities {
-  const atlasH3 = /^minimax\/h3(?:-developer)?(?:\/(text-to-video|image-to-video|reference-to-video))?$/i.exec(modelId);
-  if (atlasH3) {
-    const mode = atlasH3[1]?.toLowerCase();
-    return {
-      confidence: "known",
-      textToVideo: mode ? mode === "text-to-video" : true,
-      imageToVideo: mode ? mode === "image-to-video" : true,
-      referenceVideo: mode ? mode === "reference-to-video" : true,
-      lastFrame: mode ? mode === "image-to-video" : true,
-      nativeAudio: supportsAudio ?? true,
-      durationValues: Array.from({ length: 12 }, (_, index) => index + 4),
-      resolutionValues: ["2K"],
-      aspectRatioValues: mode === "image-to-video" ? ["adaptive"] : ["9:16", "16:9", "1:1"],
-      maxReferenceImages: !mode || mode === "reference-to-video" ? 9 : undefined,
-    };
-  }
-  const atlasSeedance = /^bytedance\/seedance-(2\.5|2\.0(?:-fast|-mini)?)(?:\/(text-to-video|image-to-video|reference-to-video))?$/i.exec(modelId);
-  if (atlasSeedance) {
-    const version = atlasSeedance[1].toLowerCase();
-    const mode = atlasSeedance[2]?.toLowerCase();
-    const full20 = version === "2.0";
-    return {
-      confidence: "known",
-      textToVideo: mode ? mode === "text-to-video" : true,
-      imageToVideo: mode ? mode === "image-to-video" : true,
-      referenceVideo: mode ? mode === "reference-to-video" : true,
-      lastFrame: mode ? mode === "image-to-video" : true,
-      nativeAudio: supportsAudio ?? true,
-      durationValues: Array.from({ length: version === "2.5" ? 27 : 12 }, (_, index) => index + 4),
-      resolutionValues: full20 || version === "2.5" ? ["720p", "1080p"] : ["720p"],
-      aspectRatioValues: ["9:16", "16:9", "1:1"],
-      maxReferenceImages: !mode || mode === "reference-to-video" ? (version === "2.5" ? 30 : 9) : undefined,
-    };
-  }
-  const known = KNOWN_VIDEO_CAPABILITIES[modelId.toLowerCase()];
-  if (known) {
-    return { confidence: "known", ...known, nativeAudio: supportsAudio ?? known.nativeAudio };
-  }
-  const modes = inferredModes(modelId);
-  const hasInference = Object.values(modes).some((value) => value !== null);
-  return {
-    confidence: hasInference || supportsAudio !== undefined ? "inferred" : "unknown",
-    ...modes,
-    // An allowlist hit proves support; a miss on an unknown/custom model proves nothing.
-    lastFrame: modelId && modelSupportsLastFrame(modelId) ? true : null,
-    nativeAudio: supportsAudio ?? null,
-  };
+export function getVideoModelCapabilities(modelId: string, supportsAudio?: boolean, provider = ""): VideoModelCapabilities {
+  return videoCapabilitiesFromContract(resolveCapabilityContract({ capability: "video", provider, modelId, supportsAudio }));
 }
 
 /**

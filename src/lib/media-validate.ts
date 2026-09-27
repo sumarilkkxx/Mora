@@ -10,12 +10,9 @@
  * Callers: stock-fill (per-shot footage), free-bgm (music tracks), assets route (AI outputs).
  */
 import { unlink } from "fs/promises";
-import { execFile } from "child_process";
-import { promisify } from "util";
 import { probeMedia } from "@/lib/media-probe";
 import { ffmpegBin } from "@/lib/ffmpeg-path";
-
-const execFileAsync = promisify(execFile);
+import { runMediaProcess } from "@/lib/media-runtime";
 
 export type MediaKind = "video" | "image" | "audio";
 
@@ -29,10 +26,10 @@ export type MediaKind = "video" | "image" | "audio";
 export async function validateMediaFile(filePath: string, kind: MediaKind): Promise<boolean> {
   try {
     if (kind === "audio") {
-      await execFileAsync(
+      await runMediaProcess(
         ffmpegBin(),
         ["-nostdin", "-v", "error", "-xerror", "-i", filePath, "-map", "0:a:0", "-f", "null", "-"],
-        { timeout: 30_000, maxBuffer: 4 * 1024 * 1024 },
+        { timeoutMs: 30_000, maxBuffer: 4 * 1024 * 1024 },
       );
       const probe = await probeMedia(filePath);
       return probe.duration > 0;

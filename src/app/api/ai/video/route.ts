@@ -13,6 +13,8 @@ import { relative, sep } from "node:path";
 import { ATLAS_VIDEO_FAMILIES, atlasVideoFamilyId } from "@/lib/atlas-video-models";
 import { estimateVideoSpend, resolveVideoSpendCap } from "@/lib/video-spend";
 import { videoRequestResolution } from "@/lib/storyboard-film";
+import { discoverModelCapability, preflightCapabilityRequest } from "@/lib/provider-capability-contract";
+import { classifyProviderError } from "@/lib/provider-error-classification";
 
 const VIDEO_WORKFLOWS = new Set<VideoWorkflow>(["shot-motion", "storyboard-film", "reference-replication", "prompt-video"]);
 
@@ -37,6 +39,33 @@ export async function POST(req: NextRequest) {
 
   try {
     const provider = createProvider({ name: providerName, apiKey, baseUrl });
+
+    const rawOptions = options && typeof options === "object" ? options as Record<string, unknown> : {};
+    const width = typeof rawOptions.width === "number" ? rawOptions.width : 0;
+    const height = typeof rawOptions.height === "number" ? rawOptions.height : 0;
+    const longEdge = Math.max(width, height);
+    const requestedResolution = longEdge >= 1800 ? "1080p" : longEdge >= 1000 ? "720p" : longEdge > 0 ? "480p" : undefined;
+    const requestedAspectRatio = width > 0 && height > 0 ? width === height ? "1:1" : width > height ? "16:9" : "9:16" : undefined;
+    const capability = await discoverModelCapability(provider, { provider: providerName, modelId: model, mediaType: "video" });
+    const preflight = preflightCapabilityRequest(capability, {
+      mode: mode || (imageUrl ? "image-to-video" : "text-to-video"),
+      duration: typeof rawOptions.duration === "number" ? rawOptions.duration : undefined,
+      resolution: requestedResolution,
+      aspectRatio: requestedAspectRatio,
+      referenceImageCount: Array.isArray(referenceImageUrls) ? referenceImageUrls.length : 0,
+      referenceVideoCount: Array.isArray(referenceVideoUrls) ? referenceVideoUrls.length : 0,
+      referenceAudioCount: Array.isArray(rawOptions.referenceAudioUrls) ? rawOptions.referenceAudioUrls.length : 0,
+      lastFrame: Boolean(lastImageUrl),
+      audioEnabled: rawOptions.audioEnabled === true,
+    });
+    if (!preflight.ok) {
+      return NextResponse.json({
+        error: errText(req, "所选模型不支持当前参数组合，请调整后重试", "The selected model does not support this parameter combination"),
+        code: "CAPABILITY_MISMATCH",
+        contractVersion: capability.version,
+        issues: preflight.issues,
+      }, { status: 422 });
+    }
 
     // The UI preflight and paid submit share one normalization policy. This is deliberately
     // completed before media upload or provider submission so unsupported values cannot bill.
@@ -206,6 +235,7 @@ export async function POST(req: NextRequest) {
     }
   } catch (error) {
     console.error("生视频失败:", error);
+    const classified = classifyProviderError(error, providerName || "");
     const billing = insufficientBalanceDetails(error, providerName || "");
     if (billing) {
       console.warn("[AI_VIDEO_INSUFFICIENT_BALANCE]", {
@@ -228,6 +258,8 @@ export async function POST(req: NextRequest) {
             `${billing.providerLabel} has insufficient balance or credits. Top up the provider account. ${taskStateEn}.`,
           ),
           code: "INSUFFICIENT_BALANCE",
+          category: classified.category,
+          retryable: classified.retryable,
           provider: billing.provider,
           providerLabel: billing.providerLabel,
           rechargeUrl: billing.rechargeUrl,
@@ -237,8 +269,15 @@ export async function POST(req: NextRequest) {
       );
     }
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : errText(req, "生视频失败", "Video generation failed") },
-      { status: 500 }
+      {
+        error: error instanceof Error ? error.message : errText(req, "生视频失败", "Video generation failed"),
+        code: classified.code,
+        category: classified.category,
+        retryable: classified.retryable,
+        recoverable: classified.recoverableTask,
+        ...(classified.taskId && { taskId: classified.taskId }),
+      },
+      { status: classified.httpStatus }
     );
   }
 }

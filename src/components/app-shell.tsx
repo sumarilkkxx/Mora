@@ -56,7 +56,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const t = useT("common");
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const isProjectWorkspace = /^\/project\/[^/]+\/(script|assets|video|export|production|transcript|edit)/.test(pathname ?? "");
 
   useEffect(() => {
     let cancelled = false;
@@ -146,11 +145,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="studio-content-column">
-        {!isProjectWorkspace && (
-          <header className="studio-desktop-topbar">
-            <StudioUtilities />
-          </header>
-        )}
+        <header className="studio-desktop-topbar">
+          <StudioUtilities />
+        </header>
         <header className="studio-mobile-header">
           <Link href="/start" className="studio-mobile-brand"><img src="/icon.svg" alt="" width={28} height={28} /><span>Mora</span></Link>
           <div className="flex items-center gap-1">

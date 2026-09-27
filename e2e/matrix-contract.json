@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "core": [
+    { "id": "core-auto-edit", "file": "e2e/auto-edit.spec.ts", "title": "合成素材上传→分析→文案确认→选段→生成旁白→合成→下载播放" },
+    { "id": "core-guided-edit", "file": "e2e/guided-edit.spec.ts", "title": "镜头卡片草稿、取消恢复、局部重渲染和历史版本保持可播放" },
+    { "id": "core-project-package", "file": "e2e/project-package.spec.ts", "title": "用户可导出、删除并导入自包含项目包，恢复预览、重渲染和再次导出" }
+  ],
+  "advanced": [
+    { "id": "advanced-generated-media", "file": "e2e/advanced-workflows.spec.ts", "title": "固定 Provider 的商品图片和生成式视频可落盘为真实项目素材" },
+    { "id": "advanced-local-compose", "file": "e2e/advanced-workflows.spec.ts", "title": "本地合成与发布工具生成可解码成片、封面、图文卡和平台文件" },
+    { "id": "advanced-batch", "file": "e2e/advanced-workflows.spec.ts", "title": "批量制作状态跨刷新保留且已完成条目不会重复执行" },
+    { "id": "advanced-clone", "file": "e2e/advanced-workflows.spec.ts", "title": "结构复刻从真实参考视频得到镜头骨架并保留本地文件" },
+    { "id": "advanced-production", "file": "e2e/production-overview.spec.ts", "title": "制作概览显示失败可恢复与完成项目" }
+  ],
+  "faults": [
+    { "id": "provider-401", "file": "e2e/failure-matrix.spec.ts", "title": "Provider 401 给出重新配置凭据的下一步且不重复提交" },
+    { "id": "provider-429", "file": "e2e/auto-edit.spec.ts", "title": "失败后可恢复，重复 retry 只领取一次" },
+    { "id": "provider-5xx", "file": "e2e/failure-matrix.spec.ts", "title": "Provider 5xx 保留可恢复任务且不重复计费请求" },
+    { "id": "provider-timeout", "file": "e2e/failure-matrix.spec.ts", "title": "Provider 超时保留可恢复任务并警告不要重复提交" },
+    { "id": "process-restart", "file": "e2e/failure-matrix.spec.ts", "title": "进程重启后的过期租约保留检查点并进入可恢复状态" },
+    { "id": "missing-file", "file": "e2e/failure-matrix.spec.ts", "title": "成片文件丢失时发布工具明确失败且保留已完成记录" },
+    { "id": "disk-space", "file": "e2e/failure-matrix.spec.ts", "title": "磁盘空间不足拒绝导入且不留下半成品" },
+    { "id": "cancel-race", "file": "e2e/guided-edit.spec.ts", "title": "镜头卡片草稿、取消恢复、局部重渲染和历史版本保持可播放" },
+    { "id": "corrupt-media", "file": "e2e/auto-edit.spec.ts", "title": "损坏的 MP4 被拒绝且不留下可选素材" }
+  ]
+}

@@ -8,7 +8,8 @@
  */
 import { dirname } from "path";
 import { mkdir } from "fs/promises";
-import { ffmpegBin, ffprobeBin } from "@/lib/ffmpeg-path";
+import { ffmpegBin } from "@/lib/ffmpeg-path";
+import { probeMedia, runMediaProcess } from "@/lib/media-runtime";
 import { buildDrawtext, unshellFilter } from "./composer";
 
 export interface EndCardVfOpts {
@@ -63,21 +64,9 @@ export function buildEndCardFilter(o: EndCardVfOpts): string {
 
 /** ffprobe the video's width + duration (falls back to 1080 / 0 on failure). */
 async function probeVideo(videoPath: string): Promise<{ width: number; duration: number }> {
-  const { execFile } = await import("child_process");
-  const { promisify } = await import("util");
-  const run = promisify(execFile);
   try {
-    const { stdout } = await run(ffprobeBin(), [
-      "-v", "error",
-      "-select_streams", "v:0",
-      "-show_entries", "stream=width:format=duration",
-      "-of", "default=nw=1:nk=1",
-      videoPath,
-    ]);
-    const nums = String(stdout).trim().split(/\s+/).map((x) => parseFloat(x));
-    const width = Number.isFinite(nums[0]) && nums[0] > 0 ? Math.round(nums[0]) : 1080;
-    const duration = Number.isFinite(nums[1]) && nums[1] > 0 ? nums[1] : 0;
-    return { width, duration };
+    const probe = await probeMedia(videoPath);
+    return { width: probe.width > 0 ? probe.width : 1080, duration: probe.duration };
   } catch {
     return { width: 1080, duration: 0 };
   }
@@ -93,9 +82,6 @@ export async function generateEndCard(opts: {
   seconds?: number;
   fontFile?: string;
 }): Promise<void> {
-  const { execFile } = await import("child_process");
-  const { promisify } = await import("util");
-  const run = promisify(execFile);
   const { width, duration } = await probeVideo(opts.videoPath);
   const vf = buildEndCardFilter({
     width,
@@ -106,7 +92,7 @@ export async function generateEndCard(opts: {
     fontFile: opts.fontFile,
   });
   await mkdir(dirname(opts.outPath), { recursive: true });
-  await run(ffmpegBin(), [
+  await runMediaProcess(ffmpegBin(), [
     "-y",
     "-i", opts.videoPath,
     "-i", opts.qrPath,
@@ -117,5 +103,5 @@ export async function generateEndCard(opts: {
     "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
     "-c:a", "copy",
     opts.outPath,
-  ]);
+  ], { timeoutMs: 15 * 60_000, maxBuffer: 50 * 1024 * 1024 });
 }

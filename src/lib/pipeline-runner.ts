@@ -20,6 +20,7 @@
  */
 
 import { eq } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
 import { internalApiHeaders } from "@/lib/internal-api";
 import { getDb } from "@/lib/db";
 import { compositions, pipelineRuns } from "@/lib/db/schema";
@@ -29,6 +30,7 @@ import {
   type JudgeReport,
 } from "@/lib/script-judge";
 import { stagesFrom, type PipelineStage } from "@/lib/pipeline-stages";
+import { OperationRunRepository, operationOwner } from "@/lib/operation-run";
 
 export interface PipelineLlmConfig {
   baseUrl: string;
@@ -46,16 +48,14 @@ export interface StartPipelineInput {
   llmConfig?: PipelineLlmConfig;
   /** resume breakpoint; defaults to the full chain */
   fromStage?: PipelineStage;
+  requestKey?: string;
 }
 
-// Survives route-module reloads in dev: one registry of run ids currently executing in THIS
-// process. A DB row saying "running" whose id is absent here means the server restarted
-// mid-run — the row is an orphan and gets surfaced as interrupted.
-const globalRuns = globalThis as unknown as { __moraActivePipelines?: Set<string> };
-const activeRuns = (globalRuns.__moraActivePipelines ??= new Set<string>());
+const operations = () => new OperationRunRepository(getDb(), { owner: operationOwner });
 
 export function isPipelineRunActive(runId: string): boolean {
-  return activeRuns.has(runId);
+  const run = operations().read(runId);
+  return run?.status === "running" && run.owner === operationOwner && (run.leaseUntil ?? 0) > Date.now();
 }
 
 /** Compose polling budget: 2.5s × 288 ≈ 12 min, above the server render timeout. */
@@ -64,6 +64,11 @@ const COMPOSE_POLL_MAX = 288;
 
 async function setRun(runId: string, patch: Partial<typeof pipelineRuns.$inferInsert>): Promise<void> {
   const db = getDb();
+  const operation = operations();
+  const current = operation.read(runId);
+  if (!operation.checkpoint(runId, { ...(current?.checkpoint ?? {}), ...(patch.compositionId ? { compositionId: patch.compositionId } : {}) }, patch.stage ?? current?.stage ?? "running")) {
+    throw new Error("Operation lease lost");
+  }
   await db.update(pipelineRuns).set({ ...patch, updatedAt: new Date() }).where(eq(pipelineRuns.id, runId));
 }
 
@@ -116,7 +121,7 @@ async function runComposeStage(input: StartPipelineInput, runId: string): Promis
   const res = await fetch(`${input.origin}/api/project/${input.projectId}/compose`, {
     method: "POST",
     headers: internalApiHeaders(input.origin),
-    body: JSON.stringify({ freeTts: { enabled: true } }),
+    body: JSON.stringify({ freeTts: { enabled: true }, requestId: `pipeline:${runId}` }),
   });
   const data = (await res.json().catch(() => ({}))) as { compositionId?: string; error?: string };
   if (!res.ok) throw new Error(data.error || "合成启动失败 / compose failed to start");
@@ -126,6 +131,8 @@ async function runComposeStage(input: StartPipelineInput, runId: string): Promis
   const db = getDb();
   for (let i = 0; i < COMPOSE_POLL_MAX; i++) {
     await new Promise((r) => setTimeout(r, COMPOSE_POLL_INTERVAL_MS));
+    if (operations().cancellationRequested(runId)) throw new Error("Operation cancelled");
+    if (!operations().heartbeat(runId)) throw new Error("Operation lease lost");
     const rows = compositionId
       ? await db.select().from(compositions).where(eq(compositions.id, compositionId)).limit(1)
       : [];
@@ -143,13 +150,33 @@ async function runComposeStage(input: StartPipelineInput, runId: string): Promis
 export async function startPipelineRun(input: StartPipelineInput): Promise<string> {
   const db = getDb();
   const stages = stagesFrom(input.fromStage);
-  const [run] = await db
-    .insert(pipelineRuns)
-    .values({ projectId: input.projectId, scriptId: input.scriptId ?? null, stage: stages[0], status: "running" })
-    .returning();
-  activeRuns.add(run.id);
+  const runId = randomUUID();
+  const operation = operations();
+  const created = operation.create({
+    id: runId, kind: "pipeline", subjectId: input.projectId,
+    requestKey: input.requestKey ?? `pipeline:${input.projectId}:${runId}`,
+    stage: stages[0], checkpoint: { completed: [] },
+  });
+  if (!created.created) return created.run.id;
+  let run: typeof pipelineRuns.$inferSelect;
+  try {
+    run = db
+      .insert(pipelineRuns)
+      .values({ id: runId, projectId: input.projectId, scriptId: input.scriptId ?? null, stage: stages[0], status: "running" })
+      .returning().get();
+  } catch (error) {
+    operation.requestCancel(runId);
+    throw error;
+  }
+  if (!operation.claim(run.id)) {
+    operation.requestCancel(run.id);
+    await db.update(pipelineRuns).set({ status: "failed", error: "Operation claim failed", updatedAt: new Date() }).where(eq(pipelineRuns.id, run.id));
+    throw new Error("Pipeline operation could not be claimed");
+  }
 
   void (async () => {
+    const heartbeat = setInterval(() => operation.heartbeat(run.id), 10_000);
+    heartbeat.unref();
     try {
       // lock in the chosen variant so every stage (and compose) uses it
       if (input.scriptId) {
@@ -160,6 +187,7 @@ export async function startPipelineRun(input: StartPipelineInput): Promise<strin
         }).catch(() => {});
       }
       for (const stage of stages) {
+        if (operation.cancellationRequested(run.id)) throw new Error("Operation cancelled");
         await setRun(run.id, { stage });
         if (stage === "judge") await runJudgeStage(input);
         else if (stage === "stock_fill") await runStockFillStage(input);
@@ -167,12 +195,17 @@ export async function startPipelineRun(input: StartPipelineInput): Promise<strin
         const next = stages[stages.indexOf(stage) + 1];
         if (next) await setRun(run.id, { stage: next });
       }
-      await setRun(run.id, { status: "done" });
+      if (!operation.finish(run.id, "done", { compositionId: operation.read(run.id)?.checkpoint?.compositionId })) throw new Error("Operation lease lost before publish");
+      await db.update(pipelineRuns).set({ status: "done", updatedAt: new Date() }).where(eq(pipelineRuns.id, run.id));
     } catch (e) {
       console.error(`[pipeline] 运行失败 run=${run.id}:`, e);
-      await setRun(run.id, { status: "failed", error: e instanceof Error ? e.message : String(e) }).catch(() => {});
+      const cancelled = operation.cancellationRequested(run.id);
+      const error = e instanceof Error ? e.message : String(e);
+      if (operation.finish(run.id, cancelled ? "cancelled" : "failed", undefined, error)) {
+        await db.update(pipelineRuns).set({ status: cancelled ? "cancelled" : "failed", error, updatedAt: new Date() }).where(eq(pipelineRuns.id, run.id)).catch(() => {});
+      }
     } finally {
-      activeRuns.delete(run.id);
+      clearInterval(heartbeat);
     }
   })();
 

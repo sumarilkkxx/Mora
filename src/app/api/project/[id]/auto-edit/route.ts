@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { createHash, randomUUID } from "crypto";
 import { getDb } from "@/lib/db";
-import { autoEditRuns, mediaSources } from "@/lib/db/schema";
+import { autoEditRuns, mediaSources, projects } from "@/lib/db/schema";
 import { parseBrief, parsePlan, parsePromotionCopy, validateSource, type Checkpoint } from "@/lib/auto-edit/contract";
 import { cancelAutoEdit, recoverAutoEdits, startAutoEdit, type Credentials } from "@/lib/auto-edit/runner";
 import { fileNameOf } from "@/lib/paths";
@@ -97,6 +97,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const [duplicate] = await db.select().from(autoEditRuns).where(eq(autoEditRuns.requestKey, requestKey));
       return NextResponse.json({ runId: duplicate.id }, { status: 202 });
     }
+    await db.update(projects).set({ workflowType: "edit", workflowMode: "auto_edit", updatedAt: new Date() }).where(eq(projects.id, id));
     startAutoEdit(created, credentials ?? { llm: { baseUrl: "", apiKey: "", model: "" } }, { exportOnly: body.action === "export", candidatesOnly: body.action === "candidates" || body.action === "approve-copy", manualPlan });
     return NextResponse.json({ runId: created.id }, { status: 202 });
   } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid request" }, { status: 400 }); }

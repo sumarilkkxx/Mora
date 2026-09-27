@@ -31,7 +31,7 @@ import {
   type TTSProvider,
 } from "@/lib/tts-presets";
 import { mergeCustomModels } from "@/lib/gen-params";
-import { getVideoModelCapabilities, resolveModelResolution } from "@/lib/model-capabilities";
+import { getVideoModelCapabilities, resolveModelResolution, videoCapabilitiesFromContract } from "@/lib/model-capabilities";
 import { ATLAS_VIDEO_FAMILIES, atlasVideoFamilyId } from "@/lib/atlas-video-models";
 import { estimateVideoSpend } from "@/lib/video-spend";
 import { LLM_PRESETS } from "@/lib/llm-presets";
@@ -41,6 +41,7 @@ import { PresenterManager } from "@/components/presenter-manager";
 import { PageFrame, PageHeader } from "@/components/studio/page";
 import { Notice } from "@/components/ui/notice";
 import { Switch } from "@/components/ui/switch";
+import { DiagnosticBundlePanel } from "@/components/diagnostic-bundle-panel";
 
 // default resolution options
 const resolutionOptions = [
@@ -64,6 +65,7 @@ const SETTINGS_SECTIONS = [
   { id: "tts", labelKey: "tabTts" },
   { id: "characters", labelKey: "tabCharacters" },
   { id: "brand", labelKey: "tabBrand" },
+  { id: "diagnostics", labelKey: "tabDiagnostics" },
 ];
 const SETTINGS_TABS: string[] = SETTINGS_SECTIONS.map((s) => s.id);
 
@@ -308,7 +310,10 @@ export default function SettingsPage() {
     model.id === defaultVideoModel && (!defaultVideoProvider || model.provider === defaultVideoProvider)
   );
   const selectedVideoProvider = selectedVideoModel?.provider;
-  const selectedVideoCapabilities = getVideoModelCapabilities(defaultVideoModel);
+  const selectedVideoContract = selectedVideoModel?.capability;
+  const selectedVideoCapabilities = selectedVideoContract
+    ? videoCapabilitiesFromContract(selectedVideoContract)
+    : getVideoModelCapabilities(defaultVideoModel, selectedVideoModel?.supportsAudio, selectedVideoProvider);
   const effectiveVideoResolution = resolveModelResolution(defaultResolution, selectedVideoCapabilities.resolutionValues);
   const selectedAtlasFamily = selectedVideoProvider === "atlas-cloud"
     ? ATLAS_VIDEO_FAMILIES.find((family) => family.id === atlasVideoFamilyId(defaultVideoModel))
@@ -359,17 +364,6 @@ export default function SettingsPage() {
     const url = new URL(window.location.href);
     url.searchParams.set("tab", v);
     window.history.replaceState(null, "", url.toString());
-  };
-
-  // 系统诊断信息（/api/health），报障截图用
-  const [diagnostics, setDiagnostics] = useState("");
-  const loadDiagnostics = async () => {
-    try {
-      const res = await fetch("/api/health");
-      setDiagnostics(JSON.stringify(await res.json(), null, 2));
-    } catch (e) {
-      setDiagnostics(String(e));
-    }
   };
 
   // test LLM connection
@@ -1064,6 +1058,9 @@ export default function SettingsPage() {
                         {selectedVideoSecondEstimate && (
                           <span><span className="text-muted-foreground">{t("videoBillingTier")}：</span>≈ ${selectedVideoSecondEstimate.maxUsd.toFixed(3)}/s</span>
                         )}
+                        {selectedVideoContract && (
+                          <span><span className="text-muted-foreground">{t("videoRecovery")}：</span>{t(selectedVideoContract.task.recovery === "durable" ? "videoRecoveryDurable" : "videoRecoveryBestEffort")}</span>
+                        )}
                       </div>
                       <p className="mt-2 leading-5 text-muted-foreground">{t("videoResolutionBehavior")}</p>
                     </div>
@@ -1086,6 +1083,7 @@ export default function SettingsPage() {
             <BrandSettings />
           </section>
           )}
+          {tab === "diagnostics" && <DiagnosticBundlePanel />}
         </div>
 
         {/* custom model endpoints + generation params (advanced, cross-cutting, collapsed) */}
@@ -1097,7 +1095,7 @@ export default function SettingsPage() {
                   <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden="true" />
                 </summary>
                 <div className="px-1 pb-1 space-y-4">
-                  <GenerationSettings selectedVideoProvider={selectedVideoProvider} />
+                  <GenerationSettings selectedVideoProvider={selectedVideoProvider} selectedVideoCapability={selectedVideoContract} />
                 </div>
               </details>
         </div>
@@ -1105,29 +1103,6 @@ export default function SettingsPage() {
         {/* zustand persists every change instantly — say so instead of showing a fake save button */}
         <p className="mt-8 text-xs text-muted-foreground">{t("autoSaveHint")}</p>
 
-        {/* 系统诊断：报障时让用户点开截图/复制，一次拿到版本、数据库、迁移、ffmpeg 状态（折叠，不与设置项抢注意力） */}
-        <details className="group mt-4 rounded-lg border border-border/40">
-          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground">
-            <span>{t("diagnosticsTitle")}</span>
-            <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden="true" />
-          </summary>
-          <div className="px-4 pb-4">
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={loadDiagnostics}>
-                {diagnostics ? t("diagnosticsRefresh") : t("diagnosticsShow")}
-              </Button>
-              {diagnostics && (
-                <Button variant="outline" size="sm" onClick={() => navigator.clipboard.writeText(diagnostics)}>
-                  {t("diagnosticsCopy")}
-                </Button>
-              )}
-            </div>
-            {diagnostics && (
-              <pre className="mt-3 max-h-64 overflow-auto rounded bg-muted/30 p-3 text-xs leading-relaxed whitespace-pre-wrap break-all">{diagnostics}</pre>
-            )}
-            <p className="mt-2 text-xs text-muted-foreground">{t("diagnosticsHint")}</p>
-          </div>
-        </details>
       </PageFrame>
   );
 }

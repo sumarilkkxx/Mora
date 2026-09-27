@@ -40,6 +40,13 @@ describe("guided edit render invocation", () => {
     expect(invocation.outputArgs).toContain("[acat]");
   });
 
+  it("supports a render-only 720p export without changing the edit content", () => {
+    const lowerResolution = document("muted");
+    lowerResolution.brief.outputQuality = "720p";
+    const invocation = buildGuidedRenderInvocation({ sourcePath: "in.mp4", outputPath: "out.mp4", document: lowerResolution, sourceHasAudio: false });
+    expect(invocation.filterComplex).toContain("scale=720:1280");
+  });
+
   it("creates a video-only invocation in muted mode", () => {
     const invocation = buildGuidedRenderInvocation({ sourcePath: "in.mp4", outputPath: "out.mp4", document: document("muted"), sourceHasAudio: true, subtitlePath: "sub.ass" });
     expect(invocation.filterComplex).not.toContain("atrim=");
@@ -59,6 +66,26 @@ describe("guided edit render invocation", () => {
     const invocation = buildGuidedRenderInvocation({ sourcePath: "in.mp4", outputPath: "out.mp4", document: document("local_voice"), sourceHasAudio: true, voiceoverPath: "local.wav" });
     expect(invocation.inputArgs).toContain("local.wav");
     expect(invocation.outputArgs).toContain("[avoice]");
+  });
+
+  it("applies saved track volumes and mixes optional background music", () => {
+    const mixed = document("original");
+    mixed.brief.originalVolume = 0.35;
+    mixed.brief.bgmFile = "/api/files/project/bgm.mp3";
+    mixed.brief.bgmVolume = 0.2;
+
+    const invocation = buildGuidedRenderInvocation({
+      sourcePath: "in.mp4",
+      outputPath: "out.mp4",
+      document: mixed,
+      sourceHasAudio: true,
+      bgmPath: "bgm.mp3",
+    });
+    expect(invocation.inputArgs).toContain("bgm.mp3");
+    expect(invocation.filterComplex).toContain("volume=0.350");
+    expect(invocation.filterComplex).toContain("volume=0.200");
+    expect(invocation.filterComplex).toContain("amix=inputs=2");
+    expect(invocation.outputArgs).toContain("[amix]");
   });
 
   it("applies real slow motion and a gradual zoom for the slow-push style", () => {

@@ -17,11 +17,11 @@ function taskHrefFromCenter(task: TaskRow): string {
 function taskTitleKey(row: TaskRow): string {
   if (row.kind === "auto_edit") return "kindAutoEdit";
   if (row.kind === "paid_unknown") return "kindUnknown";
-  if (row.kind === "pipeline_interrupted") return "kindInterrupted";
+  if (row.kind === "pipeline_interrupted" || row.kind === "compose_interrupted") return "kindInterrupted";
   if (row.kind === "paid") return "kindPaid";
   if (row.kind === "compose") return "kindCompose";
   if (row.kind === "pipeline") return "kindPipeline";
-  if (row.kind === "batch") return "kindBatch";
+  if (row.kind === "batch" || row.kind === "batch_interrupted") return "kindBatch";
   if (row.kind === "done") return "statusDone";
   return "kindOther";
 }

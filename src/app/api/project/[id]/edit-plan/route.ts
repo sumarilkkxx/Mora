@@ -4,6 +4,7 @@ import { apiError, errText } from "@/lib/api-error";
 import { getDb } from "@/lib/db";
 import { compositions, guidedEditPlans, mediaSources, projects } from "@/lib/db/schema";
 import { createGuidedEditPlan, MAX_GUIDED_OUTPUT_SECONDS } from "@/lib/guided-edit";
+import { saveGuidedEditPlan } from "@/lib/guided-edit-plan-repository";
 import { fileNameOf } from "@/lib/paths";
 import { isGuidedRenderActive } from "@/lib/guided-edit-render-runner";
 
@@ -96,6 +97,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       sourceId,
       sourceDuration: source[0].duration / 1000,
       existingBeats: Array.isArray(body.beats) ? body.beats as never[] : undefined,
+      timeline: body.timeline,
     });
     if (!document.beats.length) return apiError(req, "请先填写推广文案", "Add promotion copy first", 422);
     if (document.outputDuration > MAX_GUIDED_OUTPUT_SECONDS + 0.01) {
@@ -104,35 +106,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!document.timeline.length) return apiError(req, "没有可用于剪辑的镜头", "No scenes are available for editing", 422);
     const now = new Date();
     const planId = typeof body.planId === "string" && SAFE_ID.test(body.planId) ? body.planId : null;
-    let saved;
-    if (planId) {
-      const [existing] = await db.select().from(guidedEditPlans)
-        .where(and(eq(guidedEditPlans.id, planId), eq(guidedEditPlans.projectId, id))).limit(1);
-      if (!existing) return apiError(req, "剪辑方案不存在", "Edit plan not found", 404);
-      if (existing.status === "rendering") return apiError(req, "当前方案正在渲染", "This plan is rendering", 409);
-      [saved] = await db.update(guidedEditPlans).set({
-        sourceId,
-        document,
-        status: "ready",
-        compositionId: null,
-        error: null,
-        updatedAt: now,
-      }).where(eq(guidedEditPlans.id, existing.id)).returning();
-    } else {
-      const [latest] = await db.select({ revision: guidedEditPlans.revision }).from(guidedEditPlans)
-        .where(eq(guidedEditPlans.projectId, id)).orderBy(desc(guidedEditPlans.revision)).limit(1);
-      [saved] = await db.insert(guidedEditPlans).values({
-        projectId: id,
-        sourceId,
-        revision: (latest?.revision ?? 0) + 1,
-        document,
-        status: "ready",
-      }).returning();
-    }
+    const saved = saveGuidedEditPlan(db, {
+      projectId: id,
+      sourceId,
+      planId,
+      document,
+      intent: body.intent === "draft" ? "draft" : "ready",
+    });
     await Promise.all([
       db.update(mediaSources).set({ scenes: document.scenes, updatedAt: now }).where(eq(mediaSources.id, sourceId)),
       db.update(projects).set({
         workflowType: "edit",
+        workflowMode: "guided_edit",
         name: document.brief.projectName || project[0].name,
         productName: document.brief.productName || project[0].productName,
         productDescription: document.brief.promotionGoal || project[0].productDescription,

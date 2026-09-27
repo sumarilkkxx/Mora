@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { apiError, errText } from "@/lib/api-error";
 import { llmErrorPair } from "@/lib/llm-error";
 import { productionModeForCreation } from "@/lib/production-mode";
+import { workflowModeForCreation } from "@/lib/project-continuation";
 import { normalizeTargetVideoDuration } from "@/lib/target-video-duration";
 
 const VALID_NARRATION = new Set<TopicNarrationStyle>([
@@ -75,6 +76,7 @@ export async function POST(req: NextRequest) {
       );
     }
   } else {
+    const productionMode = productionModeForCreation(body.productionMode);
     const [created] = await db
       .insert(projects)
       .values({
@@ -82,7 +84,8 @@ export async function POST(req: NextRequest) {
         contentType: "topic",
         topic,
         status: "draft",
-        productionMode: productionModeForCreation(body.productionMode),
+        productionMode,
+        workflowMode: workflowModeForCreation("generate", productionMode, body.workflowMode),
         targetDuration,
       })
       .returning();

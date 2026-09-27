@@ -1,7 +1,8 @@
 import { withBatchExecution } from "@/lib/batch-execution";
 import { NextRequest, NextResponse } from "next/server";
 import { getDataDir, fileNameOf } from "@/lib/paths";
-import { ffprobeBin, ffmpegBin } from "@/lib/ffmpeg-path";
+import { ffmpegBin } from "@/lib/ffmpeg-path";
+import { probeMedia, runMediaProcess } from "@/lib/media-runtime";
 import { join } from "path";
 import { resolveExistingUploadFilePath } from "@/lib/upload-path";
 import { mkdir, writeFile, rm } from "fs/promises";
@@ -31,6 +32,7 @@ import type { Shot, ScriptCharacter } from "@/lib/domain/script";
 import { assignCharacterVoices } from "@/lib/character-voices";
 import { readyAssetsByShot } from "@/lib/assets-view";
 import { desc, and } from "drizzle-orm";
+import { OperationRunRepository, operationOwner } from "@/lib/operation-run";
 
 // 获取该项目最新一条合成记录（导出页读取真实成片）
 export async function GET(
@@ -176,18 +178,10 @@ async function handlePost(
     /** 探测视频文件是否带「可听见」的音轨（自带语音/音效）；仅静音/空轨不算，让免费 TTS 旁白照常生效 */
     async function videoHasAudio(filePath: string): Promise<boolean> {
       try {
-        const { exec } = await import("child_process");
-        const { promisify } = await import("util");
-        const execAsync = promisify(exec);
         // 1) 先看有没有音频流
-        const { stdout } = await execAsync(
-          `"${ffprobeBin()}" -v error -select_streams a -show_entries stream=codec_type -of csv=p=0 "${filePath}"`
-        );
-        if (stdout.trim().length === 0) return false;
+        if (!(await probeMedia(filePath)).hasAudio) return false;
         // 2) 有流再用 volumedetect 看是否真有声音（静音轨按无音频处理，避免吞掉 TTS 旁白）
-        const { stderr } = await execAsync(
-          `"${ffmpegBin()}" -i "${filePath}" -af volumedetect -f null -`
-        );
+        const { stderr } = await runMediaProcess(ffmpegBin(), ["-nostdin", "-i", filePath, "-af", "volumedetect", "-f", "null", "-"], { timeoutMs: 60_000 });
         return isAudibleFromVolumedetect(stderr);
       } catch {
         return false;
@@ -197,13 +191,7 @@ async function handlePost(
     /** 探测媒体时长（秒），失败返回 0 */
     async function probeDuration(filePath: string): Promise<number> {
       try {
-        const { exec } = await import("child_process");
-        const { promisify } = await import("util");
-        const execAsync = promisify(exec);
-        const { stdout } = await execAsync(
-          `"${ffprobeBin()}" -v error -show_entries format=duration -of csv=p=0 "${filePath}"`
-        );
-        return parseFloat(stdout.trim()) || 0;
+        return (await probeMedia(filePath)).duration;
       } catch {
         return 0;
       }
@@ -309,15 +297,37 @@ async function handlePost(
     // Variant label (variant-matrix batch renders): surfaces on the export page's output list
     const label = typeof body.label === "string" && body.label.trim() ? body.label.trim().slice(0, 60) : undefined;
 
+    const operation = new OperationRunRepository(db, { owner: operationOwner });
+    const requestId = typeof body.requestId === "string" && body.requestId.length <= 200 ? body.requestId : compositionId;
+    const operationResult = operation.create({
+      id: compositionId,
+      kind: "compose",
+      subjectId: id,
+      requestKey: `compose:${id}:${requestId}`,
+      stage: "render",
+    });
+    if (!operationResult.created) {
+      return NextResponse.json({ compositionId: operationResult.run.id, status: operationResult.run.status, reused: true }, { status: 200 });
+    }
+    if (!operation.claim(compositionId)) throw new Error("Composition operation could not be claimed");
+
     // 立即建合成记录(composing)并返回；重活(TTS+FFmpeg)后台异步跑，前端轮询 GET 获取结果
-    const [comp] = await db
-      .insert(compositions)
-      .values({ id: compositionId, projectId: id, resolution: outputCfg.resolution, aspectRatio: outputCfg.aspectRatio, aigcBadge, ...(label && { label }), videoOrigin: "local_render", status: "composing" })
-      .returning();
-    await db.update(projects).set({ status: "composing", productionMode: "local", updatedAt: new Date() }).where(eq(projects.id, id));
+    let comp: typeof compositions.$inferSelect;
+    try {
+      comp = db
+        .insert(compositions)
+        .values({ id: compositionId, projectId: id, resolution: outputCfg.resolution, aspectRatio: outputCfg.aspectRatio, aigcBadge, ...(label && { label }), videoOrigin: "local_render", status: "composing" })
+        .returning().get();
+    } catch (error) {
+      operation.finish(compositionId, "failed", undefined, error instanceof Error ? error.message : String(error));
+      throw error;
+    }
+    await db.update(projects).set({ status: "composing", workflowMode: "local_generate", productionMode: "local", updatedAt: new Date() }).where(eq(projects.id, id));
 
     // 后台异步合成（不阻塞请求，避免长视频超时）
     void (async () => {
+     const operationHeartbeat = setInterval(() => operation.heartbeat(compositionId), 10_000);
+     operationHeartbeat.unref();
      try {
     await mkdir(ttsDir, { recursive: true });
     // Breathing gap in seconds between the end of one narration and the start of the next;
@@ -557,6 +567,16 @@ async function handlePost(
         ).catch(() => {});
         // 封面缩略图：抽首帧存成片旁（本地抽取永不过期），作品流/项目卡靠它凭画面找片；失败不阻断
         const thumbnailPath = await extractFirstFrame(outputPath);
+        if (operation.cancellationRequested(compositionId)) {
+          if (!operation.finish(compositionId, "cancelled")) throw new Error("Composition lease lost while cancelling");
+          await rm(outputPath, { force: true }).catch(() => {});
+          await db.update(compositions).set({ status: "failed" }).where(eq(compositions.id, comp.id));
+          return;
+        }
+        if (!operation.finish(compositionId, "done", { compositionId, outputPath })) {
+          await rm(outputPath, { force: true }).catch(() => {});
+          throw new Error("Composition lease lost before publish");
+        }
         // 完成：更新合成记录与项目状态
         await db
           .update(compositions)
@@ -565,9 +585,13 @@ async function handlePost(
         await db.update(projects).set({ status: "done", updatedAt: new Date() }).where(eq(projects.id, id));
       } catch (e) {
         console.error("后台合成失败:", e);
-        await db.update(compositions).set({ status: "failed" }).where(eq(compositions.id, comp.id)).catch(() => {});
-        await db.update(projects).set({ status: "video", updatedAt: new Date() }).where(eq(projects.id, id)).catch(() => {});
+        const settled = operation.finish(compositionId, operation.cancellationRequested(compositionId) ? "cancelled" : "failed", undefined, e instanceof Error ? e.message : String(e));
+        if (settled) {
+          await db.update(compositions).set({ status: "failed" }).where(eq(compositions.id, comp.id)).catch(() => {});
+          await db.update(projects).set({ status: "video", updatedAt: new Date() }).where(eq(projects.id, id)).catch(() => {});
+        }
       } finally {
+        clearInterval(operationHeartbeat);
         await rm(ttsDir, { recursive: true, force: true }).catch((error) => console.warn("合成临时文件清理失败", error));
       }
     })();
@@ -580,5 +604,20 @@ async function handlePost(
       { error: error instanceof Error ? error.message : "视频合成失败" },
       { status: 500 }
     );
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const compositionId = req.nextUrl.searchParams.get("compositionId");
+    if (!compositionId) return NextResponse.json({ error: "Missing compositionId" }, { status: 400 });
+    const db = getDb();
+    const composition = db.select().from(compositions).where(and(eq(compositions.id, compositionId), eq(compositions.projectId, id))).get();
+    if (!composition) return NextResponse.json({ error: "Composition not found" }, { status: 404 });
+    const status = new OperationRunRepository(db, { owner: operationOwner }).requestCancel(compositionId);
+    return status ? NextResponse.json({ compositionId, status }, { status: 202 }) : NextResponse.json({ error: "Operation not found" }, { status: 404 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 }

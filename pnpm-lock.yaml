@@ -28,6 +28,9 @@ importers:
       '@types/fluent-ffmpeg':
         specifier: ^2.1.28
         version: 2.1.28
+      adm-zip:
+        specifier: 0.6.0
+        version: 0.6.0
       better-sqlite3:
         specifier: ^12.11.1
         version: 12.11.1

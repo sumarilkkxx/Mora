@@ -25,6 +25,7 @@ export function recoverRenders(sqlite: Database.Database, now = Math.floor(Date.
         sqlite.prepare(`UPDATE ${table} SET status = 'failed', error = COALESCE(error, ?), updated_at = ? WHERE status = 'rendering' AND composition_id = ?`).run(message, now, row.id);
       }
       recovered += sqlite.prepare("UPDATE compositions SET status = 'failed' WHERE id = ? AND status IN ('composing', 'pending')").run(row.id).changes;
+      sqlite.prepare("UPDATE operation_runs SET status = CASE WHEN status = 'cancel_requested' THEN 'cancelled' ELSE 'interrupted' END, owner = NULL, lease_until = NULL, error = COALESCE(error, 'interrupted'), updated_at = ? WHERE id = ? AND status IN ('running', 'cancel_requested')").run(now * 1000, row.id);
       sqlite.prepare(`UPDATE projects SET status = 'video', updated_at = ? WHERE id = ? AND status = 'composing'
         AND NOT EXISTS (SELECT 1 FROM compositions WHERE project_id = ? AND status IN ('composing', 'pending'))`).run(now, row.project_id, row.project_id);
     }

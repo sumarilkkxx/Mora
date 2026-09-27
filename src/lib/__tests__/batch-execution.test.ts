@@ -4,13 +4,13 @@ import Database from "better-sqlite3";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { NextRequest } from "next/server";
-import { batchJobs, batchJobItems, projects, compositions } from "../db/schema";
+import { batchJobs, batchJobItems, projects, compositions, operationRuns } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { readFileSync, readdirSync } from "node:fs";
 
 const fake = vi.hoisted(() => ({ db: undefined as unknown as BetterSQLite3Database }));
 vi.mock("../db", () => ({ getDb: () => fake.db }));
-import { PATCH } from "../../app/api/batch/route";
+import { PATCH, POST } from "../../app/api/batch/route";
 import { withBatchExecution } from "../batch-execution";
 let native: Database.Database;
 const patch = (body: unknown) => PATCH(new NextRequest("http://localhost/api/batch", { method: "PATCH", body: JSON.stringify(body) }));
@@ -20,6 +20,20 @@ beforeAll(() => {
 });
 afterAll(() => native.close());
 describe("batch execution ownership", () => {
+  it("deduplicates a retried create request before a second batch is started", async () => {
+    const request = () => new NextRequest("http://localhost/api/batch", {
+      method: "POST",
+      body: JSON.stringify({ requestId: "retry-once", items: [{ productId: "dedupe", productName: "dedupe" }] }),
+    });
+    const first = await POST(request());
+    const firstBody = await first.json();
+    const second = await POST(request());
+    await expect(second.json()).resolves.toMatchObject({ jobId: firstBody.jobId, reused: true });
+    expect(fake.db.select().from(operationRuns).where(eq(operationRuns.requestKey, "batch:retry-once")).all()).toHaveLength(1);
+    expect(fake.db.select().from(batchJobItems).where(eq(batchJobItems.jobId, firstBody.jobId)).all()).toHaveLength(1);
+    expect((await patch({ jobId: firstBody.jobId, status: "cancelled" })).status).toBe(200);
+    expect(fake.db.select().from(operationRuns).where(eq(operationRuns.id, firstBody.jobId)).get()?.status).toBe("cancelled");
+  });
   it("lets only one page claim a running batch and fences stale writers", async () => {
     fake.db.insert(batchJobs).values({ id: "shared", total: 1 }).run();
     fake.db.insert(batchJobItems).values({ id: "item", jobId: "shared", productId: "p", productName: "p" }).run();
@@ -47,6 +61,19 @@ describe("batch execution ownership", () => {
     await patch({ jobId: "inflight", action: "claim", owner: "new" });
     expect(await (await withBatchExecution(request("new"), "project", execute)).json()).toEqual({ id: "saved-project" });
     expect(execute).toHaveBeenCalledTimes(1);
+  });
+  it("accepts cancellation during an in-flight stage and refuses its late checkpoint", async () => {
+    fake.db.insert(batchJobs).values({ id: "cancel-running", total: 1 }).run();
+    fake.db.insert(batchJobItems).values({ id: "cancel-running-item", jobId: "cancel-running", productId: "p", productName: "p" }).run();
+    await patch({ jobId: "cancel-running", action: "claim", owner: "page" });
+    let finish!: (response: Response) => void;
+    const request = new NextRequest("http://localhost/api/project", { method: "POST", headers: { "x-mora-batch-item": "cancel-running-item", "x-mora-batch-owner": "page" } });
+    const pending = withBatchExecution(request, "project", () => new Promise<Response>(resolve => { finish = resolve; }));
+    expect((await patch({ jobId: "cancel-running", owner: "page", status: "cancelled" })).status).toBe(200);
+    finish(Response.json({ id: "late-project" }));
+    expect((await pending).status).toBe(409);
+    expect(fake.db.select().from(batchJobItems).where(eq(batchJobItems.id, "cancel-running-item")).get()?.projectId).toBeNull();
+    expect(fake.db.select().from(operationRuns).where(eq(operationRuns.id, "cancel-running")).get()?.status).toBe("cancelled");
   });
   it("allows expired execution to be claimed but rejects the old owner", async () => {
     fake.db.insert(batchJobs).values({ id: "expired", executionOwner: "old", executionUntil: Date.now() - 1 }).run();

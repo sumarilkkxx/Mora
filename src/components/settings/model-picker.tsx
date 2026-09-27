@@ -4,8 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, CircleAlert, LibraryBig, LoaderCircle, RotateCw, Search, X } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import type { ProviderCapabilityContract } from "@/lib/provider-capability-contract";
 
-export interface ModelChoice { id: string; name: string; provider?: string; custom?: boolean; }
+export interface ModelChoice { id: string; name: string; provider?: string; custom?: boolean; capability?: ProviderCapabilityContract; }
 
 const BRAND_LABELS: Record<string, string> = {
   openai: "OpenAI", google: "Google", bytedance: "ByteDance", kwaivgi: "Kling", minimax: "MiniMax",
@@ -160,7 +161,12 @@ export function ModelPicker({ value, baseUrl, apiKey, onChange, placeholder, cap
     try {
       const res = await fetch("/api/llm/models", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ baseUrl, apiKey, capability }) });
       const data = await res.json().catch(() => ({ ok: false }));
-      const choices = (Array.isArray(data.models) ? data.models : []).map((id: string) => ({ id, name: id }));
+      const choices = (Array.isArray(data.models) ? data.models : []).flatMap((item: unknown) => {
+        if (typeof item === "string") return [{ id: item, name: item }];
+        if (!item || typeof item !== "object") return [];
+        const model = item as Partial<ModelChoice>;
+        return typeof model.id === "string" ? [{ id: model.id, name: model.name ?? model.id, capability: model.capability }] : [];
+      });
       setModels(choices); setOpen(Boolean(choices.length));
       if (!data.ok) { setError(data.error || t("modelListFailed")); setErrorCode(data.code || "REQUEST_FAILED"); }
     } catch (e) { setError(e instanceof Error ? e.message : t("modelListFailed")); setErrorCode("REQUEST_FAILED"); }

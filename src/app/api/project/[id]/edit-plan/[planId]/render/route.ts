@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { apiError, errText } from "@/lib/api-error";
 import { getDb } from "@/lib/db";
 import { compositions, guidedEditPlans, mediaSources, projects } from "@/lib/db/schema";
-import { startGuidedEditRender } from "@/lib/guided-edit-render-runner";
+import { cancelGuidedEditRender, startGuidedEditRender } from "@/lib/guided-edit-render-runner";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,6 +32,7 @@ export async function POST(
         .where(and(eq(guidedEditPlans.id, planId), eq(guidedEditPlans.projectId, id))).limit(1).get();
       if (!plan) throw new RenderStartError("剪辑方案不存在", 404);
       if (plan.status === "rendering") throw new RenderStartError("当前方案正在渲染", 409);
+      if (!["ready", "failed", "cancelled"].includes(plan.status)) throw new RenderStartError("请先应用当前草稿", 409);
       const source = tx.select().from(mediaSources)
         .where(and(eq(mediaSources.id, plan.sourceId), eq(mediaSources.projectId, id))).limit(1).get();
       if (!source) throw new RenderStartError("原始素材不存在", 404);
@@ -41,9 +42,10 @@ export async function POST(
       const composition = tx.insert(compositions).values({
         projectId: id,
         videoOrigin: "local_render",
-        resolution: "1080p",
+        resolution: plan.document.brief.outputQuality ?? "1080p",
         aspectRatio: plan.document.brief.aspectRatio,
         duration: Math.round(plan.document.outputDuration * 1000),
+        bgmPath: plan.document.brief.bgmFile,
         ttsEnabled: plan.document.brief.audioMode === "local_voice" || plan.document.brief.audioMode === "uploaded_voice",
         aigcBadge: false,
         label: `Guided edit · R${plan.revision}`,
@@ -51,7 +53,7 @@ export async function POST(
       }).returning().get();
       tx.update(guidedEditPlans).set({ compositionId: composition.id, status: "rendering", error: null, updatedAt: new Date() })
         .where(eq(guidedEditPlans.id, plan.id)).run();
-      tx.update(projects).set({ status: "composing", productionMode: "local", updatedAt: new Date() }).where(eq(projects.id, id)).run();
+      tx.update(projects).set({ status: "composing", workflowMode: "guided_edit", productionMode: "local", updatedAt: new Date() }).where(eq(projects.id, id)).run();
       return { plan, source, composition };
     });
     startGuidedEditRender({ planId: plan.id, compositionId: composition.id, revision: plan.revision, source, document: plan.document });
@@ -63,4 +65,15 @@ export async function POST(
     console.error("Guided edit render start failed:", error);
     return NextResponse.json({ error: error instanceof Error ? error.message : errText(req, "启动自动剪辑失败", "Failed to start guided edit") }, { status: 500 });
   }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string; planId: string }> },
+) {
+  const { id, planId } = await params;
+  if (!SAFE_ID.test(id) || !SAFE_ID.test(planId)) return apiError(req, "无效的剪辑方案ID", "Invalid edit plan ID", 400);
+  const cancelled = await cancelGuidedEditRender(planId, id);
+  if (!cancelled) return apiError(req, "当前没有可取消的渲染", "No active render to cancel", 409);
+  return NextResponse.json({ planId, status: "cancelled" });
 }

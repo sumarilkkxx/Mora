@@ -330,14 +330,19 @@ pnpm dist:win
 pnpm dist:mac
 ```
 
-GitHub Actions 已配置 Windows x64、macOS Apple Silicon 和 macOS Intel 构建任务，并对最终安装包执行校验和启动冒烟测试。当前 `v0.2.0.0` 的构建配置未启用代码签名，macOS 安装包也未经过公证。首次打开 macOS 应用时，可能需要在“隐私与安全性”中手动允许。
+GitHub Actions 已配置 Windows x64、macOS Apple Silicon 和 macOS Intel 构建任务，并对最终安装包执行 standalone、SQLite 迁移、FFmpeg/ffprobe、本地 ASR 运行时和核心页面启动检查。Mora 是 GitHub 上的开源项目：普通分支或手动构建标记为 `unsigned-dev`；正式 tag 在没有证书时生成明确标记的 `unsigned` 发布包，在配置完整证书后可选生成 `signed` 发布包。签名与 Apple 公证是信任体验增强，不是当前开源发布的硬门槛。
+
+每个 GitHub Release 同时提供 `SHA256SUMS.txt` 和安装说明。下载后应先核对 SHA-256；未签名 Windows 安装包可能显示 SmartScreen“未知发布者”，未签名 macOS 安装包可能被 Gatekeeper 阻止。确认下载来自本项目 GitHub Release 且校验和一致后，Windows 可选择“更多信息 → 仍要运行”，macOS 可按住 Control 点击应用并选择“打开”，或在“系统设置 → 隐私与安全性”中选择“仍要打开”。
+
+桌面升级会在启动新版本及执行迁移前，将 SQLite 数据库复制到用户数据目录下的 `backups/desktop-upgrades/` 并校验 SHA-256。迁移或启动验证失败时会自动恢复旧数据库，并在 `recovery/` 写入恢复说明。应用只检查 GitHub Release 的新版本并提示用户前往官方下载，不会静默下载或自动安装。
 
 | 版本层 | 当前约定 |
 | --- | --- |
-| Git 标签 | `v0.2.0.0` |
-| npm / Electron SemVer | `0.2.0` |
-| Windows FileVersion | `0.2.0.0` |
-| 安装包 | `Mora-Setup-v0.2.0.0-win-x64.exe` / `Mora-v0.2.0.0-mac-<arch>.dmg` |
+| Git 标签 | `v0.2.1.0` |
+| npm / Electron SemVer | `0.2.1` |
+| Windows FileVersion | `0.2.1.0` |
+| 开源发布安装包 | 默认追加 `-unsigned`；配置完整签名凭证时追加 `-signed` |
+| 开发安装包 | 同名追加 `-unsigned-dev`，不得发布为正式版本 |
 
 ## HTTP API 与自动化入口
 

@@ -13,6 +13,7 @@ import { useT, useLocale } from "@/lib/i18n";
 import { formatRelativeTime } from "@/lib/relative-time";
 import { PageFrame, PageHeader, SegmentedControl, SegmentedItem, Skeleton } from "@/components/studio/page";
 import { projectContinuePath, type ProductionMode } from "@/lib/production-mode";
+import { ProjectPackageExportButton, ProjectPackageImportButton } from "@/components/project-package-actions";
 
 import styles from "./page.module.css";
 
@@ -25,6 +26,7 @@ interface ProjectRow {
   status: string;
   workflowType?: "generate" | "edit";
   productionMode?: ProductionMode;
+  continuation?: { href: string };
   sourceType?: "manual" | "clone";
   contentType?: "product" | "topic";
   deletedAt?: string | null;
@@ -200,12 +202,15 @@ export default function ProjectsPage() {
         <PageHeader
           title={t("pageTitle")}
           description={t("pageSubtitle")}
-          actions={<Link href="/start">
-            <Button>
-              <Plus className="h-4 w-4" />
-              <span className="ml-1.5">{t("newProject")}</span>
-            </Button>
-          </Link>}
+          actions={<div className="flex flex-wrap items-center gap-2">
+            <ProjectPackageImportButton onImported={() => window.location.reload()} />
+            <Link href="/start">
+              <Button>
+                <Plus className="h-4 w-4" />
+                <span className="ml-1.5">{t("newProject")}</span>
+              </Button>
+            </Link>
+          </div>}
         />
 
         {/* One calm command surface keeps view, search and source filtering together. */}
@@ -354,7 +359,7 @@ export default function ProjectsPage() {
               return (
                 <Card key={p.id} className="group h-full overflow-hidden border-border/65 bg-card/92 shadow-[0_10px_30px_rgba(38,68,101,.08)] transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-[0_18px_42px_rgba(38,68,101,.14)]">
                   <CardContent className="p-0">
-                    <Link href={projectContinuePath(p.id, effectiveStatus, p.productionMode, p.workflowType)} className="block">
+                    <Link href={p.continuation?.href ?? projectContinuePath(p.id, effectiveStatus, p.productionMode, p.workflowType)} className="block">
                       {/* poster: latest render's first frame, falling back to the product photo */}
                       <div className="relative aspect-[16/10] overflow-hidden bg-muted/30">
                         {poster ? (
@@ -385,12 +390,16 @@ export default function ProjectsPage() {
                     </Link>
                     <div className="flex items-center border-t border-border/55 px-4 py-2.5">
                       <span className="inline-flex min-w-0 items-center gap-1.5 truncate text-[11px] text-muted-foreground"><Clock3 className="size-3.5 shrink-0" />{rel || t("updatedNow")}</span>
+                      <ProjectPackageExportButton
+                        project={{ id: p.id, name: p.name || p.productName || t("untitled") }}
+                        className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground/65 opacity-100 transition-[background-color,color,opacity] hover:bg-primary/10 hover:text-primary md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                      />
                       <button
                         type="button"
                         onClick={() => handleDelete(p)}
                         title={t("moveToTrash")}
                         aria-label={t("moveToTrash")}
-                        className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground/65 opacity-100 transition-[background-color,color,opacity] hover:bg-destructive/10 hover:text-destructive md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                        className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground/65 opacity-100 transition-[background-color,color,opacity] hover:bg-destructive/10 hover:text-destructive md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>

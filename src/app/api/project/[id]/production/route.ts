@@ -2,31 +2,36 @@ import { NextRequest, NextResponse } from "next/server";
 import { desc, eq } from "drizzle-orm";
 import { apiError, errText } from "@/lib/api-error";
 import { getDb } from "@/lib/db";
-import { aiTasks, assets, compositions, pipelineRuns, projects, scripts, videoClips } from "@/lib/db/schema";
+import { aiTasks, assets, autoEditRuns, compositions, operationRuns, projects, scripts, videoClips } from "@/lib/db/schema";
 import {
   buildVersionTree,
   sanitizeCreativeIntent,
   sanitizeProjectMediaInsight,
   sanitizeVisualBible,
-  sanitizeWorkflowPlan,
   semanticAssetFromRecord,
   type ProductionSnapshot,
 } from "@/lib/production-system";
+import { deriveProductionOverview } from "@/lib/production-overview";
+import { OperationRunRepository, operationOwner } from "@/lib/operation-run";
+import { syncLegacyOperationRuns } from "@/lib/operation-read-model";
 
 const SAFE_ID = /^[a-zA-Z0-9-]+$/;
 
 async function projectRows(projectId: string) {
   const db = getDb();
-  const [project, scriptRows, assetRows, taskRows, compositionRows, clipRows, runRows] = await Promise.all([
+  syncLegacyOperationRuns(db);
+  new OperationRunRepository(db, { owner: operationOwner }).recoverExpired();
+  const [project, scriptRows, assetRows, taskRows, compositionRows, clipRows, operationRows, editRows] = await Promise.all([
     db.select().from(projects).where(eq(projects.id, projectId)).limit(1),
     db.select().from(scripts).where(eq(scripts.projectId, projectId)).orderBy(desc(scripts.createdAt)),
     db.select().from(assets).where(eq(assets.projectId, projectId)).orderBy(desc(assets.createdAt)),
     db.select().from(aiTasks).where(eq(aiTasks.projectId, projectId)).orderBy(desc(aiTasks.createdAt)),
     db.select().from(compositions).where(eq(compositions.projectId, projectId)).orderBy(desc(compositions.createdAt)),
     db.select().from(videoClips).where(eq(videoClips.projectId, projectId)).orderBy(desc(videoClips.createdAt)),
-    db.select().from(pipelineRuns).where(eq(pipelineRuns.projectId, projectId)).orderBy(desc(pipelineRuns.createdAt)),
+    db.select().from(operationRuns).where(eq(operationRuns.subjectId, projectId)).orderBy(desc(operationRuns.createdAt)),
+    db.select().from(autoEditRuns).where(eq(autoEditRuns.projectId, projectId)).orderBy(desc(autoEditRuns.createdAt)),
   ]);
-  return { project: project[0], scripts: scriptRows, assets: assetRows, tasks: taskRows, compositions: compositionRows, clips: clipRows, runs: runRows };
+  return { project: project[0], scripts: scriptRows, assets: assetRows, tasks: taskRows, compositions: compositionRows, clips: clipRows, operations: operationRows, edits: editRows };
 }
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -35,35 +40,29 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const rows = await projectRows(id);
     if (!rows.project) return apiError(req, "项目不存在", "Project not found", 404);
+    const operationFacts = [
+      ...rows.operations,
+      ...rows.edits.map(edit => ({ id: edit.id, kind: "auto_edit", status: edit.status, stage: edit.stage, checkpoint: edit.checkpoint as unknown as Record<string, unknown>, error: edit.error, createdAt: new Date(edit.createdAt) })),
+    ].sort((a, b) => Number(b.createdAt ?? 0) - Number(a.createdAt ?? 0));
+    const status = deriveProductionOverview({
+      project: rows.project,
+      scripts: rows.scripts,
+      assets: rows.assets,
+      tasks: rows.tasks,
+      compositions: rows.compositions,
+      operations: operationFacts,
+      snapshots: rows.project.versionSnapshots ?? [],
+    });
     return NextResponse.json({
       project: rows.project,
-      workflow: rows.project.productionWorkflow,
+      status,
       creativeIntent: rows.project.creativeIntent,
       visualBible: rows.project.visualBible,
       mediaInsights: rows.project.mediaInsights ?? [],
       snapshots: rows.project.versionSnapshots ?? [],
       semanticAssets: rows.assets.map(semanticAssetFromRecord),
       versionTree: buildVersionTree(rows),
-      latestRun: rows.runs[0] ?? null,
       latestComposition: rows.compositions[0] ?? null,
-      latestFailure: [
-        ...rows.tasks.filter((task) => task.status === "failed" || task.status === "unknown").map((task) => ({
-          source: "task" as const,
-          id: task.id,
-          status: task.status,
-          stage: task.mediaType,
-          error: task.error || (task.status === "unknown" ? "Cloud task status is unknown after polling" : "Generation failed"),
-          createdAt: task.updatedAt ?? task.createdAt,
-        })),
-        ...rows.runs.filter((run) => run.status === "failed").map((run) => ({
-          source: "pipeline" as const,
-          id: run.id,
-          status: run.status,
-          stage: run.stage,
-          error: run.error || "Pipeline stage failed",
-          createdAt: run.updatedAt ?? run.createdAt,
-        })),
-      ].sort((a, b) => Number(b.createdAt ?? 0) - Number(a.createdAt ?? 0))[0] ?? null,
       selectedScript: (() => {
         const script = rows.scripts.find((item) => item.selected) ?? rows.scripts[0];
         return script ? { id: script.id, shotCount: script.shots?.length ?? 0, totalDuration: script.totalDuration ?? 0 } : null;
@@ -93,11 +92,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     if ("creativeIntent" in body) updates.creativeIntent = sanitizeCreativeIntent(body.creativeIntent);
     if ("visualBible" in body) updates.visualBible = sanitizeVisualBible(body.visualBible);
-    if ("productionWorkflow" in body) {
-      const workflow = sanitizeWorkflowPlan(body.productionWorkflow);
-      if (!workflow) return apiError(req, "工作流格式无效", "Invalid workflow format", 400);
-      updates.productionWorkflow = workflow;
-    }
+    // productionWorkflow is legacy read-only data. It is deliberately ignored:
+    // the actual runners never consumed the complete nine-stage plan.
     if ("mediaInsight" in body) {
       const insight = sanitizeProjectMediaInsight(body.mediaInsight);
       if (!insight) return apiError(req, "媒体洞察格式无效", "Invalid media insight", 400);

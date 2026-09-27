@@ -525,6 +525,7 @@ export default function BatchPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          requestId: crypto.randomUUID(),
           config: { videoMode, scriptStyle, duration, autoCompose, productCard, antiHomogeneity, plan },
           items: selected.map((p, i) => ({ productId: p.id, productName: p.name, variation: tasks[i].variation ?? null })),
         }),

@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull } from "drizzle-orm";
 import { getDb } from "@/lib/db";
-import { aiTasks, autoEditRuns, batchJobItems, batchJobs, compositions, pipelineRuns, projects } from "@/lib/db/schema";
+import { aiTasks, autoEditRuns, batchJobItems, batchJobs, compositions, projects } from "@/lib/db/schema";
 import { recoverAutoEdits } from "@/lib/auto-edit/runner";
-import { isPipelineRunActive } from "@/lib/pipeline-runner";
 import { ACTIVE_AI_TASK_STATUSES } from "@/lib/ai-tasks";
 import { userVisibleProjects } from "@/lib/project-visibility";
+import { OperationRunRepository, operationOwner } from "@/lib/operation-run";
+import { operationBucket, readOperationModel, syncLegacyOperationRuns } from "@/lib/operation-read-model";
 
 /**
  * GET /api/tasks — the global task center feed: everything currently running (or
@@ -34,58 +35,56 @@ export async function GET() {
     const edits = await db.select().from(autoEditRuns).where(inArray(autoEditRuns.status, ["queued", "running", "cancel_requested", "failed", "interrupted", "waiting_input", "needs_review"])).orderBy(desc(autoEditRuns.createdAt)).limit(100);
     for (const edit of edits) {
       if (!activeProjectIds.has(edit.projectId)) continue;
-      (["queued", "running", "cancel_requested"].includes(edit.status) ? active : attention).push({ kind: "auto_edit", id: edit.id, projectId: edit.projectId, projectName: projectName.get(edit.projectId), stage: edit.stage, status: edit.status, label: edit.checkpoint.plan?.title, createdAt: new Date(edit.createdAt).toISOString() });
+      (operationBucket(edit.status) === "active" ? active : attention).push({ kind: "auto_edit", id: edit.id, projectId: edit.projectId, projectName: projectName.get(edit.projectId), stage: edit.stage, status: edit.status, label: edit.checkpoint.plan?.title, createdAt: new Date(edit.createdAt).toISOString() });
     }
 
-    // server-side pipelines: verify against the in-process registry; a "running" row whose
-    // executor is gone (restart) is settled to failed and surfaced as resumable instead
-    const runningPipelines = await db.select().from(pipelineRuns).orderBy(desc(pipelineRuns.createdAt), desc(sql`${pipelineRuns}.rowid`));
+    // Batch, pipeline and compose share one lifecycle read model. Older databases are
+    // imported once, then expired leases become durable, actionable interruptions.
+    syncLegacyOperationRuns(db);
+    new OperationRunRepository(db, { owner: operationOwner }).recoverExpired();
+    const operationModel = readOperationModel(db);
+    const operationRows = operationModel.all;
     const seenProjects = new Set<string>();
     const pipelineComposeIds = new Set<string>();
-    for (const run of runningPipelines) {
-      if (!activeProjectIds.has(run.projectId)) continue;
-      if (seenProjects.has(run.projectId)) continue;
-      seenProjects.add(run.projectId);
-      if (run.status !== "running" && !(run.status === "failed" && run.error === "interrupted")) continue;
-      if (run.status === "running" && isPipelineRunActive(run.id)) {
-        if (run.compositionId) pipelineComposeIds.add(run.compositionId);
-        active.push({
-          kind: "pipeline",
+    for (const run of operationRows) {
+      if (run.kind === "pipeline") {
+        if (!activeProjectIds.has(run.subjectId) || seenProjects.has(run.subjectId)) continue;
+        seenProjects.add(run.subjectId);
+        const compositionId = typeof run.checkpoint?.compositionId === "string" ? run.checkpoint.compositionId : undefined;
+        if (compositionId) pipelineComposeIds.add(compositionId);
+        const bucket = operationBucket(run.status);
+        if (bucket === "done") continue;
+        const entry = {
+          kind: bucket === "active" ? "pipeline" : "pipeline_interrupted",
           id: run.id,
-          projectId: run.projectId,
-          projectName: projectName.get(run.projectId) ?? "",
+          projectId: run.subjectId,
+          projectName: projectName.get(run.subjectId) ?? "",
           stage: run.stage,
+          status: run.status,
+          error: run.error,
           createdAt: run.createdAt,
-        });
-      } else {
-        await db
-          .update(pipelineRuns)
-          .set({ status: "failed", error: "interrupted", updatedAt: new Date() })
-          .where(and(eq(pipelineRuns.id, run.id), eq(pipelineRuns.status, "running")));
-        attention.push({
-          kind: "pipeline_interrupted",
-          id: run.id,
-          projectId: run.projectId,
-          projectName: projectName.get(run.projectId) ?? "",
-          stage: run.stage,
-          createdAt: run.createdAt,
-        });
+        };
+        (bucket === "active" ? active : attention).push(entry);
       }
     }
 
-    // renders in flight (skip ones already represented by their pipeline row)
-    const composing = await db.select().from(compositions).where(eq(compositions.status, "composing"));
-    for (const c of composing) {
-      if (!activeProjectIds.has(c.projectId)) continue;
-      if (pipelineComposeIds.has(c.id)) continue;
-      active.push({
-        kind: "compose",
-        id: c.id,
-        projectId: c.projectId,
-        projectName: projectName.get(c.projectId) ?? "",
-        label: c.label,
-        createdAt: c.createdAt,
-      });
+    for (const run of operationRows) {
+      if (run.kind !== "compose" || !activeProjectIds.has(run.subjectId) || pipelineComposeIds.has(run.id)) continue;
+      const bucket = operationBucket(run.status);
+      if (bucket === "done") continue;
+      const composition = await db.select().from(compositions).where(eq(compositions.id, run.id)).get();
+      const entry = {
+        kind: bucket === "active" ? "compose" : "compose_interrupted",
+        id: run.id,
+        projectId: run.subjectId,
+        projectName: projectName.get(run.subjectId) ?? "",
+        label: composition?.label,
+        stage: run.stage,
+        status: run.status,
+        error: run.error,
+        createdAt: run.createdAt,
+      };
+      (bucket === "active" ? active : attention).push(entry);
     }
 
     // paid cloud tasks: live ones are informational; unknown = already billed, contact lost —
@@ -107,23 +106,23 @@ export async function GET() {
       });
     }
 
-    // a running batch job, with per-item progress counts
-    const [job] = await db
-      .select()
-      .from(batchJobs)
-      .where(eq(batchJobs.status, "running"))
-      .orderBy(desc(batchJobs.createdAt))
-      .limit(1);
-    if (job) {
+    // latest batch, enriched with the domain table's per-item progress counts
+    const batchRun = operationRows.find((run) => run.kind === "batch" && !["done", "cancelled"].includes(run.status));
+    const job = batchRun ? await db.select().from(batchJobs).where(eq(batchJobs.id, batchRun.subjectId)).get() : undefined;
+    if (job && batchRun) {
       const items = await db.select().from(batchJobItems).where(eq(batchJobItems.jobId, job.id));
-      active.push({
-        kind: "batch",
+      const bucket = operationBucket(batchRun.status);
+      const entry = {
+        kind: bucket === "active" ? "batch" : "batch_interrupted",
         id: job.id,
+        status: batchRun.status,
+        error: batchRun.error,
         total: job.total,
         done: items.filter((i) => i.status === "done").length,
         failed: items.filter((i) => i.status === "failed").length,
-        createdAt: job.createdAt,
-      });
+        createdAt: batchRun.createdAt,
+      };
+      (bucket === "active" ? active : attention).push(entry);
     }
 
     // recent wins: successful renders from the last 24h
@@ -134,7 +133,8 @@ export async function GET() {
       .where(and(eq(compositions.status, "done"), gt(compositions.completedAt, dayAgo)))
       .orderBy(desc(compositions.completedAt))
       .limit(8);
-    const recent = recentRows.filter((c) => activeProjectIds.has(c.projectId)).map((c) => ({
+    const completedOperationIds = new Set(operationModel.done.filter(run => run.kind === "compose" && run.status === "done").map(run => run.id));
+    const recent = recentRows.filter((c) => activeProjectIds.has(c.projectId) && completedOperationIds.has(c.id)).map((c) => ({
       kind: "done",
       id: c.id,
       projectId: c.projectId,

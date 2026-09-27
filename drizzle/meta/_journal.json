@@ -170,6 +170,27 @@
       "when": 1790172253000,
       "tag": "0024_agent_eval_projects",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1790262190000,
+      "tag": "0025_project_workflow_mode",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1790293200000,
+      "tag": "0026_local_library_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "6",
+      "when": 1790296200000,
+      "tag": "0027_operation_runs",
+      "breakpoints": true
     }
   ]
 }

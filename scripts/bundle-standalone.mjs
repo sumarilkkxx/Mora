@@ -77,12 +77,22 @@ async function rebuildBetterSqlite3ForElectron() {
   const url = `https://github.com/WiseLibs/better-sqlite3/releases/download/v${bsVer}/${asset}`;
   console.log(`重建 standalone better-sqlite3 → Electron ABI ${abi}：${asset}`);
 
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`下载 Electron 预编译失败 ${res.status}：${url}（确认 better-sqlite3 ${bsVer} 该 release 有 electron-v${abi}-${plat}-${arch} 资产）`);
-  }
+  const cacheDir = join(root, ".cache", "desktop-native");
+  const cached = join(cacheDir, asset);
   const tmp = join(root, ".next", "bs-electron.tar.gz");
-  writeFileSync(tmp, Buffer.from(await res.arrayBuffer()));
+  if (existsSync(cached)) {
+    copyFileSync(cached, tmp);
+    console.log(`✓ 使用已缓存的 Electron 原生模块: ${cached}`);
+  } else {
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`下载 Electron 预编译失败 ${res.status}：${url}（确认 better-sqlite3 ${bsVer} 该 release 有 electron-v${abi}-${plat}-${arch} 资产）`);
+    }
+    const archive = Buffer.from(await res.arrayBuffer());
+    mkdirSync(cacheDir, { recursive: true });
+    writeFileSync(cached, archive);
+    writeFileSync(tmp, archive);
+  }
   execSync(`tar -xzf "${tmp}" -C "${bsDir}"`);
 
   const node = join(bsDir, "build", "Release", "better_sqlite3.node");

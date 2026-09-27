@@ -1,4 +1,10 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
+
+test('health 报告隔离数据库可用', async ({ request }) => {
+  const response = await request.get('/api/health');
+  expect(response.ok()).toBeTruthy();
+  expect(await response.json()).toMatchObject({ db: { status: 'ok' } });
+});
 
 test('首页提供视频创作入口', async ({ page }) => {
   await page.goto('/');
@@ -36,7 +42,13 @@ test('项目通过 API 创建后可在任务列表之外的项目列表读取', 
   const created = await request.post('/api/project', { data: { name: 'E2E 隔离项目', workflowType: 'edit' } });
   expect(created.status()).toBe(201);
   const project = await created.json();
+  expect(project.workflowMode).toBe('guided_edit');
   const list = await request.get('/api/project');
   expect(list.ok()).toBeTruthy();
-  expect(await list.json()).toEqual(expect.arrayContaining([expect.objectContaining({ id: project.id, name: 'E2E 隔离项目', workflowType: 'edit' })]));
+  expect(await list.json()).toEqual(expect.arrayContaining([expect.objectContaining({
+    id: project.id,
+    name: 'E2E 隔离项目',
+    workflowType: 'edit',
+    continuation: expect.objectContaining({ mode: 'guided_edit', href: `/project/${project.id}/edit` }),
+  })]));
 });

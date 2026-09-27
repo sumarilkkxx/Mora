@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { apiError, errText } from "@/lib/api-error";
 import { getDb } from "@/lib/db";
 import { projects } from "@/lib/db/schema";
-import { sanitizeGuidedScriptBeats, sanitizeGuidedSpeechRate } from "@/lib/guided-edit";
+import { guidedNarrationText, sanitizeGuidedScriptBeats, sanitizeGuidedSpeechRate } from "@/lib/guided-edit";
 import { DEFAULT_FREE_VOICE, generateSpeechFree } from "@/lib/edge-tts";
 import { getUploadsDir } from "@/lib/paths";
 import { probeMedia } from "@/lib/media-probe";
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const ratePercent = Math.round((multiplier - 1) * 100);
     const rate = `${ratePercent >= 0 ? "+" : ""}${ratePercent}%`;
     try {
-      const audio = await generateSpeechFree(beats.map((beat) => beat.text).join("\n"), { voice, rate, timeoutMs: 45_000 });
+      const audio = await generateSpeechFree(guidedNarrationText(beats), { voice, rate, timeoutMs: 45_000 });
       await writeFile(outputPath, audio);
     } catch (error) {
       await rm(outputPath, { force: true }).catch(() => {});

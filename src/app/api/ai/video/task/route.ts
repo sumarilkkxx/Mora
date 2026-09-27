@@ -6,6 +6,7 @@ import { getAiTaskByProviderTaskId, updateAiTaskByProviderTaskId, type AiTaskSta
 import { persistRecoveredComposition, persistRecoveredShotVideo } from "@/lib/generated-video-persistence";
 import { withAiTaskFinalizationLock } from "@/lib/ai-task-finalization";
 import type { TaskStatusEnum } from "@/lib/providers/types";
+import { classifyProviderError } from "@/lib/provider-error-classification";
 
 // Query / resume a previously submitted video task by its provider task ID (issue #16).
 // POST because the request carries the API key — keys must never appear in URLs.
@@ -92,10 +93,11 @@ export async function POST(req: NextRequest) {
         error: status.error,
       });
     } catch (error) {
+      const classified = classifyProviderError(error, providerName);
       // definitive failure vs. lost contact — a paid task must never be downgraded to
       // "failed" just because we couldn't reach the status endpoint
       const failed = error instanceof ProviderError && error.code === "TASK_FAILED";
-      const credentialRequired = error instanceof ProviderError && (error.statusCode === 401 || error.statusCode === 403);
+      const credentialRequired = classified.category === "authentication";
       const message = credentialRequired
         ? errText(
             req,
@@ -108,8 +110,16 @@ export async function POST(req: NextRequest) {
         error: message,
       });
       return NextResponse.json(
-        { error: message, taskId, recoverable: !failed, credentialRequired },
-        { status: credentialRequired ? 401 : failed ? 500 : 504 }
+        {
+          error: message,
+          code: classified.code,
+          category: classified.category,
+          retryable: classified.retryable,
+          taskId,
+          recoverable: !failed,
+          credentialRequired,
+        },
+        { status: credentialRequired ? 401 : failed ? classified.httpStatus : 504 }
       );
     }
   } catch (error) {

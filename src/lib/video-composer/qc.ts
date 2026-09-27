@@ -8,7 +8,8 @@
  * Rationale (2026 survey): unattended batch pipelines shipping black/silent/truncated videos is a top
  * complaint against this tool category; only the largest agent-first systems run automated output QA.
  */
-import { ffmpegBin, ffprobeBin } from "@/lib/ffmpeg-path";
+import { ffmpegBin } from "@/lib/ffmpeg-path";
+import { probeMedia, runMediaProcess } from "@/lib/media-runtime";
 
 export type QcLevel = "ok" | "warn" | "fail";
 
@@ -305,36 +306,18 @@ export function evaluateQc(probe: QcProbe, signals: QcSignals, expect: QcExpecta
 
 /** ffprobe streams + duration. */
 async function probeVideo(videoPath: string): Promise<QcProbe> {
-  const { execFile } = await import("child_process");
-  const { promisify } = await import("util");
-  const run = promisify(execFile);
-  const { stdout } = await run(ffprobeBin(), [
-    "-v", "error",
-    "-show_entries", "stream=codec_type,width,height:format=duration",
-    "-of", "json",
-    videoPath,
-  ]);
-  const parsed = JSON.parse(String(stdout)) as {
-    streams?: Array<{ codec_type?: string; width?: number; height?: number }>;
-    format?: { duration?: string };
-  };
-  const streams = parsed.streams ?? [];
-  const v = streams.find((s) => s.codec_type === "video");
-  const duration = parseFloat(parsed.format?.duration ?? "0");
+  const probe = await probeMedia(videoPath);
   return {
-    hasVideo: !!v,
-    hasAudio: streams.some((s) => s.codec_type === "audio"),
-    width: v?.width ?? 0,
-    height: v?.height ?? 0,
-    duration: Number.isFinite(duration) ? duration : 0,
+    hasVideo: probe.hasVideo,
+    hasAudio: probe.hasAudio,
+    width: probe.width,
+    height: probe.height,
+    duration: probe.duration,
   };
 }
 
 /** One decode pass collecting black/freeze/silence/loudness signals from ffmpeg stderr. */
 async function collectSignals(videoPath: string, probe: QcProbe): Promise<QcSignals> {
-  const { execFile } = await import("child_process");
-  const { promisify } = await import("util");
-  const run = promisify(execFile);
   const args = ["-hide_banner", "-nostats", "-i", videoPath];
   if (probe.hasVideo) {
     args.push("-vf", `blackdetect=d=${QC_PARAMS.blackMinSec}:pix_th=${QC_PARAMS.blackPixTh},freezedetect=n=${QC_PARAMS.freezeNoiseDb}dB:d=${QC_PARAMS.freezeMinSec}`);
@@ -344,7 +327,7 @@ async function collectSignals(videoPath: string, probe: QcProbe): Promise<QcSign
   }
   args.push("-f", "null", "-");
   // detectors write to stderr; the null muxer discards the media itself
-  const { stderr } = await run(ffmpegBin(), args, { maxBuffer: 32 * 1024 * 1024 });
+  const { stderr } = await runMediaProcess(ffmpegBin(), args, { timeoutMs: 5 * 60_000, maxBuffer: 32 * 1024 * 1024 });
   const text = String(stderr);
   const { loudness, truePeak } = parseEbur128Summary(text);
   return {

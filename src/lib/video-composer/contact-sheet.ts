@@ -15,7 +15,8 @@
 
 import { dirname } from "path";
 import { mkdir } from "fs/promises";
-import { ffmpegBin, ffprobeBin } from "@/lib/ffmpeg-path";
+import { ffmpegBin } from "@/lib/ffmpeg-path";
+import { probeMedia, runMediaProcess } from "@/lib/media-runtime";
 import { buildDrawtext, resolveChineseFontFile, unshellFilter } from "./composer";
 
 const drawtextSupportByBinary = new Map<string, Promise<boolean>>();
@@ -31,12 +32,10 @@ async function supportsDrawtextFilter(): Promise<boolean> {
   if (cached) return cached;
 
   const check = (async () => {
-    const { execFile } = await import("child_process");
-    const { promisify } = await import("util");
     try {
-      const { stdout, stderr } = await promisify(execFile)(binary, ["-hide_banner", "-filters"], {
+      const { stdout, stderr } = await runMediaProcess(binary, ["-hide_banner", "-filters"], {
         maxBuffer: 8 * 1024 * 1024,
-        timeout: 30_000,
+        timeoutMs: 30_000,
       });
       return /(^|\s)drawtext(\s|$)/m.test(`${stdout ?? ""}\n${stderr ?? ""}`);
     } catch {
@@ -207,28 +206,9 @@ export function buildSmartSheetFilter(
 
 /** ffprobe duration + audio-stream presence + frame size (falls back to zeros on failure). */
 async function probeVideo(videoPath: string): Promise<{ duration: number; hasAudio: boolean; width: number; height: number }> {
-  const { execFile } = await import("child_process");
-  const { promisify } = await import("util");
-  const run = promisify(execFile);
   try {
-    const { stdout } = await run(ffprobeBin(), [
-      "-v", "error",
-      "-show_entries", "format=duration",
-      "-show_entries", "stream=codec_type,width,height",
-      "-of", "json",
-      videoPath,
-    ]);
-    const info = JSON.parse(stdout) as {
-      format?: { duration?: string };
-      streams?: { codec_type?: string; width?: number; height?: number }[];
-    };
-    const v = (info.streams ?? []).find((s) => s.codec_type === "video");
-    return {
-      duration: parseFloat(info.format?.duration ?? "0") || 0,
-      hasAudio: (info.streams ?? []).some((s) => s.codec_type === "audio"),
-      width: v?.width ?? 0,
-      height: v?.height ?? 0,
-    };
+    const probe = await probeMedia(videoPath);
+    return { duration: probe.duration, hasAudio: probe.hasAudio, width: probe.width, height: probe.height };
   } catch {
     return { duration: 0, hasAudio: false, width: 0, height: 0 };
   }
@@ -242,16 +222,13 @@ async function probeVideo(videoPath: string): Promise<{ duration: number; hasAud
  * (validated on real composed output; see the render test notes).
  */
 export async function detectSceneTimes(videoPath: string, threshold = 0.22): Promise<number[]> {
-  const { execFile } = await import("child_process");
-  const { promisify } = await import("util");
-  const run = promisify(execFile);
   const th = Math.min(0.6, Math.max(0.1, threshold));
   try {
     // select runs before showinfo, so only above-threshold frames are logged (small stderr)
-    const { stderr } = await run(
+    const { stderr } = await runMediaProcess(
       ffmpegBin(),
       ["-i", videoPath, "-vf", `select='gt(scene,${th})',showinfo`, "-an", "-f", "null", "-"],
-      { maxBuffer: 16 * 1024 * 1024 }
+      { timeoutMs: 2 * 60_000, maxBuffer: 16 * 1024 * 1024 }
     );
     return parseSceneTimes(stderr ?? "");
   } catch {
@@ -292,9 +269,6 @@ export async function generateContactSheet(opts: {
   /** authoritative splice times (composer timeline sidecar) — merged with scene detection */
   knownCuts?: number[];
 }): Promise<ContactSheetResult> {
-  const { execFile } = await import("child_process");
-  const { promisify } = await import("util");
-  const run = promisify(execFile);
   const { duration, hasAudio } = await probeVideo(opts.videoPath);
   const layout = resolveContactSheetLayout({ ...opts, hasAudio });
   await mkdir(dirname(opts.outPath), { recursive: true });
@@ -315,14 +289,14 @@ export async function generateContactSheet(opts: {
       for (const t of plan.times) args.push("-ss", t.toFixed(3), "-i", opts.videoPath);
       if (audioInputIndex != null) args.push("-i", opts.videoPath);
       args.push("-filter_complex", unshellFilter(filter), "-map", `[${outLabel}]`, "-frames:v", "1", opts.outPath);
-      await run(ffmpegBin(), args);
+      await runMediaProcess(ffmpegBin(), args, { timeoutMs: 5 * 60_000, maxBuffer: 32 * 1024 * 1024 });
       return { layout: { ...layout, frames: plan.times.length, sheetWidth: plan.times.length * layout.thumbWidth }, mode: "smart", frameTimes: plan.times, cuts: sceneTimes };
     }
     // no usable plan (e.g. probe raced) — fall through to the even path below
   }
 
   const { filter, outLabel } = buildContactSheetFilter(layout, duration);
-  await run(ffmpegBin(), ["-y", "-i", opts.videoPath, "-filter_complex", filter, "-map", `[${outLabel}]`, "-frames:v", "1", opts.outPath]);
+  await runMediaProcess(ffmpegBin(), ["-y", "-i", opts.videoPath, "-filter_complex", filter, "-map", `[${outLabel}]`, "-frames:v", "1", opts.outPath], { timeoutMs: 5 * 60_000, maxBuffer: 32 * 1024 * 1024 });
   return { layout, mode: "even", frameTimes: [], cuts: [] };
 }
 
@@ -355,12 +329,9 @@ export function buildProxyFilter(width: number, height: number, fontFile?: strin
  * timecode burned in so human feedback can reference exact moments ("cut at 00:00:12.4 is jarring").
  */
 export async function generateReviewProxy(opts: { videoPath: string; outPath: string }): Promise<void> {
-  const { execFile } = await import("child_process");
-  const { promisify } = await import("util");
-  const run = promisify(execFile);
   const { width, height } = await probeVideo(opts.videoPath);
   await mkdir(dirname(opts.outPath), { recursive: true });
-  await run(ffmpegBin(), [
+  await runMediaProcess(ffmpegBin(), [
     "-y",
     "-i", opts.videoPath,
     "-vf", buildProxyFilter(width, height, resolveChineseFontFile()),
@@ -368,5 +339,5 @@ export async function generateReviewProxy(opts: { videoPath: string; outPath: st
     "-c:a", "aac", "-b:a", "96k",
     "-movflags", "+faststart",
     opts.outPath,
-  ]);
+  ], { timeoutMs: 15 * 60_000, maxBuffer: 32 * 1024 * 1024 });
 }

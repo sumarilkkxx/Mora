@@ -46,7 +46,9 @@ export function proxy(request: NextRequest): NextResponse {
     const type = request.headers.get("content-type")?.split(";")[0].trim().toLowerCase();
     const mediaUpload = request.method === "POST" && /^\/api\/project\/[a-zA-Z0-9-]+\/media$/.test(request.nextUrl.pathname)
       && ["video/mp4", "video/quicktime", "video/webm", "video/x-matroska", "video/x-m4v", "application/octet-stream"].includes(type ?? "");
-    if (type !== "application/json" && type !== "multipart/form-data" && !mediaUpload) {
+    const projectPackageUpload = request.method === "POST" && request.nextUrl.pathname === "/api/project/package"
+      && type === "application/vnd.mora.project+zip";
+    if (type !== "application/json" && type !== "multipart/form-data" && !mediaUpload && !projectPackageUpload) {
       return NextResponse.json({ error: "Expected JSON or multipart body" }, { status: 415 });
     }
   }

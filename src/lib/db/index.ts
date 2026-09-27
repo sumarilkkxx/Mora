@@ -98,3 +98,9 @@ export const db = realDb ?? makeFailedDbProxy();
 export function getDb() {
   return db;
 }
+
+/** Raw SQLite seam for transactional archive/import operations that span dynamic project tables. */
+export function getSqlite(): Database.Database {
+  if (!sqlite) throw new Error(`数据库不可用：${dbInitError ?? "SQLite 尚未初始化"}`);
+  return sqlite;
+}

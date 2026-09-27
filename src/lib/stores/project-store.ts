@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type { Shot, CharacterVoiceProfile } from "@/lib/domain/script";
 
 // ==================== Character ====================
@@ -103,7 +102,6 @@ interface CharacterState {
 }
 
 export const useCharacterStore = create<CharacterState>()(
-  persist(
     (set, get) => ({
       characters: [],
 
@@ -132,7 +130,5 @@ export const useCharacterStore = create<CharacterState>()(
               : { ...c, isDefault: false }
           ),
         })),
-    }),
-    { name: "daihuo-jianshou-characters" }
-  )
+    })
 );

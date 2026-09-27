@@ -10,12 +10,10 @@ import {
   BrainCircuit,
   Check,
   CircleAlert,
-  Clock3,
   Film,
   GitBranch,
   LoaderCircle,
   RefreshCw,
-  Route,
   Save,
   Scissors,
   ShieldCheck,
@@ -26,13 +24,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
 import { PageFrame, PageHeader } from "@/components/studio/page";
+import { ProductionOverviewStages } from "@/components/production-overview-stages";
 import { useLocale, useT } from "@/lib/i18n";
 import { getVideoModelCapabilities } from "@/lib/model-capabilities";
 import {
   buildPreviewPlan,
-  buildWorkflowPlan,
   diagnoseGenerationFailure,
-  estimateProduction,
   repairPlanFromQc,
   routeModel,
   type CreativeIntent,
@@ -43,25 +40,22 @@ import {
   type SemanticAsset,
   type VersionTree,
   type VisualBible,
-  type WorkflowStageId,
-  type WorkflowStagePlan,
 } from "@/lib/production-system";
+import type { ProductionOverviewModel } from "@/lib/production-overview";
 import type { Model } from "@/lib/providers/types";
 import { useSettingsStore } from "@/lib/stores/settings-store";
 import type { QcReport } from "@/lib/video-composer/qc";
 
 interface ProductionOverview {
   project: { id: string; name: string; sourceVideoUrl?: string | null };
-  workflow: WorkflowStagePlan[] | null;
+  status: ProductionOverviewModel;
   creativeIntent: CreativeIntent | null;
   visualBible: VisualBible | null;
   mediaInsights: ProjectMediaInsight[];
   snapshots: ProductionSnapshot[];
   semanticAssets: SemanticAsset[];
   versionTree: VersionTree;
-  latestRun: { id: string; status: string; stage: string; error?: string | null } | null;
   latestComposition: { id: string; status: string; duration?: number | null; resolution?: "720p" | "1080p" | null; aspectRatio?: "9:16" | "16:9" | "1:1" | null } | null;
-  latestFailure: { source: "task" | "pipeline"; id: string; stage: string; error: string } | null;
   selectedScript: { id: string; shotCount: number; totalDuration: number } | null;
   counts: { scripts: number; assets: number; clips: number; tasks: number; compositions: number };
 }
@@ -71,7 +65,6 @@ const EMPTY_BIBLE: VisualBible = {
 };
 
 const EMPTY_INTENT: CreativeIntent = { subject: "" };
-const OPTIONAL_STAGES = new Set<WorkflowStageId>(["analyze", "motion", "voice", "qc", "release"]);
 
 function splitList(value: string): string[] {
   return [...new Set(value.split(/[,，\n]/).map((item) => item.trim()).filter(Boolean))].slice(0, 12);
@@ -107,15 +100,14 @@ export default function ProductionPage() {
   const { id } = useParams<{ id: string }>();
   const t = useT("production");
   const locale = useLocale();
-  const { providers, customModels, defaultImageModel, defaultVideoModel, chainMode, setDefaultVideoModel } = useSettingsStore();
+  const { providers, customModels, defaultVideoModel, chainMode, setDefaultVideoModel } = useSettingsStore();
   const [overview, setOverview] = useState<ProductionOverview | null>(null);
   const [models, setModels] = useState<Model[]>([]);
-  const [workflow, setWorkflow] = useState<WorkflowStagePlan[]>([]);
   const [bible, setBible] = useState<VisualBible>(EMPTY_BIBLE);
   const [intent, setIntent] = useState<CreativeIntent>(EMPTY_INTENT);
   const [goal, setGoal] = useState<RoutingGoal>("balanced");
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState<"workflow" | "memory" | "snapshot" | "qc" | "repair" | null>(null);
+  const [busy, setBusy] = useState<"memory" | "snapshot" | "qc" | "repair" | null>(null);
   const [status, setStatus] = useState("");
   const [repairs, setRepairs] = useState<RepairAction[]>([]);
 
@@ -125,16 +117,9 @@ export default function ProductionPage() {
     if (!response.ok) throw new Error(data.error || t("loadFailed"));
     const next = data as ProductionOverview;
     setOverview(next);
-    const initialWorkflow = next.workflow?.length ? next.workflow : buildWorkflowPlan({
-      hasSourceMedia: Boolean(next.project.sourceVideoUrl || next.mediaInsights.length),
-      aiKeyframes: Boolean(defaultImageModel),
-      aiMotion: Boolean(defaultVideoModel),
-      nativeAudio: false,
-    });
-    setWorkflow(initialWorkflow);
     setBible(next.visualBible ?? EMPTY_BIBLE);
     setIntent(next.creativeIntent ?? { subject: next.project.name || "" });
-  }, [defaultImageModel, defaultVideoModel, id, t]);
+  }, [id, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -175,31 +160,8 @@ export default function ProductionPage() {
     };
   }), { mode: "image-to-video", goal, requireLastFrame: chainMode !== "off" }), [chainMode, goal, videoModels]);
 
-  const estimate = useMemo(() => estimateProduction({
-    shotCount: overview?.selectedScript?.shotCount || Math.max(1, overview?.counts.assets || 1), workflow,
-    imageUnitUsd: priceOf(models.find((model) => model.id === defaultImageModel)),
-    videoUnitUsd: priceOf(models.find((model) => model.id === (routeDecision.selected?.id || defaultVideoModel))),
-  }), [defaultImageModel, defaultVideoModel, models, overview, routeDecision.selected?.id, workflow]);
-
   const previewPlan = useMemo(() => buildPreviewPlan({ duration: overview?.selectedScript?.totalDuration || 15, hasGeneratedMotion: Boolean(overview?.counts.clips) }), [overview]);
-  const diagnosis = overview?.latestFailure ? diagnoseGenerationFailure(overview.latestFailure.error) : null;
-
-  const toggleWorkflowStage = (id: WorkflowStageId) => {
-    if (!OPTIONAL_STAGES.has(id)) return;
-    setWorkflow((current) => {
-      const enabled = !(current.find((stage) => stage.id === id)?.enabled ?? true);
-      let next = current.map((stage) => stage.id === id ? { ...stage, enabled } : stage);
-      if (id === "qc" && !enabled) next = next.map((stage) => stage.id === "release" ? { ...stage, enabled: false } : stage);
-      if (id === "release" && enabled) next = next.map((stage) => stage.id === "qc" ? { ...stage, enabled: true } : stage);
-      if (id === "motion") {
-        next = next.map((stage) => stage.id === "voice" ? { ...stage, dependsOn: enabled ? ["motion"] : ["keyframes"] } : stage);
-      }
-      const voiceEnabled = next.find((stage) => stage.id === "voice")?.enabled ?? false;
-      const motionEnabled = next.find((stage) => stage.id === "motion")?.enabled ?? false;
-      next = next.map((stage) => stage.id === "compose" ? { ...stage, dependsOn: voiceEnabled ? ["voice"] : motionEnabled ? ["motion"] : ["keyframes"] } : stage);
-      return next;
-    });
-  };
+  const diagnosis = overview?.status.failure ? diagnoseGenerationFailure(overview.status.failure.error) : null;
 
   const patchProduction = async (payload: Record<string, unknown>, kind: typeof busy) => {
     setBusy(kind); setStatus("");
@@ -236,6 +198,7 @@ export default function ProductionPage() {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept-Language": locale },
         body: JSON.stringify({
+          requestId: crypto.randomUUID(),
           resolution: composition.resolution || "1080p",
           aspectRatio: composition.aspectRatio || "9:16",
           freeTts: { enabled: true },
@@ -267,24 +230,15 @@ export default function ProductionPage() {
       <div role="status" aria-live="polite" className="mb-4 min-h-5 text-sm text-primary">{status}</div>
 
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-primary/25 bg-primary/8 p-4"><div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><BadgeDollarSign className="h-4 w-4 text-primary" />{t("cost")}</div><div className="text-xl font-bold tabular-nums">{t("usdRange", { min: estimate.rangeUsd.min.toFixed(2), max: estimate.rangeUsd.max.toFixed(2) })}</div><p className="mt-1 text-[11px] text-muted-foreground">{estimate.unknownCalls ? t("unknownCalls", { n: estimate.unknownCalls }) : t("priceKnown")}</p></div>
-        <div className="studio-surface rounded-2xl p-4 shadow-none"><div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><Clock3 className="h-4 w-4 text-primary" />{t("time")}</div><div className="text-xl font-bold tabular-nums">{t("minuteRange", { min: Math.max(1, Math.ceil(estimate.estimatedSeconds.min / 60)), max: Math.max(1, Math.ceil(estimate.estimatedSeconds.max / 60)) })}</div><p className="mt-1 text-[11px] text-muted-foreground">{t("shots", { n: overview.selectedScript?.shotCount || overview.counts.assets })}</p></div>
-        <div className="studio-surface rounded-2xl p-4 shadow-none"><div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><Activity className="h-4 w-4 text-primary" />{t("projectState")}</div><div className="text-xl font-bold">{overview.latestRun?.status ? t(`run_${overview.latestRun.status}`) : t("ready")}</div><p className="mt-1 text-[11px] text-muted-foreground">{t("outputCounts", { assets: overview.counts.assets, videos: overview.counts.compositions })}</p></div>
+        <div className="rounded-2xl border border-primary/25 bg-primary/8 p-4"><div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><BadgeDollarSign className="h-4 w-4 text-primary" />{t("cost")}</div><div className="text-xl font-bold tabular-nums">{t("paidCalls", { n: overview.status.cost.submittedCalls })}</div><p className="mt-1 text-[11px] text-muted-foreground">{overview.status.cost.submittedCalls ? t("costBreakdown", { active: overview.status.cost.activeCalls, completed: overview.status.cost.completedCalls, failed: overview.status.cost.failedCalls }) : t("noPaidCalls")}</p>{overview.status.cost.submittedCalls > 0 && <p className="mt-1 text-[10px] text-muted-foreground">{t("costUnavailable")}</p>}</div>
+        <div className="studio-surface rounded-2xl p-4 shadow-none"><div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><Activity className="h-4 w-4 text-primary" />{t("progress")}</div><div className="text-xl font-bold tabular-nums">{overview.status.summary.progress}%</div><p className="mt-1 text-[11px] text-muted-foreground">{t("outputCounts", { assets: overview.counts.assets, videos: overview.counts.compositions })}</p></div>
+        <div className="studio-surface rounded-2xl p-4 shadow-none"><div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><Activity className="h-4 w-4 text-primary" />{t("projectState")}</div><div className="text-xl font-bold">{t(`summary_${overview.status.summary.state}`)}</div><p className="mt-1 text-[11px] text-muted-foreground">{t("stateSource")}</p></div>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
         <div className="space-y-5">
-          <Section title={t("workflow")} hint={t("workflowHint")} icon={<Route className="h-4 w-4" />}>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {workflow.map((stage) => {
-                const optional = OPTIONAL_STAGES.has(stage.id);
-                return <button key={stage.id} type="button" disabled={!optional} aria-pressed={stage.enabled} onClick={() => toggleWorkflowStage(stage.id)} className={`min-h-20 rounded-xl border p-3 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-default ${stage.enabled ? "border-primary/30 bg-primary/8" : "border-border/50 bg-background/25 opacity-60"}`}>
-                  <span className="flex items-center justify-between gap-2"><span className="text-sm font-medium">{t(`stage_${stage.id}`)}</span><span className={`h-2 w-2 rounded-full ${stage.enabled ? "bg-emerald-400" : "bg-muted-foreground/40"}`} /></span>
-                  <span className="mt-2 flex flex-wrap gap-1 text-[10px] text-muted-foreground"><span className="rounded bg-muted/40 px-1.5 py-0.5">{t(`execution_${stage.execution}`)}</span><span className="rounded bg-muted/40 px-1.5 py-0.5">{t(`billing_${stage.billing}`)}</span></span>
-                </button>;
-              })}
-            </div>
-            <Button className="mt-4 h-10" disabled={busy === "workflow"} onClick={() => patchProduction({ productionWorkflow: workflow }, "workflow")}><Save />{busy === "workflow" ? t("saving") : t("saveWorkflow")}</Button>
+          <Section title={t("workflow")} hint={t("workflowHint")} icon={<Activity className="h-4 w-4" />}>
+            <ProductionOverviewStages overview={overview.status} />
           </Section>
 
           <Section title={t("memory")} hint={t("memoryHint")} icon={<BrainCircuit className="h-4 w-4" />}>
@@ -321,12 +275,13 @@ export default function ProductionPage() {
 
           <Section title={t("preview")} hint={t("previewDesc")} icon={<Film className="h-4 w-4" />}>
             <div className="mb-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground"><span className="rounded-full border border-border/60 px-2 py-1">{previewPlan.resolution}</span><span className="rounded-full border border-border/60 px-2 py-1">{previewPlan.videoPreset}</span><span className="rounded-full border border-border/60 px-2 py-1">CRF {previewPlan.crf}</span></div>
-            <Link href={`/project/${id}/video?renderPreset=fast`} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 text-sm font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-primary"><Film className="h-4 w-4" />{t("previewCta")}</Link>
+            {overview.selectedScript ? <Link href={`/project/${id}/video?renderPreset=fast`} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 text-sm font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-primary"><Film className="h-4 w-4" />{t("previewCta")}</Link> : <Button variant="outline" className="h-10 w-full" disabled title={t("previewNeedsScript")}><Film className="h-4 w-4" />{t("previewCta")}</Button>}
+            {!overview.selectedScript && <p className="mt-2 text-xs text-muted-foreground">{t("previewNeedsScript")}</p>}
           </Section>
 
           <Section title={t("repairs")} icon={<Wrench className="size-4" />}>
             <Button className="h-10 w-full" disabled={overview.latestComposition?.status !== "done" || busy === "qc"} onClick={runQc}>{busy === "qc" ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : <RefreshCw />}{busy === "qc" ? t("qcRunning") : t("runQc")}</Button>
-            {!overview.latestComposition?.id && <p className="mt-2 text-xs text-muted-foreground">{t("noComposition")}</p>}
+            {overview.latestComposition?.status !== "done" && <p className="mt-2 text-xs text-muted-foreground">{t("qcNeedsComplete")}</p>}
             {repairs.length > 0 && <div className="mt-3 space-y-2">{repairs.map((repair) => <div key={repair.checkId} className="rounded-lg border border-border/50 bg-background/30 p-3"><div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold">{t(`stage_${repair.stage}`)}</span><span className="text-[10px] text-muted-foreground">{repair.automatic ? t("freeAutoFix") : t("manualReview")}</span></div><p className="mt-1 text-xs leading-5 text-muted-foreground">{repair.message[locale]}</p></div>)}{repairs.every((repair) => repair.automatic) && <Button variant="outline" className="h-10 w-full" disabled={busy === "repair"} onClick={applyAutomaticRepairs}>{busy === "repair" ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : <Wrench />}{busy === "repair" ? t("repairStarting") : t("applyFreeRepairs")}</Button>}</div>}
           </Section>
         </div>

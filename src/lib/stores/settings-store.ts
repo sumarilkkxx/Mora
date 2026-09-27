@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { DEFAULT_TTS_PROVIDER, type TTSProvider } from "@/lib/tts-presets";
 import {
@@ -206,7 +205,6 @@ export function migrateSettings(state: SettingsState): SettingsState {
 }
 
 export const useSettingsStore = create<SettingsState>()(
-  persist(
     (set) => ({
       providers: {
         replicate: { enabled: false, apiKey: "" },
@@ -297,25 +295,5 @@ export const useSettingsStore = create<SettingsState>()(
       applyProductionProfile: (profile) =>
         set((state) => productionProfilePatch(profile, state)),
       setTargetVideoDuration: (duration) => set({ targetVideoDuration: normalizeTargetVideoDuration(duration) }),
-    }),
-    {
-      name: "daihuo-jianshou-settings",
-      // v1：清洗历史版本预设写入的失效模型名（旧预设填过不存在的模型 ID，"测试连接"只验 Key
-      // 不验模型名所以一直显示正常，直到生成脚本才报 Model Not Exist——issue #12 用户即此场景）。
-      // 只在 baseUrl 匹配对应官方端点时改写，避免误伤自建代理上的同名自定义模型。
-      // v2：把已停用的 Pollinations 免 Key 地址迁到新端点（见 migrateSettings 注释）。
-      // v3：Ollama 的 localhost:11434 改写成 127.0.0.1:11434（Windows 上 ::1 连不通）。
-      // v4：补充面向创作目标的生产方案；旧设置迁移到兼顾质量与成本的 balanced。
-      // v5：历史兼容版本。
-      // v6：移除当时不可用的 Atlas Cloud / fal.ai 配置。
-      // v8：Atlas Cloud 以真实视频适配器恢复，补回空配置并继续清理 fal.ai。
-      // v9：持久化视频模型所属平台，防止同名模型在 OpenRouter / Atlas 间被静默改道。
-      // v10：Atlas Cloud 默认模型从具体端点迁移为模型系列，端点由任务模式自动选择。
-      // v11：增加请求级文本/视觉备选模型；旧配置保留主模型且备选默认为空。
-      // v12：增加独立的成片目标时长；不再把单镜模型时长当作整片时长。
-      // v13：新安装默认使用 720p，并加入单次付费视频生成的费用上限。
-      version: 13,
-      migrate: (persisted) => migrateSettings(persisted as SettingsState),
-    }
-  )
+    })
 );

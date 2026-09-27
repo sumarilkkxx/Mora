@@ -4,7 +4,7 @@ import { ffmpegBin } from "@/lib/ffmpeg-path";
 import { buildKaraokeAss } from "@/lib/video-composer/karaoke";
 import { resolveChineseFontFamily, resolveChineseFontFile, withComposeSlot } from "@/lib/video-composer/composer";
 import { probeMedia } from "@/lib/media-probe";
-import { execMedia } from "./media";
+import { runMediaProcess } from "@/lib/media-runtime";
 import { timeline, type EditBrief, type EditPlan, type Speech, type Checkpoint, type CheckResult } from "./contract";
 
 export function outputSize(aspect: EditBrief["aspect"], quality: "720p" | "1080p") {
@@ -94,7 +94,7 @@ export async function renderAutoEdit(input: Parameters<typeof buildRender>[0] & 
   await writeFile(script, inv.filter);
   await withComposeSlot(async () => {
     input.signal.throwIfAborted();
-    await execMedia(ffmpegBin(), [...inv.inputArgs, "-filter_complex_threads", "1", "-filter_complex_script", script, ...inv.outputArgs], { timeout: 15 * 60000, signal: input.signal, maxBuffer: 2 * 1024 * 1024 });
+    await runMediaProcess(ffmpegBin(), [...inv.inputArgs, "-filter_complex_threads", "1", "-filter_complex_script", script, ...inv.outputArgs], { timeoutMs: 15 * 60000, signal: input.signal, maxBuffer: 2 * 1024 * 1024 });
   });
 }
 export async function checkOutput(file: string, plan: EditPlan, brief: EditBrief, quality: "720p" | "1080p", signal: AbortSignal): Promise<CheckResult> {
@@ -105,7 +105,7 @@ export async function checkOutput(file: string, plan: EditPlan, brief: EditBrief
   if (meta.duration <= 0 || meta.duration > 30 || meta.duration > brief.target || Math.abs(meta.duration - expected) > 0.08) issues.push("成片时长与计划不符 / Duration mismatch");
   if (meta.width !== w || meta.height !== h) issues.push("画幅不符 / Dimensions mismatch");
   if (meta.hasAudio !== (brief.audio !== "muted" || Boolean(brief.bgm))) issues.push("声音方式不符 / Audio mismatch");
-  const { stderr } = await execMedia(ffmpegBin(), ["-nostdin", "-hide_banner", "-i", file, "-vf", "blackdetect=d=0.5:pix_th=0.05,freezedetect=n=-55dB:d=2", "-f", "null", "-"], { timeout: 120000, signal, maxBuffer: 2 * 1024 * 1024 });
+  const { stderr } = await runMediaProcess(ffmpegBin(), ["-nostdin", "-hide_banner", "-i", file, "-vf", "blackdetect=d=0.5:pix_th=0.05,freezedetect=n=-55dB:d=2", "-f", "null", "-"], { timeoutMs: 120000, signal, maxBuffer: 2 * 1024 * 1024 });
   const review = stderr.split(/\r?\n/).filter(l => /black_start:|freeze_start:/.test(l)).map(l => l.slice(-250)).slice(0, 12);
   return { technical: !issues.length, issues, review, duration: meta.duration };
 }

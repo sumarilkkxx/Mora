@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { mkdtemp, rm, mkdir, writeFile, readFile, access } from "node:fs/promises";
 import { NextRequest } from "next/server";
+import { eq } from "drizzle-orm";
 import * as schema from "@/lib/db/schema";
 import { recoverRenders, renderOwner } from "@/lib/render-recovery";
 
@@ -22,13 +23,15 @@ const { compose, submit } = vi.hoisted(() => ({ compose: vi.fn(), submit: vi.fn(
 vi.mock("@/lib/providers", () => ({ createProvider: () => ({ submitVideoTask: submit, waitForTask: vi.fn() }) }));
 vi.mock("@/lib/video-composer/composer", async (original) => ({ ...await original<typeof import("@/lib/video-composer/composer")>(), composeVideo: compose, resolveChineseFontFamily: () => "sans-serif" }));
 vi.mock("@/lib/edge-tts", () => ({ DEFAULT_FREE_VOICE: "fixture", generateSpeechFreeDetailed: async (text: string) => ({ audio: Buffer.from(text), words: [] }) }));
-import { POST as composePost } from "@/app/api/project/[id]/compose/route";
+import { DELETE as composeDelete, POST as composePost } from "@/app/api/project/[id]/compose/route";
 import { POST as videoPost } from "@/app/api/ai/video/route";
 import { GET } from "@/app/api/tasks/route";
 import { persistRecoveredShotVideo } from "@/lib/generated-video-persistence";
 import { recordAiTask, getAiTaskByProviderTaskId } from "@/lib/ai-tasks";
 
 beforeEach(async () => {
+  compose.mockReset();
+  submit.mockReset();
   sqlite = new Database(":memory:");
   sqlite.pragma("foreign_keys = ON");
   db = drizzle(sqlite, { schema });
@@ -100,9 +103,36 @@ describe("recovery with migrated SQLite", () => {
     pending[0].resolve(join(directory, "output.mp4"));
     pending[1].reject(new Error("fixture renderer failure"));
     await vi.waitFor(() => expect(db.select().from(schema.compositions).all().map((c) => c.status).sort()).toEqual(["done", "failed"]));
+    expect(db.select().from(schema.operationRuns).all().map((run) => run.status).sort()).toEqual(["done", "failed"]);
     await vi.waitFor(async () => {
       for (const p of pending) await expect(access(p.audio)).rejects.toThrow();
     });
+  });
+  it("deduplicates a retried render and cancellation prevents its late output from publishing", async () => {
+    await mkdir(join(directory, "uploads", "p"), { recursive: true });
+    await writeFile(join(directory, "uploads", "p", "image.png"), "fixture");
+    db.insert(schema.assets).values({ projectId: "p", shotId: 1, type: "ai_generated", filePath: "/api/files/p/image.png", status: "done" }).run();
+    db.insert(schema.scripts).values({ projectId: "p", styleType: "story", selected: true, shots: [{ shotId: 1, type: "hook", duration: 3, voiceover: "fixture", description: "fixture", camera: "static", visualSource: "product_image", transition: "direct_concat" }] }).run();
+    let finish!: (path: string) => void;
+    compose.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    const request = () => composePost(new NextRequest("http://localhost/api/project/p/compose", {
+      method: "POST",
+      body: JSON.stringify({ requestId: "same-render", freeTts: { enabled: true } }),
+    }), { params: Promise.resolve({ id: "p" }) });
+    const first = await request();
+    const firstBody = await first.json();
+    const second = await request();
+    await expect(second.json()).resolves.toMatchObject({ compositionId: firstBody.compositionId, reused: true });
+    expect(db.select().from(schema.compositions).all()).toHaveLength(1);
+    await vi.waitFor(() => expect(compose).toHaveBeenCalled(), { timeout: 10_000 });
+    const cancelled = await composeDelete(new NextRequest(`http://localhost/api/project/p/compose?compositionId=${firstBody.compositionId}`, { method: "DELETE" }), { params: Promise.resolve({ id: "p" }) });
+    await expect(cancelled.json()).resolves.toMatchObject({ status: "cancel_requested" });
+    const lateOutput = join(directory, "cancelled-output.mp4");
+    await writeFile(lateOutput, "late");
+    finish(lateOutput);
+    await vi.waitFor(() => expect(db.select().from(schema.operationRuns).where(eq(schema.operationRuns.id, firstBody.compositionId)).get()?.status).toBe("cancelled"));
+    expect(db.select().from(schema.compositions).where(eq(schema.compositions.id, firstBody.compositionId)).get()?.status).toBe("failed");
+    await expect(access(lateOutput)).rejects.toThrow();
   });
   it("recovers a just-submitted dead process and legacy rows without failing live long renders", () => {
     const now = Math.floor(Date.now() / 1000);

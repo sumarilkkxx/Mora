@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ import {
   type CustomModel,
   type GenMediaType,
 } from "@/lib/gen-params";
+import type { ProviderCapabilityContract } from "@/lib/provider-capability-contract";
 
 // platforms that support custom model attachment (keys match settings.providers)
 const PROVIDER_OPTIONS: { value: string; label: string }[] = [
@@ -33,6 +34,7 @@ const PROVIDER_OPTIONS: { value: string; label: string }[] = [
   { value: "alibaba", label: "阿里百炼" },
   { value: "siliconflow", label: "硅基流动" },
 ];
+const ASPECT_KEY: Record<string, string> = { "9:16": "aspect916", "16:9": "aspect169", "1:1": "aspect11" };
 
 const labelOf = (opts: { value: string; label: string }[], v: string) =>
   opts.find((o) => o.value === v)?.label ?? v;
@@ -73,7 +75,7 @@ function NumberField({
  * "Custom models + generation params" settings card. Self-contained read/write from the settings store,
  * allowing users to attach arbitrary model IDs to existing providers and set global default params for image/video generation.
  */
-export function GenerationSettings({ selectedVideoProvider }: { selectedVideoProvider?: string }) {
+export function GenerationSettings({ selectedVideoProvider, selectedVideoCapability }: { selectedVideoProvider?: string; selectedVideoCapability?: ProviderCapabilityContract }) {
   const t = useT("generationSettings");
   const {
     customModels,
@@ -92,8 +94,7 @@ export function GenerationSettings({ selectedVideoProvider }: { selectedVideoPro
   ];
 
   // aspect ratio options: reuse values from gen-params, labels via i18n (consistent with "default settings" on the settings page)
-  const ASPECT_KEY: Record<string, string> = { "9:16": "aspect916", "16:9": "aspect169", "1:1": "aspect11" };
-  const ASPECT_OPTIONS = ASPECT_RATIO_OPTIONS.map((o) => ({ value: o.value, label: t(ASPECT_KEY[o.value] ?? o.value) }));
+  const ASPECT_OPTIONS = useMemo(() => ASPECT_RATIO_OPTIONS.map((o) => ({ value: o.value, label: t(ASPECT_KEY[o.value] ?? o.value) })), [t]);
 
   // form state for adding a new custom model
   const [form, setForm] = useState<{ provider: string; modelId: string; name: string; mediaType: GenMediaType; supportsAudio: boolean }>({
@@ -106,6 +107,28 @@ export function GenerationSettings({ selectedVideoProvider }: { selectedVideoPro
 
   const canAdd = form.modelId.trim().length > 0;
   const unifiedVideo = selectedVideoProvider === "openrouter" || selectedVideoProvider === "atlas-cloud";
+  const supportedVideoAspects = useMemo(() => {
+    const supported = new Set(selectedVideoCapability?.parameters.aspectRatios ?? []);
+    const filtered = ASPECT_OPTIONS.filter((option) => supported.has(option.value));
+    return filtered.length ? filtered : ASPECT_OPTIONS;
+  }, [ASPECT_OPTIONS, selectedVideoCapability]);
+  const supportedVideoResolutions = useMemo(() => {
+    const supported = new Set((selectedVideoCapability?.parameters.resolutions ?? []).map((value) => value.toLowerCase()));
+    const filtered = RESOLUTION_OPTIONS.filter((option) => supported.has(option.value.toLowerCase()));
+    return filtered.length ? filtered : RESOLUTION_OPTIONS;
+  }, [selectedVideoCapability]);
+  const supportedDurations = selectedVideoCapability?.parameters.durations;
+
+  useEffect(() => {
+    let next = videoParams;
+    if (!supportedVideoAspects.some((option) => option.value === next.aspectRatio)) next = { ...next, aspectRatio: supportedVideoAspects[0].value };
+    if (!supportedVideoResolutions.some((option) => option.value === next.resolution)) next = { ...next, resolution: supportedVideoResolutions[0].value };
+    if (supportedDurations?.length && (next.duration == null || !supportedDurations.includes(next.duration))) {
+      const requested = next.duration ?? supportedDurations[0];
+      next = { ...next, duration: supportedDurations.reduce((best, value) => Math.abs(value - requested) < Math.abs(best - requested) ? value : best, supportedDurations[0]) };
+    }
+    if (next !== videoParams) setVideoParams(next);
+  }, [setVideoParams, supportedDurations, supportedVideoAspects, supportedVideoResolutions, videoParams]);
   const handleAdd = () => {
     if (!canAdd) return;
     const cm: CustomModel = {
@@ -246,7 +269,7 @@ export function GenerationSettings({ selectedVideoProvider }: { selectedVideoPro
                     <SelectValue>{(value: string) => labelOf(ASPECT_OPTIONS, value)}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {ASPECT_OPTIONS.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
+                    {supportedVideoAspects.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
@@ -257,11 +280,19 @@ export function GenerationSettings({ selectedVideoProvider }: { selectedVideoPro
                     <SelectValue>{(value: string) => labelOf(RESOLUTION_OPTIONS, value)}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {RESOLUTION_OPTIONS.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
+                  {supportedVideoResolutions.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
-              <NumberField label={t("duration")} value={videoParams.duration} onChange={(v) => setVideoParams({ ...videoParams, duration: v })} placeholder="5" />
+              {supportedDurations?.length ? (
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">{t("duration")}</Label>
+                  <Select value={String(videoParams.duration ?? supportedDurations[0])} onValueChange={(value) => setVideoParams({ ...videoParams, duration: Number(value) })}>
+                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                    <SelectContent>{supportedDurations.map((value) => <SelectItem key={value} value={String(value)}>{value}s</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              ) : <NumberField label={t("duration")} value={videoParams.duration} onChange={(v) => setVideoParams({ ...videoParams, duration: v })} placeholder="5" />}
               <NumberField label={t("fps")} value={videoParams.fps} onChange={(v) => setVideoParams({ ...videoParams, fps: v })} placeholder={t("platformDefault")} disabled={unifiedVideo} />
               <NumberField label={t("motionStrength")} value={videoParams.motionStrength} onChange={(v) => setVideoParams({ ...videoParams, motionStrength: v })} step="0.1" placeholder={t("platformDefault")} disabled={unifiedVideo} />
               <NumberField label={t("seed")} value={videoParams.seed} onChange={(v) => setVideoParams({ ...videoParams, seed: v })} placeholder={t("seedPlaceholder")} />

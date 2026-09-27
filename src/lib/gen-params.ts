@@ -10,6 +10,8 @@
  *   and attaches them to generation request options.
  */
 
+import { resolveCapabilityContract, type ProviderCapabilityContract } from "@/lib/provider-capability-contract";
+
 export type GenAspectRatio = "9:16" | "16:9" | "1:1";
 export type GenResolution = "720p" | "1080p";
 export type GenMediaType = "image" | "video";
@@ -201,19 +203,28 @@ export interface ModelLike {
   mediaType?: GenMediaType;
   modes?: string[];
   supportsAudio?: boolean;
+  capability?: ProviderCapabilityContract;
   /** Marked as user-defined (UI may add a badge / distinguish the source) */
   custom?: boolean;
 }
 
 /** Custom model → model list entry (reused by the dropdown and generation logic to resolve the platform Key/baseUrl) */
 export function customModelToModelLike(cm: CustomModel): ModelLike {
+  const modes = cm.mediaType === "image" ? ["text-to-image", "image-to-image"] : ["text-to-video", "image-to-video"];
   return {
     id: cm.modelId,
     name: cm.name,
     provider: cm.provider,
     mediaType: cm.mediaType,
-    modes: cm.mediaType === "image" ? ["text-to-image", "image-to-image"] : ["text-to-video", "image-to-video"],
+    modes,
     supportsAudio: cm.supportsAudio,
+    capability: resolveCapabilityContract({
+      capability: cm.mediaType,
+      provider: cm.provider,
+      modelId: cm.modelId,
+      modes,
+      supportsAudio: cm.supportsAudio,
+    }),
     custom: true,
   };
 }

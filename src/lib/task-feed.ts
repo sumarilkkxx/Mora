@@ -30,6 +30,7 @@ export function taskHref(row: TaskRow): string {
     case "auto_edit":
       return row.projectId ? `/project/${row.projectId}/auto-edit?run=${row.id}` : "/projects";
     case "batch":
+    case "batch_interrupted":
       return "/batch";
     case "paid":
     case "paid_unknown":
@@ -37,6 +38,9 @@ export function taskHref(row: TaskRow): string {
     case "pipeline":
     case "pipeline_interrupted":
       return row.projectId ? `/project/${row.projectId}/script` : "/projects";
+    case "compose":
+    case "compose_interrupted":
+      return row.projectId ? `/project/${row.projectId}/video` : "/projects";
     case "done":
       return row.projectId ? `/project/${row.projectId}/export` : "/projects";
     default:

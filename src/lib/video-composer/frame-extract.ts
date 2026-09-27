@@ -9,12 +9,9 @@
  * Best-effort by design: extraction failure returns undefined and never blocks
  * the pipeline — the caller falls back to the pre-generated keyframe.
  */
-import { execFile } from "child_process";
-import { promisify } from "util";
 import { stat } from "fs/promises";
 import { ffmpegBin } from "@/lib/ffmpeg-path";
-
-const execFileAsync = promisify(execFile);
+import { runMediaProcess } from "@/lib/media-runtime";
 
 /** Suffix appended to the video path to name its extracted tail frame. */
 export const LAST_FRAME_SUFFIX = ".last.jpg";
@@ -31,10 +28,10 @@ export const THUMB_SUFFIX = ".thumb.jpg";
 export async function extractFirstFrame(videoPath: string, outPath?: string): Promise<string | undefined> {
   const target = outPath ?? `${videoPath}${THUMB_SUFFIX}`;
   try {
-    await execFileAsync(
+    await runMediaProcess(
       ffmpegBin(),
       ["-nostdin", "-v", "error", "-y", "-i", videoPath, "-frames:v", "1", "-vf", "scale=480:-2", "-q:v", "3", target],
-      { timeout: 60_000 }
+      { timeoutMs: 60_000 }
     );
     const st = await stat(target);
     return st.size > 0 ? target : undefined;
@@ -52,10 +49,10 @@ export async function extractFirstFrame(videoPath: string, outPath?: string): Pr
 export async function extractLastFrame(videoPath: string, outPath?: string): Promise<string | undefined> {
   const target = outPath ?? `${videoPath}${LAST_FRAME_SUFFIX}`;
   try {
-    await execFileAsync(
+    await runMediaProcess(
       ffmpegBin(),
       ["-nostdin", "-v", "error", "-y", "-sseof", "-0.1", "-i", videoPath, "-frames:v", "1", "-q:v", "2", target],
-      { timeout: 60_000 }
+      { timeoutMs: 60_000 }
     );
     const st = await stat(target);
     return st.size > 0 ? target : undefined;

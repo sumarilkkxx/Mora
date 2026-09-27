@@ -39,7 +39,7 @@ export const mediaLab: NamespaceMessages = {
     silent: "无音轨",
     empty: "选择媒体并开始分析，结果会显示在这里。",
     failed: "分析失败，请检查视觉模型配置或稍后重试。",
-    saveProject: "沉淀到项目", saveInsight: "保存为项目洞察", saving: "保存中…", savedToProject: "已加入项目视觉记忆，可在生产控制台复用。", saveFailed: "保存项目洞察失败", noProject: "暂无项目",
+    saveProject: "沉淀到项目", saveInsight: "保存为项目洞察", saving: "保存中…", savedToProject: "已加入项目视觉记忆，可在制作概览中复用。", saveFailed: "保存项目洞察失败", noProject: "暂无项目",
   },
   en: {
     eyebrow: "Visual analysis",
@@ -79,6 +79,6 @@ export const mediaLab: NamespaceMessages = {
     silent: "No audio",
     empty: "Choose media and start analysis. Results will appear here.",
     failed: "Analysis failed. Check the vision-model setup or try again later.",
-    saveProject: "Save to project", saveInsight: "Save as project insight", saving: "Saving…", savedToProject: "Added to project memory and ready in the production console.", saveFailed: "Failed to save project insight", noProject: "No project yet",
+    saveProject: "Save to project", saveInsight: "Save as project insight", saving: "Saving…", savedToProject: "Added to project memory and ready in the production overview.", saveFailed: "Failed to save project insight", noProject: "No project yet",
   },
 };

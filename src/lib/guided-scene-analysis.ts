@@ -1,12 +1,10 @@
-import { execFile } from "child_process";
 import { mkdir } from "fs/promises";
 import { join } from "path";
-import { promisify } from "util";
 import { ffmpegBin } from "@/lib/ffmpeg-path";
+import { runMediaProcess } from "@/lib/media-runtime";
 import { getUploadsDir } from "@/lib/paths";
 import type { GuidedScene } from "@/lib/guided-edit";
 
-const execFileAsync = promisify(execFile);
 const SCENE_THRESHOLD = 0.32;
 const MIN_SCENE_SECONDS = 0.7;
 const MAX_SCENE_SECONDS = 8;
@@ -36,10 +34,10 @@ export function sceneRangesFromTimestamps(timestamps: number[], duration: number
 }
 
 async function extractThumbnail(inputPath: string, outputPath: string, at: number): Promise<void> {
-  await execFileAsync(ffmpegBin(), [
+  await runMediaProcess(ffmpegBin(), [
     "-nostdin", "-v", "error", "-y", "-ss", at.toFixed(3), "-i", inputPath,
     "-frames:v", "1", "-vf", "scale=360:-2", "-q:v", "4", outputPath,
-  ], { timeout: 60_000, maxBuffer: 4 * 1024 * 1024 });
+  ], { timeoutMs: 60_000, maxBuffer: 4 * 1024 * 1024 });
 }
 
 export async function analyzeGuidedScenes(input: {
@@ -50,10 +48,10 @@ export async function analyzeGuidedScenes(input: {
 }): Promise<GuidedScene[]> {
   let stderr = "";
   try {
-    const result = await execFileAsync(ffmpegBin(), [
+    const result = await runMediaProcess(ffmpegBin(), [
       "-nostdin", "-hide_banner", "-i", input.sourcePath,
       "-vf", `select=gt(scene\\,${SCENE_THRESHOLD}),showinfo`, "-an", "-f", "null", "-",
-    ], { timeout: 5 * 60_000, maxBuffer: 24 * 1024 * 1024 });
+    ], { timeoutMs: 5 * 60_000, maxBuffer: 24 * 1024 * 1024 });
     stderr = result.stderr;
   } catch (error) {
     const details = error as { stderr?: string };
@@ -80,4 +78,3 @@ export async function analyzeGuidedScenes(input: {
   }
   return scenes;
 }
-

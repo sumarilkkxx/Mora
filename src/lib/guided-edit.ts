@@ -1,4 +1,5 @@
 import type { TimeRange } from "@/lib/transcript-editor";
+import { resequenceGuidedTimeline, type GuidedEditFingerprints } from "@/lib/guided-edit-state";
 
 export const GUIDED_EDIT_ROLES = ["hook", "introduction", "feature", "usage", "cta"] as const;
 export type GuidedEditRole = (typeof GUIDED_EDIT_ROLES)[number];
@@ -95,10 +96,16 @@ export interface GuidedEditBrief {
   /** Visual pacing applied by the local FFmpeg renderer. Older plans default to natural cuts. */
   editStyle?: GuidedEditStyle;
   aspectRatio: "9:16" | "16:9" | "1:1";
+  outputQuality?: "720p" | "1080p";
   audioMode: "original" | "muted" | "uploaded_voice" | "local_voice";
   voiceoverFile?: string;
   voiceoverName?: string;
   voiceoverVoice?: string;
+  bgmFile?: string;
+  bgmName?: string;
+  originalVolume?: number;
+  voiceoverVolume?: number;
+  bgmVolume?: number;
   burnSubtitles: boolean;
   captionSize: "small" | "medium" | "large";
   captionLanguage: "auto" | "zh" | "en";
@@ -115,6 +122,10 @@ export interface GuidedScriptBeat {
   id: string;
   role: GuidedEditRole;
   text: string;
+  /** Optional narration override. Older plans fall back to text. */
+  voiceoverText?: string;
+  /** Optional burned-caption override. Older plans fall back to narration/text. */
+  captionText?: string;
   estimatedDuration: number;
   sceneIds: string[];
 }
@@ -135,6 +146,8 @@ export interface GuidedEditPlanDocument {
   beats: GuidedScriptBeat[];
   timeline: GuidedTimelineClip[];
   outputDuration: number;
+  /** Derived cache keys. Optional only for plans created before this field existed. */
+  fingerprints?: GuidedEditFingerprints;
 }
 
 export const DEFAULT_GUIDED_EDIT_BRIEF: GuidedEditBrief = {
@@ -160,8 +173,12 @@ export const DEFAULT_GUIDED_EDIT_BRIEF: GuidedEditBrief = {
   speechRate: 1,
   editStyle: "natural",
   aspectRatio: "9:16",
+  outputQuality: "1080p",
   audioMode: "local_voice",
   voiceoverVoice: "zh-CN-XiaoxiaoNeural",
+  originalVolume: 1,
+  voiceoverVolume: 1,
+  bgmVolume: 0.2,
   burnSubtitles: true,
   captionSize: "medium",
   captionLanguage: "auto",
@@ -182,6 +199,10 @@ const cleanText = (value: unknown, max = 2000): string =>
 function finite(value: unknown, fallback: number): number {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function volume(value: unknown, fallback: number): number {
+  return Math.min(1, Math.max(0, finite(value, fallback)));
 }
 
 export function sanitizeGuidedSpeechRate(value: unknown): number {
@@ -218,12 +239,18 @@ export function sanitizeGuidedEditBrief(value: unknown): GuidedEditBrief {
     speechRate: sanitizeGuidedSpeechRate(raw.speechRate),
     editStyle: GUIDED_EDIT_STYLES.includes(raw.editStyle as GuidedEditStyle) ? raw.editStyle as GuidedEditStyle : "natural",
     aspectRatio: raw.aspectRatio === "16:9" || raw.aspectRatio === "1:1" ? raw.aspectRatio : "9:16",
+    outputQuality: raw.outputQuality === "720p" ? "720p" : "1080p",
     audioMode: raw.audioMode === "original" || raw.audioMode === "uploaded_voice" || raw.audioMode === "local_voice" ? raw.audioMode : "muted",
     voiceoverFile: typeof raw.voiceoverFile === "string" ? raw.voiceoverFile.replace(/[^a-zA-Z0-9._-]/g, "").slice(0, 240) : undefined,
     voiceoverName: cleanText(raw.voiceoverName, 240) || undefined,
     voiceoverVoice: typeof raw.voiceoverVoice === "string" && /^[A-Za-z0-9-]{1,80}$/.test(raw.voiceoverVoice)
       ? raw.voiceoverVoice
       : "zh-CN-XiaoxiaoNeural",
+    bgmFile: typeof raw.bgmFile === "string" && raw.bgmFile.startsWith("/api/files/") ? raw.bgmFile.slice(0, 500) : undefined,
+    bgmName: cleanText(raw.bgmName, 240) || undefined,
+    originalVolume: volume(raw.originalVolume, 1),
+    voiceoverVolume: volume(raw.voiceoverVolume, 1),
+    bgmVolume: volume(raw.bgmVolume, 0.2),
     burnSubtitles: raw.burnSubtitles !== false,
     captionSize: raw.captionSize === "small" || raw.captionSize === "large" ? raw.captionSize : "medium",
     captionLanguage: raw.captionLanguage === "zh" || raw.captionLanguage === "en" ? raw.captionLanguage : "auto",
@@ -322,10 +349,16 @@ export function sanitizeGuidedScriptBeats(value: unknown): GuidedScriptBeat[] {
       id: typeof raw.id === "string" && raw.id ? raw.id.slice(0, 120) : `beat-${index + 1}`,
       role,
       text,
+      voiceoverText: cleanText(raw.voiceoverText, 1200) || undefined,
+      captionText: cleanText(raw.captionText, 1200) || undefined,
       estimatedDuration: Math.min(60, Math.max(0.8, finite(raw.estimatedDuration, estimateSpeechDuration(text)))),
       sceneIds,
     }];
   }).slice(0, 80);
+}
+
+export function guidedNarrationText(beats: GuidedScriptBeat[]): string {
+  return beats.map((beat) => beat.voiceoverText ?? beat.text).join("\n");
 }
 
 export function scaleGuidedBeatDurations(beats: GuidedScriptBeat[], durationValue: unknown): GuidedScriptBeat[] {
@@ -421,20 +454,54 @@ export function outputDurationForGuidedTimeline(timeline: GuidedTimelineClip[]):
   return timeline.reduce((max, clip) => Math.max(max, clip.outputEnd), 0);
 }
 
+function sanitizeGuidedTimeline(
+  value: unknown,
+  sourceId: string,
+  beats: GuidedScriptBeat[],
+  scenes: GuidedScene[],
+): GuidedTimelineClip[] {
+  if (!Array.isArray(value)) return [];
+  const beatIds = new Set(beats.map((beat) => beat.id));
+  const sceneById = new Map(scenes.filter((scene) => scene.selected && scene.label !== "unused").map((scene) => [scene.id, scene]));
+  return value.flatMap((item, index) => {
+    if (!item || typeof item !== "object") return [];
+    const raw = item as Partial<GuidedTimelineClip>;
+    const scene = typeof raw.sceneId === "string" ? sceneById.get(raw.sceneId) : undefined;
+    if (!scene || typeof raw.beatId !== "string" || !beatIds.has(raw.beatId)) return [];
+    const start = Math.min(scene.end, Math.max(scene.start, finite(raw.start, scene.start)));
+    const end = Math.min(scene.end, Math.max(start, finite(raw.end, scene.end)));
+    if (end - start < 0.2) return [];
+    return [{
+      id: typeof raw.id === "string" && raw.id ? raw.id.slice(0, 120) : `clip-${index + 1}`,
+      sourceId,
+      sceneId: scene.id,
+      beatId: raw.beatId,
+      start,
+      end,
+      outputStart: 0,
+      outputEnd: 0,
+    }];
+  }).slice(0, 240);
+}
+
 export function createGuidedEditPlan(input: {
   brief: unknown;
   scenes: unknown;
   sourceId: string;
   sourceDuration: number;
   existingBeats?: GuidedScriptBeat[];
+  timeline?: unknown;
 }): GuidedEditPlanDocument {
   const brief = sanitizeGuidedEditBrief(input.brief);
   const scenes = sanitizeGuidedScenes(input.scenes, input.sourceDuration);
   const sanitizedExisting = sanitizeGuidedScriptBeats(input.existingBeats);
   const beats = sanitizedExisting.length ? sanitizedExisting : buildGuidedScriptBeats(brief);
-  const timeline = buildGuidedTimeline({ sourceId: input.sourceId, sourceDuration: input.sourceDuration, beats, scenes });
+  const requestedTimeline = sanitizeGuidedTimeline(input.timeline, input.sourceId, beats, scenes);
+  const timeline = requestedTimeline.length
+    ? requestedTimeline
+    : buildGuidedTimeline({ sourceId: input.sourceId, sourceDuration: input.sourceDuration, beats, scenes });
   const outputDuration = outputDurationForGuidedTimeline(timeline);
-  return {
+  const document: GuidedEditPlanDocument = {
     version: 1,
     brief: { ...brief, targetDuration: Math.min(MAX_GUIDED_OUTPUT_SECONDS, outputDuration) },
     scenes,
@@ -442,4 +509,5 @@ export function createGuidedEditPlan(input: {
     timeline,
     outputDuration,
   };
+  return resequenceGuidedTimeline(document, timeline);
 }

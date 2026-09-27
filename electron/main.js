@@ -3,7 +3,7 @@
 //  - Data is written to app.getPath('userData')/data (writable), injected into the server via APP_DATA_DIR (standalone cwd is read-only)
 //  - ffmpeg/ffprobe use bundled binaries, injected via FFMPEG_PATH/FFPROBE_PATH (no ffmpeg install required on the user's machine)
 //  - Persist the local port to preserve browser storage across launches; kill the server on exit
-const { app, BrowserWindow, dialog, shell } = require("electron");
+const { app, BrowserWindow, dialog, shell, ipcMain, safeStorage } = require("electron");
 const { fork } = require("child_process");
 const http = require("http");
 const { createRequire } = require("node:module");
@@ -13,6 +13,18 @@ const fs = require("fs");
 const { randomBytes } = require("node:crypto");
 const { checkServer } = require("./smoke-check.cjs");
 const { installApiCredentials } = require("./api-session.cjs");
+const { createCredentialVault } = require("./credential-vault.cjs");
+const { resolveDesktopVersion } = require("./desktop-version.cjs");
+const { checkForDesktopUpdate } = require("./update-check.cjs");
+const {
+  commitDesktopUpgrade,
+  prepareDesktopUpgrade,
+  recoverInterruptedDesktopUpgrade,
+  rollbackDesktopUpgrade,
+} = require("./upgrade-guard.cjs");
+// electron-builder intentionally writes a reduced package.json into app.asar;
+// source-only fields such as build.buildVersion are not available at runtime.
+const desktopBuildVersion = resolveDesktopVersion(app);
 const apiToken = randomBytes(32).toString("hex");
 
 let serverChild = null;
@@ -21,8 +33,32 @@ let childExited = false; // set once the server child errors/exits, so waitReady
 let childExitInfo = "";
 let logFilePath = "";
 let serverUrl = "";
+let credentialVault = null;
+let updateCheckStarted = false;
 
-const hasSingleInstanceLock = app.requestSingleInstanceLock();
+function installCredentialHandlers() {
+  const assertTrustedSender = (event) => {
+    if (!mainWindow || mainWindow.isDestroyed() || event.sender.id !== mainWindow.webContents.id) {
+      throw new Error("Credential request rejected: untrusted renderer");
+    }
+  };
+  ipcMain.handle("mora:credentials:load", (event) => {
+    assertTrustedSender(event);
+    return credentialVault.load();
+  });
+  ipcMain.handle("mora:credentials:save", (event, credentials) => {
+    assertTrustedSender(event);
+    credentialVault.save(credentials);
+  });
+  ipcMain.handle("mora:credentials:clear", (event) => {
+    assertTrustedSender(event);
+    credentialVault.clear();
+  });
+}
+
+// CI and release smoke runs use an isolated user-data-dir and must not hang behind
+// a developer's already-running Mora window. Product launches still keep the lock.
+const hasSingleInstanceLock = process.env.HEADLESS_SMOKE === "1" || app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) app.quit();
 
 app.on("second-instance", () => {
@@ -185,12 +221,57 @@ function killServer() {
   }
 }
 
+async function stopServerAndWait(timeoutMs = 5000) {
+  const child = serverChild;
+  if (!child) return;
+  serverChild = null;
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  await new Promise((resolve) => {
+    let settled = false;
+    let timer;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      resolve();
+    };
+    child.once("exit", finish);
+    try { child.kill(); } catch { finish(); return; }
+    timer = setTimeout(() => {
+      try { child.kill("SIGKILL"); } catch { /* already gone */ }
+      finish();
+    }, timeoutMs);
+  });
+}
+
 function openExternalHttp(target) {
   try {
     const parsed = new URL(target);
     if (parsed.protocol === "http:" || parsed.protocol === "https:") void shell.openExternal(parsed.href);
   } catch {
     log(`拒绝打开非法外部链接: ${target}`);
+  }
+}
+
+async function offerManualUpdate(window) {
+  if (!app.isPackaged || updateCheckStarted || process.env.MORA_DISABLE_UPDATE_CHECK === "1") return;
+  updateCheckStarted = true;
+  try {
+    const update = await checkForDesktopUpdate({ currentVersion: desktopBuildVersion });
+    if (!update.available || window.isDestroyed()) return;
+    const choice = await dialog.showMessageBox(window, {
+      type: "info",
+      title: "Mora 更新可用 / Update available",
+      message: `Mora ${update.latestVersion} 已发布 / is available`,
+      detail: "Mora 不会自动下载或安装更新。是否前往官方 GitHub Release 页面手动下载？\nMora will not download or install it automatically. Open the official GitHub Release page?",
+      buttons: ["前往下载 / Download", "稍后 / Later"],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true,
+    });
+    if (choice.response === 0) openExternalHttp(update.downloadUrl);
+  } catch (error) {
+    log(`版本检查失败（不影响启动）: ${error?.message || error}`);
   }
 }
 
@@ -204,6 +285,7 @@ function createMainWindow(url) {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      preload: path.join(__dirname, "preload.cjs"),
     },
   });
   installApiCredentials(mainWindow, url, apiToken);
@@ -228,6 +310,7 @@ function createMainWindow(url) {
       `${errorDescription} (${errorCode})\n${validatedURL}\n\n日志 / Log: ${logFilePath || "(不可用)"}`
     );
   });
+  mainWindow.webContents.once("did-finish-load", () => { void offerManualUpdate(mainWindow); });
   mainWindow.loadURL(url);
   mainWindow.on("closed", () => {
     mainWindow = null;
@@ -236,15 +319,45 @@ function createMainWindow(url) {
 
 app.whenReady().then(async () => {
   if (!hasSingleInstanceLock) return;
+  const protectedStorage = {
+    isEncryptionAvailable: () => safeStorage.isEncryptionAvailable()
+      && !(process.platform === "linux" && safeStorage.getSelectedStorageBackend?.() === "basic_text"),
+    encryptString: (value) => safeStorage.encryptString(value),
+    decryptString: (value) => safeStorage.decryptString(value),
+  };
+  credentialVault = createCredentialVault({
+    filePath: path.join(app.getPath("userData"), "credentials.bin"),
+    safeStorage: protectedStorage,
+  });
+  installCredentialHandlers();
   let url;
+  let upgradePlan = null;
   try {
     // Read the previous launch log before initLog truncates it (legacy migration).
-    const port = await getStableServerPort(app.getPath("userData"));
+    const userDataDir = app.getPath("userData");
+    const port = await getStableServerPort(userDataDir);
     initLog();
+    const interrupted = recoverInterruptedDesktopUpgrade({ userDataDir });
+    if (interrupted.recovered && "instructionsPath" in interrupted) log(`已恢复上次中断的升级: ${interrupted.instructionsPath}`);
+    upgradePlan = prepareDesktopUpgrade({ userDataDir, currentVersion: desktopBuildVersion });
+    if (upgradePlan.backupDir) log(`升级前数据库备份已校验: ${upgradePlan.backupDir}`);
     url = await startServer(port);
+    // A bound port is not migration proof. Health + a real DB route must pass
+    // before the new version marker is committed and the backup is trusted.
+    await checkServer(url, apiToken);
+    commitDesktopUpgrade(upgradePlan);
     serverUrl = url;
   } catch (e) {
-    const msg = (e && (e.stack || e.message)) || String(e);
+    await stopServerAndWait();
+    let recovery = null;
+    let rollbackError = null;
+    if (upgradePlan?.backupDir) {
+      try { recovery = rollbackDesktopUpgrade(upgradePlan, e); }
+      catch (error) { rollbackError = error; }
+    }
+    const msg = `${(e && (e.stack || e.message)) || String(e)}` +
+      (recovery ? `\nPrevious database restored. Recovery instructions: ${recovery.instructionsPath}` : "") +
+      (rollbackError ? `\nDatabase rollback also failed: ${rollbackError.stack || rollbackError.message || rollbackError}` : "");
     log("启动本地服务失败: " + msg);
     // Surface the failure instead of quitting silently: a packaged GUI app has no console, so without this the
     // window simply never appears and the user reports "clicked, nothing happened" with no way to diagnose.
@@ -257,7 +370,6 @@ app.whenReady().then(async () => {
     } else {
       console.error("启动本地服务失败:", msg);
     }
-    killServer();
     app.exit(1);
     return;
   }
