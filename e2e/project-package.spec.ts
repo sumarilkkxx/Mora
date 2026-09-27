@@ -81,6 +81,11 @@ test('用户可导出、删除并导入自包含项目包，恢复预览、重�
   const finished = await waitForPlan(request, id, plan.id);
   expect(finished.composition?.outputUrl).toBeTruthy();
 
+  // Compile the package route before the page starts polling /api/tasks. Under
+  // next dev, compiling both routes at once can intermittently abort the poll.
+  const warmedPackageRoute = await request.get(`/api/project/${id}/package?estimate=1`);
+  expect(warmedPackageRoute.ok(), await warmedPackageRoute.text()).toBeTruthy();
+
   await page.goto('/projects');
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: `备份项目包：${name}` }).click();
