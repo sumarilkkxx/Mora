@@ -274,15 +274,20 @@ jobs:
         run: |
           node scripts/verify-desktop-release-reports.cjs release-assets
 
-          mapfile -t installers < <(find release-assets -maxdepth 1 -type f \( -name '*.exe' -o -name '*.dmg' \) -print | sort)
+          mapfile -t installers < <(find release-assets -type f \( -name '*.exe' -o -name '*.dmg' \) -print | sort)
           if [[ "${#installers[@]}" -ne 3 ]]; then
             echo "Expected 3 installers, found ${#installers[@]}."
             printf '%s\n' "${installers[@]}"
             exit 1
           fi
 
+          # Uploaded artifacts retain release/ and test-results/ directories.
+          # GitHub release downloads use basenames, so checksums must do the same.
+          for installer in "${installers[@]}"; do
+            (cd "$(dirname "$installer")" && sha256sum "$(basename "$installer")")
+          done > release-assets/SHA256SUMS.txt
+
           cd release-assets
-          sha256sum ./*.exe ./*.dmg > SHA256SUMS.txt
 
           cat > INSTALLATION-NOTES.md <<'EOF'
           # Mora desktop installation notes

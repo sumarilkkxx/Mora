@@ -1,24 +1,25 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-function findReleaseReports(rootDir) {
-  const reports = [];
+function findReleaseFiles(rootDir) {
+  const files = [];
   const visit = currentDir => {
     for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
       const entryPath = path.join(currentDir, entry.name);
       if (entry.isDirectory()) {
         visit(entryPath);
-      } else if (entry.isFile() && /^desktop-release-.+\.json$/.test(entry.name)) {
-        reports.push(entryPath);
+      } else if (entry.isFile()) {
+        files.push(entryPath);
       }
     }
   };
   visit(rootDir);
-  return reports.sort();
+  return files.sort();
 }
 
 function verifyDesktopReleaseReports(reportDir) {
-  const files = findReleaseReports(reportDir);
+  const releaseFiles = findReleaseFiles(reportDir);
+  const files = releaseFiles.filter(file => /^desktop-release-.+\.json$/.test(path.basename(file)));
   if (files.length !== 3) throw new Error(`Expected 3 desktop release reports, found ${files.length}`);
   const reports = files.map(file => JSON.parse(fs.readFileSync(file, "utf8")));
   const artifacts = new Set();
@@ -32,7 +33,8 @@ function verifyDesktopReleaseReports(reportDir) {
     if (!['unsigned-open-source', 'authenticode-signed', 'signed-and-notarized'].includes(report.signingExpectation)) {
       throw new Error(`${report.artifact} has an unsupported signing expectation`);
     }
-    if (artifacts.has(report.artifact) || !fs.existsSync(path.join(reportDir, report.artifact))) {
+    const matches = releaseFiles.filter(file => path.basename(file) === report.artifact);
+    if (artifacts.has(report.artifact) || matches.length !== 1) {
       throw new Error(`${report.artifact} is missing or duplicated in release assets`);
     }
     artifacts.add(report.artifact);

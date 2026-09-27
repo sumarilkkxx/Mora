@@ -33,6 +33,18 @@ test("requires all three verified desktop release reports and matching installer
     assert.throws(() => verifyDesktopReleaseReports(root), /targets/);
     put("desktop-release-macos-arm64.json", report("macos", "arm64", "Mora-arm64.dmg"));
     assert.equal(verifyDesktopReleaseReports(root).length, 3);
+    const installerDir = path.join(root, "release");
+    fs.mkdirSync(installerDir);
+    for (const artifact of ["Mora.exe", "Mora-arm64.dmg", "Mora-x64.dmg"]) {
+      fs.renameSync(path.join(root, artifact), path.join(installerDir, artifact));
+    }
+    fs.mkdirSync(path.join(root, "test-results"));
+    for (const name of fs.readdirSync(root).filter(name => name.endsWith(".json"))) {
+      fs.renameSync(path.join(root, name), path.join(root, "test-results", name));
+    }
+    assert.equal(verifyDesktopReleaseReports(root).length, 3);
+    fs.writeFileSync(path.join(root, "Mora.exe"), "duplicate installer");
+    assert.throws(() => verifyDesktopReleaseReports(root), /missing or duplicated/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

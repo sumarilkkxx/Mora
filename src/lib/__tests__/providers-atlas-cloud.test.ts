@@ -12,7 +12,9 @@ const provider = () => new AtlasCloudProvider({
 afterEach(() => vi.restoreAllMocks())
 
 describe('AtlasCloudProvider', () => {
-  it('is registered as a real provider and always includes the verified model families', async () => {
+  it('is registered as a real provider and includes verified model families when the catalog is offline', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Catalog offline in test'))
+    const warnMock = vi.spyOn(console, 'warn').mockImplementation(() => {})
     expect(createProvider({ name: 'atlas-cloud', apiKey: 'x', baseUrl: '' })).toBeInstanceOf(AtlasCloudProvider)
     const models = await provider().listModels('video')
     expect(models.length).toBeGreaterThanOrEqual(ATLAS_VIDEO_FAMILIES.length)
@@ -23,6 +25,9 @@ describe('AtlasCloudProvider', () => {
       supportsAudio: true,
     }))
     expect(await provider().listModels('image')).toEqual([])
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledWith('https://www.atlascloud.ai/zh/models/all', expect.any(Object))
+    expect(warnMock).toHaveBeenCalledWith('[ATLAS_CATALOG_FALLBACK]', 'Catalog offline in test')
   })
 
   it('submits the exact Atlas reference-to-video schema without hidden overrides', async () => {
