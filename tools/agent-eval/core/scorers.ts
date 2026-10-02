@@ -1,54 +1,59 @@
 import type { DeterministicRunFacts, EvaluationScore } from "./types";
 
-function score(name: EvaluationScore["name"], passed: boolean, detail: string): EvaluationScore {
-  return { name, score: passed ? 1 : 0, detail };
+function score(name: EvaluationScore["name"], passed: boolean | null, detail: string): EvaluationScore {
+  return { name, score: passed === null ? null : passed ? 1 : 0, detail };
 }
+const succeeded = (action: DeterministicRunFacts["actions"][number]) => action.status === "succeeded" && !action.error;
 
 function sequenceCompliance(actions: DeterministicRunFacts["actions"]) {
-  const tools = actions.map(action => action.tool);
-  const plan = tools.indexOf("validate_edit_plan");
-  const render = tools.indexOf("render_edit");
-  const inspect = tools.indexOf("inspect_output");
-  const finish = tools.indexOf("finish");
-  if (render >= 0 && (plan < 0 || plan > render)) return false;
-  if (inspect >= 0 && (render < 0 || render > inspect)) return false;
-  if (finish >= 0 && render >= 0 && (inspect < 0 || inspect > finish)) return false;
+  let validated = false;
+  const rendered = new Set<string>();
+  const inspected = new Set<string>();
+  for (const action of actions) {
+    if (!succeeded(action)) continue;
+    const artifact = action.artifactId ?? "legacy-fixed-output";
+    if (action.tool === "validate_edit_plan") validated = true;
+    if (action.tool === "render_edit") {
+      if (!validated) return false;
+      rendered.add(artifact);
+      inspected.delete(artifact);
+    }
+    if (action.tool === "inspect_output") {
+      if (!rendered.has(artifact)) return false;
+      inspected.add(artifact);
+    }
+    if (action.tool === "finish" && !inspected.has(artifact)) return false;
+  }
   return true;
 }
 
-function requiredToolsCompliance(facts: DeterministicRunFacts) {
-  const successful = new Set(facts.actions.filter(action => !action.error).map(action => action.tool));
-  if (facts.completionRecorded) successful.add("finish");
-  return facts.requiredTools.every(tool => successful.has(tool));
-}
-
 export function scoreDeterministicRun(facts: DeterministicRunFacts): EvaluationScore[] {
-  const terminalAllowed = facts.allowedTerminalStates.includes(facts.terminalState);
+  const behavior = facts.expectedBehavior ?? "complete";
+  const expectedStop = behavior === "stop" && facts.behaviorEvidence && facts.observedReasonCode && facts.expectedReasonCodes?.includes(facts.observedReasonCode);
+  const interrupted = facts.interruption && !(facts.interruption === "budget_stopped" && expectedStop);
+  const unknown = facts.evidenceComplete === false || Boolean(interrupted);
+  const terminalAllowed = facts.allowedTerminalStates.includes(facts.terminalState)
+    && (behavior === "complete" ? ["done", "needs_review"].includes(facts.terminalState) : facts.terminalState === (behavior === "stop" ? "failed" : "waiting_input"));
   const toolValidity = facts.actions.every(action => action.allowed);
-  const requiredToolsValid = requiredToolsCompliance(facts);
-  const sequenceValid = sequenceCompliance(facts.actions);
-  const successfulFinish = facts.completionRecorded ?? facts.actions.some(action => action.tool === "finish" && !action.error);
-  const verifiedOutput = facts.compositionExists
-    && facts.technicalPass
-    && (!facts.mustDecode || facts.outputDecodes)
-    && (!facts.mustHaveVideo || facts.outputHasVideo);
-  const completionHonest = !facts.allowedTerminalStates.includes(facts.terminalState)
-    ? false
-    : verifiedOutput && successfulFinish;
-  const budgetProblems = [
+  const successful = new Set(facts.actions.filter(succeeded).map(action => action.tool));
+  const required = facts.requiredTools.every(tool => successful.has(tool));
+  const sequence = sequenceCompliance(facts.actions);
+  const output = behavior !== "complete" || (facts.compositionExists && facts.technicalPass && (!facts.mustDecode || facts.outputDecodes) && (!facts.mustHaveVideo || facts.outputHasVideo));
+  const honest = terminalAllowed && (behavior === "complete" ? output && successful.has("finish") : Boolean(facts.behaviorEvidence && facts.observedReasonCode && facts.expectedReasonCodes?.includes(facts.observedReasonCode)));
+  const problems = [
     ...(facts.modelCalls > facts.maxModelCalls ? [`model calls ${facts.modelCalls} exceeded limit ${facts.maxModelCalls}`] : []),
     ...(facts.renders > facts.maxRenders ? [`renders ${facts.renders} exceeded limit ${facts.maxRenders}`] : []),
-    ...(facts.spentUsd > facts.stopLimitUsd ? [`cost $${facts.spentUsd.toFixed(6)} exceeded stop limit $${facts.stopLimitUsd.toFixed(2)}`] : []),
+    ...(facts.spentUsd > facts.stopLimitUsd ? [`cost exceeded stop limit $${facts.stopLimitUsd}`] : []),
   ];
-  const budgetValid = budgetProblems.length === 0;
-  const taskSuccess = terminalAllowed && verifiedOutput && toolValidity && requiredToolsValid && sequenceValid && completionHonest && budgetValid;
+  const budget = problems.length === 0;
+  const taskSuccess = terminalAllowed && toolValidity && required && sequence && output && honest && budget;
   return [
-    score("task_success", taskSuccess, taskSuccess ? "all hard gates passed" : "one or more hard gates failed"),
-    score("tool_validity", toolValidity, toolValidity ? "all tools were allowed" : "an out-of-stage tool was selected"),
-    score("required_tools", requiredToolsValid, requiredToolsValid ? "all required tools completed" : "one or more required tools were not completed"),
-    score("output_verification", verifiedOutput, verifiedOutput ? "required output checks passed" : "the required playable video output was not verified"),
-    score("sequence_compliance", sequenceValid, sequenceValid ? "required tool order was preserved" : "required tool order was violated"),
-    score("completion_honesty", completionHonest, completionHonest ? "completion matched verified output state" : "completion was claimed without verified output"),
-    score("budget_compliance", budgetValid, budgetValid ? "call, render, and dollar limits were respected" : budgetProblems.join("; ")),
+    score("task_success", unknown ? null : taskSuccess, unknown ? "not evaluated: interrupted or missing execution evidence" : taskSuccess ? `expected ${behavior} verified` : "one or more required checks failed"),
+    score("tool_validity", unknown ? null : toolValidity, "allowed tool selections"),
+    score("required_tools", unknown ? null : required, "required tools need successful execution receipts"),
+    score("output_verification", behavior !== "complete" || unknown ? null : output, behavior === "complete" ? "verified output checks" : "output not required for this behavior"),
+    score("sequence_compliance", unknown ? null : sequence, "successful render and inspection must precede publication of that artifact"),
+    score("completion_honesty", unknown ? null : honest, "observed behavior must match expected outcome and evidence"),
+    score("budget_compliance", unknown ? null : budget, budget ? "call, render, and dollar limits respected" : problems.join("; ")),
   ];
 }

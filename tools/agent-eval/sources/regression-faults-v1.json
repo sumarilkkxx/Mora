@@ -1,0 +1,204 @@
+{
+  "version": "1",
+  "cases": [
+    {
+      "caseId": "regression-recovery-render-error",
+      "kind": "fault_runner",
+      "scenario": "render-error",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t render-error"
+    },
+    {
+      "caseId": "regression-recovery-render-timeout",
+      "kind": "fault_runner",
+      "scenario": "render-timeout",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t render-timeout"
+    },
+    {
+      "caseId": "regression-recovery-render-invalid",
+      "kind": "fault_runner",
+      "scenario": "render-invalid",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t render-invalid"
+    },
+    {
+      "caseId": "regression-recovery-inspect-error",
+      "kind": "fault_runner",
+      "scenario": "inspect-error",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t inspect-error"
+    },
+    {
+      "caseId": "regression-recovery-inspect-invalid",
+      "kind": "fault_runner",
+      "scenario": "inspect-invalid",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t inspect-invalid"
+    },
+    {
+      "caseId": "regression-recovery-invalid-plan",
+      "kind": "fault_runner",
+      "scenario": "invalid-plan",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t invalid-plan"
+    },
+    {
+      "caseId": "regression-recovery-model-error",
+      "kind": "fault_runner",
+      "scenario": "model-error",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t model-error"
+    },
+    {
+      "caseId": "regression-recovery-invalid-segment",
+      "kind": "fault_runner",
+      "scenario": "invalid-segment",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t invalid-segment"
+    },
+    {
+      "caseId": "regression-safe_stop-bad-input",
+      "kind": "fault_runner",
+      "scenario": "bad-input",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t bad-input"
+    },
+    {
+      "caseId": "regression-safe_stop-missing-audio",
+      "kind": "fault_runner",
+      "scenario": "missing-audio",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t missing-audio"
+    },
+    {
+      "caseId": "regression-safe_stop-source-changed",
+      "kind": "fault_runner",
+      "scenario": "source-changed",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t source-changed"
+    },
+    {
+      "caseId": "regression-safe_stop-authentication",
+      "kind": "fault_runner",
+      "scenario": "authentication",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t authentication"
+    },
+    {
+      "caseId": "regression-safe_stop-call-limit",
+      "kind": "fault_runner",
+      "scenario": "call-limit",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t call-limit"
+    },
+    {
+      "caseId": "regression-safe_stop-render-limit",
+      "kind": "fault_runner",
+      "scenario": "render-limit",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t render-limit"
+    },
+    {
+      "caseId": "regression-safe_stop-required-brand",
+      "kind": "fault_runner",
+      "scenario": "required-brand",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "interactive",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t required-brand"
+    },
+    {
+      "caseId": "regression-safe_stop-required-price",
+      "kind": "fault_runner",
+      "scenario": "required-price",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "interactive",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t required-price"
+    }
+  ],
+  "corruptSource": {
+    "path": "evals/agent/fixtures/regression-v1/bands-corrupt.mp4",
+    "sha256": "e02fca45b54a002b2d765b82eb3577b3c470b8059a4cb33415c5b0dad87ad2a5",
+    "parentPath": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+    "parentSha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+    "operation": "zero bytes after mdat marker"
+  }
+}

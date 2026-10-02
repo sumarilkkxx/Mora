@@ -1,3 +1,4 @@
+import { choice, parseRegressionFields } from "./contracts";
 import type { AgentEvaluationCase, AgentEvaluationDataset, EvaluationCategory, EvaluationDatasetSplit } from "./types";
 import { AUTO_EDIT_MODEL_CALL_LIMIT, AUTO_EDIT_RENDER_LIMIT } from "../../../src/lib/auto-edit/budget";
 
@@ -31,7 +32,7 @@ function strings(value: unknown, label: string) {
   return value as string[];
 }
 
-function parseCase(value: unknown, index: number): AgentEvaluationCase {
+function parseCase(value: unknown, index: number, schemaVersion: 1 | 2): AgentEvaluationCase {
   const input = object(value, `cases[${index}]`);
   const source = object(input.source, `cases[${index}].source`);
   const brief = object(input.brief, `cases[${index}].brief`);
@@ -43,7 +44,18 @@ function parseCase(value: unknown, index: number): AgentEvaluationCase {
   const maxRenders = number(expected.maxRenders, `cases[${index}].expected.maxRenders`);
   if (!Number.isInteger(maxModelCalls) || maxModelCalls < 1 || maxModelCalls > AUTO_EDIT_MODEL_CALL_LIMIT) throw new Error(`cases[${index}].expected.maxModelCalls must be an integer from 1 to ${AUTO_EDIT_MODEL_CALL_LIMIT}`);
   if (!Number.isInteger(maxRenders) || maxRenders < 1 || maxRenders > AUTO_EDIT_RENDER_LIMIT) throw new Error(`cases[${index}].expected.maxRenders must be an integer from 1 to ${AUTO_EDIT_RENDER_LIMIT}`);
+  const regression = schemaVersion === 2 ? parseRegressionFields(input) : {};
+  const behavior = schemaVersion === 2 ? choice(expected.behavior, ["complete", "request_input", "stop"], "behavior") : undefined;
+  const reasonCodes = schemaVersion === 2 ? strings(expected.reasonCodes, "reasonCodes") : undefined;
+  const terminalStates = strings(expected.terminalStates, "terminalStates").map(state => oneOf(state, ["done", "needs_review", "waiting_input", "failed"] as const, "terminalStates"));
+  if (!terminalStates.length) throw new Error("terminalStates must not be empty");
+  if (behavior && behavior !== "complete") {
+    if (!reasonCodes?.length || reasonCodes.some(reason => !reason.trim())) throw new Error("non-completion requires reasonCodes");
+    if (expected.mustDecode || expected.mustHaveVideo) throw new Error("non-completion must not require output");
+    if (terminalStates.some(state => state !== (behavior === "stop" ? "failed" : "waiting_input"))) throw new Error("terminal state contradicts expected behavior");
+  } else if (terminalStates.some(state => state !== "done" && state !== "needs_review")) throw new Error("completion requires a completed terminal state");
   return {
+    ...regression,
     caseId: string(input.caseId, `cases[${index}].caseId`),
     source: {
       id: string(source.id, `cases[${index}].source.id`),
@@ -58,14 +70,15 @@ function parseCase(value: unknown, index: number): AgentEvaluationCase {
     brief: {
       target: oneOf(brief.target, [15, 20, 25, 30] as const, `cases[${index}].brief.target`),
       aspect: oneOf(brief.aspect, ["9:16", "16:9", "1:1"] as const, `cases[${index}].brief.aspect`),
-      audio: oneOf(brief.audio, ["voiceover", "muted"] as const, `cases[${index}].brief.audio`),
+      audio: oneOf(brief.audio, ["voiceover", "muted", "original"] as const, `cases[${index}].brief.audio`),
       style: oneOf(brief.style, ["auto", "concise", "highlights", "story"] as const, `cases[${index}].brief.style`),
       captions: boolean(brief.captions, `cases[${index}].brief.captions`),
       locale: oneOf(brief.locale, ["zh", "en"] as const, `cases[${index}].brief.locale`),
       instruction: string(brief.instruction, `cases[${index}].brief.instruction`),
     },
     expected: {
-      terminalStates: strings(expected.terminalStates, `cases[${index}].expected.terminalStates`).map(state => oneOf(state, ["done", "needs_review"] as const, `cases[${index}].expected.terminalStates`)),
+      terminalStates,
+      ...(behavior ? { behavior, reasonCodes } : {}),
       requiredTools: strings(expected.requiredTools, `cases[${index}].expected.requiredTools`),
       forbiddenBehaviors: strings(expected.forbiddenBehaviors, `cases[${index}].expected.forbiddenBehaviors`),
       maxModelCalls,
@@ -85,9 +98,10 @@ function parseCase(value: unknown, index: number): AgentEvaluationCase {
 export function parseEvaluationDataset(value: unknown): AgentEvaluationDataset {
   const input = object(value, "dataset");
   const sourceManifest = object(input.sourceManifest, "sourceManifest");
-  if (input.schemaVersion !== 1) throw new Error("schemaVersion must be 1");
+  if (input.schemaVersion !== 1 && input.schemaVersion !== 2) throw new Error("schemaVersion must be 1 or 2");
+  const schemaVersion = input.schemaVersion;
   if (!Array.isArray(input.cases)) throw new Error("cases must be an array");
-  const cases = input.cases.map(parseCase);
+  const cases = input.cases.map((item, index) => parseCase(item, index, schemaVersion));
   const ids = cases.map(item => item.caseId);
   if (new Set(ids).size !== ids.length) throw new Error("caseId values must be unique within a dataset");
   const sha256 = string(sourceManifest.sha256, "sourceManifest.sha256");
@@ -99,7 +113,7 @@ export function parseEvaluationDataset(value: unknown): AgentEvaluationDataset {
   if (split !== "holdout" && baselineEligible) throw new Error("only a holdout dataset can be eligible for a baseline");
   if (baselineEligible && !independentHoldout) throw new Error("a baseline-eligible holdout must be independent");
   return {
-    schemaVersion: 1,
+    schemaVersion,
     datasetId: string(input.datasetId, "datasetId"),
     version: string(input.version, "version"),
     split,

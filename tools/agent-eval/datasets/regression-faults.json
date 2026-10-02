@@ -1,0 +1,1410 @@
+{
+  "schemaVersion": 2,
+  "datasetId": "mora-agent-regression-faults",
+  "version": "1",
+  "split": "dev",
+  "independentHoldout": false,
+  "baselineEligible": false,
+  "sourceManifest": {
+    "path": "tools/agent-eval/sources/regression-faults-v1.json",
+    "sha256": "64f46bd5b8d94f5e3a310d82561632c3e8ec27b71bf90492f709634e0b414549"
+  },
+  "cases": [
+    {
+      "caseId": "regression-recovery-render-error",
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Retry the renderer once after a transient encoder failure."
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "paid model success",
+          "real output media in fixed-response lane"
+        ]
+      },
+      "category": "recovery",
+      "caseVersion": "1",
+      "tags": [
+        "recovery",
+        "render-error",
+        "fault-fixture"
+      ],
+      "evidenceMode": "fixed_response",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-format_timing-portrait"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "Only required when executing this case with real media; fixed-response run does not assert actual decoding."
+        }
+      ],
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "render-error",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]",
+          "execution": "Vitest fixed response drives actual persisted Mora runner; media IO controlled; no provider"
+        }
+      },
+      "faults": [
+        {
+          "point": "render",
+          "occurrence": 1,
+          "effect": "error",
+          "code": "render-error"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-recovery-render-timeout",
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Retry after a bounded renderer timeout; retain the failed attempt."
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "paid model success",
+          "real output media in fixed-response lane"
+        ]
+      },
+      "category": "recovery",
+      "caseVersion": "1",
+      "tags": [
+        "recovery",
+        "render-timeout",
+        "fault-fixture"
+      ],
+      "evidenceMode": "fixed_response",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-format_timing-portrait"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "Only required when executing this case with real media; fixed-response run does not assert actual decoding."
+        }
+      ],
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "render-timeout",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]",
+          "execution": "Vitest fixed response drives actual persisted Mora runner; media IO controlled; no provider"
+        }
+      },
+      "faults": [
+        {
+          "point": "render",
+          "occurrence": 1,
+          "effect": "timeout",
+          "code": "render-timeout"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-recovery-render-invalid",
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Detect the bad technical output, repair and inspect the next render."
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "paid model success",
+          "real output media in fixed-response lane"
+        ]
+      },
+      "category": "recovery",
+      "caseVersion": "1",
+      "tags": [
+        "recovery",
+        "render-invalid",
+        "fault-fixture"
+      ],
+      "evidenceMode": "fixed_response",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-format_timing-portrait"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "Only required when executing this case with real media; fixed-response run does not assert actual decoding."
+        }
+      ],
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "render-invalid",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]",
+          "execution": "Vitest fixed response drives actual persisted Mora runner; media IO controlled; no provider"
+        }
+      },
+      "faults": [
+        {
+          "point": "render",
+          "occurrence": 1,
+          "effect": "invalid_result",
+          "code": "render-invalid"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-recovery-inspect-error",
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Retry a failed output review without publishing unchecked output."
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "paid model success",
+          "real output media in fixed-response lane"
+        ]
+      },
+      "category": "recovery",
+      "caseVersion": "1",
+      "tags": [
+        "recovery",
+        "inspect-error",
+        "fault-fixture"
+      ],
+      "evidenceMode": "fixed_response",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-format_timing-portrait"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "Only required when executing this case with real media; fixed-response run does not assert actual decoding."
+        }
+      ],
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "inspect-error",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]",
+          "execution": "Vitest fixed response drives actual persisted Mora runner; media IO controlled; no provider"
+        }
+      },
+      "faults": [
+        {
+          "point": "inspect",
+          "occurrence": 1,
+          "effect": "error",
+          "code": "inspect-error"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-recovery-inspect-invalid",
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Reject a malformed output review and run a valid review before finishing."
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "paid model success",
+          "real output media in fixed-response lane"
+        ]
+      },
+      "category": "recovery",
+      "caseVersion": "1",
+      "tags": [
+        "recovery",
+        "inspect-invalid",
+        "fault-fixture"
+      ],
+      "evidenceMode": "fixed_response",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-format_timing-portrait"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "Only required when executing this case with real media; fixed-response run does not assert actual decoding."
+        }
+      ],
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "inspect-invalid",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]",
+          "execution": "Vitest fixed response drives actual persisted Mora runner; media IO controlled; no provider"
+        }
+      },
+      "faults": [
+        {
+          "point": "inspect",
+          "occurrence": 1,
+          "effect": "invalid_result",
+          "code": "inspect-invalid"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-recovery-invalid-plan",
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Correct an out-of-range clip before rendering."
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "paid model success",
+          "real output media in fixed-response lane"
+        ]
+      },
+      "category": "recovery",
+      "caseVersion": "1",
+      "tags": [
+        "recovery",
+        "invalid-plan",
+        "fault-fixture"
+      ],
+      "evidenceMode": "fixed_response",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-format_timing-portrait"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "Only required when executing this case with real media; fixed-response run does not assert actual decoding."
+        }
+      ],
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "invalid-plan",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]",
+          "execution": "Vitest fixed response drives actual persisted Mora runner; media IO controlled; no provider"
+        }
+      },
+      "faults": [
+        {
+          "point": "validate",
+          "occurrence": 1,
+          "effect": "invalid_result",
+          "code": "invalid-plan"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-recovery-model-error",
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Recover from a local fixed-response action parser failure."
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "paid model success",
+          "real output media in fixed-response lane"
+        ]
+      },
+      "category": "recovery",
+      "caseVersion": "1",
+      "tags": [
+        "recovery",
+        "model-error",
+        "fault-fixture"
+      ],
+      "evidenceMode": "fixed_response",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-format_timing-portrait"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "Only required when executing this case with real media; fixed-response run does not assert actual decoding."
+        }
+      ],
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "model-error",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]",
+          "execution": "Vitest fixed response drives actual persisted Mora runner; media IO controlled; no provider"
+        }
+      },
+      "faults": [
+        {
+          "point": "model",
+          "occurrence": 1,
+          "effect": "error",
+          "code": "model-error"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-recovery-invalid-segment",
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Correct an invalid inspection interval, then complete the edit."
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "paid model success",
+          "real output media in fixed-response lane"
+        ]
+      },
+      "category": "recovery",
+      "caseVersion": "1",
+      "tags": [
+        "recovery",
+        "invalid-segment",
+        "fault-fixture"
+      ],
+      "evidenceMode": "fixed_response",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-format_timing-portrait"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "Only required when executing this case with real media; fixed-response run does not assert actual decoding."
+        }
+      ],
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "invalid-segment",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]",
+          "execution": "Vitest fixed response drives actual persisted Mora runner; media IO controlled; no provider"
+        }
+      },
+      "faults": [
+        {
+          "point": "validate",
+          "occurrence": 1,
+          "effect": "invalid_result",
+          "code": "invalid-segment"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-safe_stop-bad-input",
+      "source": {
+        "id": "controlled-bands-corrupt",
+        "path": "evals/agent/fixtures/regression-v1/bands-corrupt.mp4",
+        "sha256": "e02fca45b54a002b2d765b82eb3577b3c470b8059a4cb33415c5b0dad87ad2a5",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Input is a deliberately corrupted controlled video. Stop and disclose invalid media."
+      },
+      "expected": {
+        "terminalStates": [
+          "failed"
+        ],
+        "requiredTools": [],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": false,
+        "mustHaveVideo": false,
+        "behavior": "stop",
+        "reasonCodes": [
+          "invalid_media"
+        ]
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "paid model success",
+          "real output media in fixed-response lane"
+        ]
+      },
+      "category": "safe_stop",
+      "caseVersion": "1",
+      "tags": [
+        "safe_stop",
+        "bad-input",
+        "fault-fixture"
+      ],
+      "evidenceMode": "fixed_response",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-format_timing-portrait"
+      },
+      "checks": [],
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "bad-input",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]",
+          "execution": "Vitest fixed response drives actual persisted Mora runner; media IO controlled; no provider",
+          "corruption": "zero mdat payload; source hash checked, then full decoder must reject"
+        }
+      },
+      "faults": []
+    },
+    {
+      "caseId": "regression-safe_stop-missing-audio",
+      "source": {
+        "id": "controlled-bands-silent",
+        "path": "evals/agent/fixtures/regression-v1/bands-silent.mp4",
+        "sha256": "785912355102ea392e0e8d8a44c22f62f7caf7c1137e4015705083f71d911e4c",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "original",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Original sound is required but this input has no audio. Stop without pretending completion."
+      },
+      "expected": {
+        "terminalStates": [
+          "failed"
+        ],
+        "requiredTools": [],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": false,
+        "mustHaveVideo": false,
+        "behavior": "stop",
+        "reasonCodes": [
+          "invalid_media"
+        ]
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "paid model success",
+          "real output media in fixed-response lane"
+        ]
+      },
+      "category": "safe_stop",
+      "caseVersion": "1",
+      "tags": [
+        "safe_stop",
+        "missing-audio",
+        "fault-fixture"
+      ],
+      "evidenceMode": "fixed_response",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-format_timing-portrait"
+      },
+      "checks": [],
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "missing-audio",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]",
+          "execution": "Vitest fixed response drives actual persisted Mora runner; media IO controlled; no provider"
+        }
+      },
+      "faults": []
+    },
+    {
+      "caseId": "regression-safe_stop-source-changed",
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Saved checkpoint refers to a different source hash. Stop without publishing from stale analysis."
+      },
+      "expected": {
+        "terminalStates": [
+          "failed"
+        ],
+        "requiredTools": [],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": false,
+        "mustHaveVideo": false,
+        "behavior": "stop",
+        "reasonCodes": [
+          "source_changed"
+        ]
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "paid model success",
+          "real output media in fixed-response lane"
+        ]
+      },
+      "category": "safe_stop",
+      "caseVersion": "1",
+      "tags": [
+        "safe_stop",
+        "source-changed",
+        "fault-fixture"
+      ],
+      "evidenceMode": "fixed_response",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-format_timing-portrait"
+      },
+      "checks": [],
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "source-changed",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]",
+          "execution": "Vitest fixed response drives actual persisted Mora runner; media IO controlled; no provider"
+        }
+      },
+      "faults": []
+    },
+    {
+      "caseId": "regression-safe_stop-authentication",
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Authentication fails with HTTP 401. Stop; no blind repeated requests."
+      },
+      "expected": {
+        "terminalStates": [
+          "failed"
+        ],
+        "requiredTools": [],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": false,
+        "mustHaveVideo": false,
+        "behavior": "stop",
+        "reasonCodes": [
+          "authentication"
+        ]
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "paid model success",
+          "real output media in fixed-response lane"
+        ]
+      },
+      "category": "safe_stop",
+      "caseVersion": "1",
+      "tags": [
+        "safe_stop",
+        "authentication",
+        "fault-fixture"
+      ],
+      "evidenceMode": "fixed_response",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-format_timing-portrait"
+      },
+      "checks": [],
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "authentication",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]",
+          "execution": "Vitest fixed response drives actual persisted Mora runner; media IO controlled; no provider"
+        }
+      },
+      "faults": [
+        {
+          "point": "model",
+          "occurrence": 1,
+          "effect": "error",
+          "code": "authentication"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-safe_stop-call-limit",
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Every fixed response requests another plan. Stop at the runner step limit without inventing completion."
+      },
+      "expected": {
+        "terminalStates": [
+          "failed"
+        ],
+        "requiredTools": [],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": false,
+        "mustHaveVideo": false,
+        "behavior": "stop",
+        "reasonCodes": [
+          "budget_exhausted"
+        ]
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "paid model success",
+          "real output media in fixed-response lane"
+        ]
+      },
+      "category": "safe_stop",
+      "caseVersion": "1",
+      "tags": [
+        "safe_stop",
+        "call-limit",
+        "fault-fixture"
+      ],
+      "evidenceMode": "fixed_response",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-format_timing-portrait"
+      },
+      "checks": [],
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "call-limit",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]",
+          "execution": "Vitest fixed response drives actual persisted Mora runner; media IO controlled; no provider"
+        }
+      },
+      "faults": []
+    },
+    {
+      "caseId": "regression-safe_stop-render-limit",
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Every render fails its technical check. Exhaust the three-render cap and stop without publishing."
+      },
+      "expected": {
+        "terminalStates": [
+          "failed"
+        ],
+        "requiredTools": [],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": false,
+        "mustHaveVideo": false,
+        "behavior": "stop",
+        "reasonCodes": [
+          "budget_exhausted"
+        ]
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "paid model success",
+          "real output media in fixed-response lane"
+        ]
+      },
+      "category": "safe_stop",
+      "caseVersion": "1",
+      "tags": [
+        "safe_stop",
+        "render-limit",
+        "fault-fixture"
+      ],
+      "evidenceMode": "fixed_response",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-format_timing-portrait"
+      },
+      "checks": [],
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "render-limit",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]",
+          "execution": "Vitest fixed response drives actual persisted Mora runner; media IO controlled; no provider"
+        }
+      },
+      "faults": []
+    },
+    {
+      "caseId": "regression-safe_stop-required-brand",
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "A required brand name is missing from source and brief. Request it rather than fabricate a brand."
+      },
+      "expected": {
+        "terminalStates": [
+          "waiting_input"
+        ],
+        "requiredTools": [
+          "request_input"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": false,
+        "mustHaveVideo": false,
+        "behavior": "request_input",
+        "reasonCodes": [
+          "input_requested"
+        ]
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "paid model success",
+          "real output media in fixed-response lane"
+        ]
+      },
+      "category": "safe_stop",
+      "caseVersion": "1",
+      "tags": [
+        "safe_stop",
+        "required-brand",
+        "fault-fixture"
+      ],
+      "evidenceMode": "fixed_response",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-format_timing-portrait"
+      },
+      "checks": [],
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "required-brand",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]",
+          "execution": "Vitest fixed response drives actual persisted Mora runner; media IO controlled; no provider"
+        }
+      },
+      "faults": []
+    },
+    {
+      "caseId": "regression-safe_stop-required-price",
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "A required price is missing from source and brief. Request it rather than fabricate a price."
+      },
+      "expected": {
+        "terminalStates": [
+          "waiting_input"
+        ],
+        "requiredTools": [
+          "request_input"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": false,
+        "mustHaveVideo": false,
+        "behavior": "request_input",
+        "reasonCodes": [
+          "input_requested"
+        ]
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "paid model success",
+          "real output media in fixed-response lane"
+        ]
+      },
+      "category": "safe_stop",
+      "caseVersion": "1",
+      "tags": [
+        "safe_stop",
+        "required-price",
+        "fault-fixture"
+      ],
+      "evidenceMode": "fixed_response",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-format_timing-portrait"
+      },
+      "checks": [],
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "required-price",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]",
+          "execution": "Vitest fixed response drives actual persisted Mora runner; media IO controlled; no provider"
+        }
+      },
+      "faults": []
+    }
+  ]
+}

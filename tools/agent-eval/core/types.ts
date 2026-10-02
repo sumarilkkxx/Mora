@@ -1,3 +1,4 @@
+import type { ExpectedBehavior, RegressionFields } from "./contracts";
 export interface ModelTokenUsage {
   promptTokens: number;
   completionTokens: number;
@@ -40,6 +41,12 @@ export interface ToolDecisionTrace {
   arguments: unknown;
 }
 
+export interface ToolExecutionTrace {
+  kind: "tool_execution"; id: string; sequence: number; stage: string; tool: string;
+  arguments: unknown; origin: "agent" | "runtime"; startedAt: string; durationMs?: number;
+  status: "pending" | "succeeded" | "failed"; result?: unknown; error?: string;
+}
+
 export interface EvaluationTrace {
   schemaVersion: 1;
   runId: string;
@@ -49,11 +56,14 @@ export interface EvaluationTrace {
   completedAt?: string;
   modelCalls: ModelCallTrace[];
   toolDecisions: ToolDecisionTrace[];
+  toolExecutions?: ToolExecutionTrace[];
+  outcome?: { state: string; reasonCode: string; reason?: string };
   budget: {
     stopLimitUsd: number;
     absoluteLimitUsd: number;
     spentUsd: number;
     reservedUsd?: number;
+    uncertainUsd?: number;
     locked: boolean;
     lockReason?: string;
   };
@@ -61,6 +71,12 @@ export interface EvaluationTrace {
 }
 
 export interface DeterministicRunFacts {
+  expectedBehavior?: ExpectedBehavior;
+  expectedReasonCodes?: string[];
+  observedReasonCode?: string;
+  behaviorEvidence?: boolean;
+  evidenceComplete?: boolean;
+  interruption?: "cancelled" | "budget_stopped" | "interrupted";
   terminalState: string;
   allowedTerminalStates: string[];
   compositionExists: boolean;
@@ -81,19 +97,21 @@ export interface DeterministicRunFacts {
     tool: string;
     allowed: boolean;
     error?: string;
+    status?: "pending" | "succeeded" | "failed";
+    artifactId?: string;
   }>;
 }
 
 export interface EvaluationScore {
   name: "task_success" | "tool_validity" | "required_tools" | "output_verification" | "sequence_compliance" | "completion_honesty" | "budget_compliance";
-  score: 0 | 1;
+  score: 0 | 1 | null;
   detail: string;
 }
 
 export type EvaluationDatasetSplit = "smoke" | "dev" | "holdout";
 export type EvaluationCategory = "product" | "process" | "service" | "difficult";
 
-export interface AgentEvaluationCase {
+export interface AgentEvaluationCase extends Partial<RegressionFields> {
   caseId: string;
   source: {
     id: string;
@@ -108,14 +126,16 @@ export interface AgentEvaluationCase {
   brief: {
     target: 15 | 20 | 25 | 30;
     aspect: "9:16" | "16:9" | "1:1";
-    audio: "voiceover" | "muted";
+    audio: "voiceover" | "muted" | "original";
     style: "auto" | "concise" | "highlights" | "story";
     captions: boolean;
     locale: "zh" | "en";
     instruction: string;
   };
   expected: {
-    terminalStates: Array<"done" | "needs_review">;
+    terminalStates: Array<"done" | "needs_review" | "waiting_input" | "failed">;
+    behavior?: ExpectedBehavior;
+    reasonCodes?: string[];
     requiredTools: string[];
     forbiddenBehaviors: string[];
     maxModelCalls: number;
@@ -132,7 +152,7 @@ export interface AgentEvaluationCase {
 }
 
 export interface AgentEvaluationDataset {
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   datasetId: string;
   version: string;
   split: EvaluationDatasetSplit;

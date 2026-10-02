@@ -19,7 +19,7 @@ import { frameAt, ownedSourcePath, sceneSamples, transcribe } from "./media";
 import { renderAutoEdit, checkOutput } from "./render";
 import { fallbackCandidatePlans } from "./planning";
 import { composeCopy, outputReviewSamples, parseBrief, parsePlan, parsePromotionCandidates, sampleTimes, timeline, validateSource, validateSpeechCuts, text, candidateSignature, type Checkpoint, type Speech, type EditPlan } from "./contract";
-import type { AutoEditObserver } from "./observer";
+import { observeToolExecution, type AutoEditObserver } from "./observer";
 
 export interface Credentials { llm: LLMConfig; tts?: TTSConfig }
 type Run = typeof autoEditRuns.$inferSelect;
@@ -41,6 +41,9 @@ function safeError(error: unknown, credentials: Credentials) {
   let message = error instanceof Error ? error.message : "任务失败 / Task failed";
   for (const key of [credentials.llm.apiKey, credentials.tts?.apiKey]) if (key) message = message.split(key).join("[redacted]");
   return message.slice(0, 900);
+}
+function executionError(code: "invalid_media" | "source_changed" | "budget_exhausted", message: string) {
+  return Object.assign(new Error(message), { code });
 }
 async function fileHash(file: string, signal: AbortSignal) {
   const hash = createHash("sha256");
@@ -74,6 +77,7 @@ export function startAutoEdit(run: Run, credentials: Credentials, options: AutoE
     }, 5000);
     const deadline = setTimeout(() => controller.abort(new Error("任务超过 30 分钟预算 / Task timeout")), 30 * 60000);
     const limit = options.schedule ?? runtime.limit;
+    let outcomeCode = "unclassified";
     try { await limit(async () => {
       controller.signal.throwIfAborted();
       const rows = await db.update(autoEditRuns).set({ status: "running" }).where(and(scope, eq(autoEditRuns.status, "queued"))).returning();
@@ -81,10 +85,18 @@ export function startAutoEdit(run: Run, credentials: Credentials, options: AutoE
       await execute(run, credentials, owner, controller.signal, options);
     }); }
     catch (error) {
+      const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
+      const status = (error as { status?: number } | null)?.status;
+      outcomeCode = code === "invalid_media" || code === "source_changed" || code === "budget_exhausted" ? code
+        : status === 401 ? "authentication" : status === 403 ? "authorization" : "unclassified";
       const [row] = await db.select().from(autoEditRuns).where(scope);
       if (row && ["running", "queued", "cancel_requested"].includes(row.status)) await db.update(autoEditRuns).set({ status: row.status === "cancel_requested" ? "cancelled" : "failed", error: safeError(error, credentials), updatedAt: Date.now() }).where(scope);
     } finally {
       clearInterval(beat); clearTimeout(deadline); runtime.controllers.delete(run.id);
+      if (options.observer?.recordOutcome) try {
+        const [settled] = await db.select({ status: autoEditRuns.status, error: autoEditRuns.error }).from(autoEditRuns).where(scope);
+        if (settled) options.observer.recordOutcome({ state: settled.status, reasonCode: settled.status === "waiting_input" ? "input_requested" : settled.status === "cancelled" ? "cancelled" : outcomeCode, reason: settled.error ?? undefined });
+      } catch (error) { console.error("Auto-edit outcome observer failed", error); }
       if (options.onFinished) try { await options.onFinished(); } catch (error) { console.error("Auto-edit completion observer failed", error); }
     }
   })().catch(() => { runtime.controllers.delete(run.id); });
@@ -113,9 +125,9 @@ async function execute(run: Run, credentials: Credentials, owner: string, signal
   // API when the user selects a plan, so generated clip bounds must match it.
   const planDuration = Math.min(metadata.duration, source.duration / 1000);
   const sourceHash = await fileHash(file, signal);
-  if (cp.sourceHash && cp.sourceHash !== sourceHash) throw new Error("原素材已发生变化，请创建新任务 / Source changed; start a new run");
+  if (cp.sourceHash && cp.sourceHash !== sourceHash) throw executionError("source_changed", "原素材已发生变化，请创建新任务 / Source changed; start a new run");
   cp.sourceHash = sourceHash;
-  if (run.brief.audio === "original" && !metadata.hasAudio) throw new Error("原视频没有音轨，请改用旁白或静音 / Source has no audio");
+  if (run.brief.audio === "original" && !metadata.hasAudio) throw executionError("invalid_media", "原视频没有音轨，请改用旁白或静音 / Source has no audio");
   let bgm: string | undefined;
   if (run.brief.bgm) {
     const path = resolveExistingUploadFilePath(run.brief.bgm);
@@ -238,7 +250,7 @@ async function execute(run: Run, credentials: Credentials, owner: string, signal
   }
   async function render() {
     if (!cp.plan) throw new Error("Validate a plan first");
-    if (rendered >= AUTO_EDIT_RENDER_LIMIT) throw new Error("已达到初次渲染加两轮修正上限 / Render budget reached");
+    if (rendered >= AUTO_EDIT_RENDER_LIMIT) throw executionError("budget_exhausted", "已达到初次渲染加两轮修正上限 / Render budget reached");
     // Inherited/retried plans must satisfy this run's latest duration and audio rules too.
     selectPlan(cp.plan);
     await voiceover();
@@ -295,7 +307,10 @@ async function execute(run: Run, credentials: Credentials, owner: string, signal
     cp.output = verifiedFallback.output;
     cp.checks = structuredClone(verifiedFallback.checks);
     inspected = true;
-    await finish(true, reason);
+    await observeToolExecution(options.observer, { stage: "complete", tool: "finish", arguments: { reason }, origin: "runtime" }, async () => {
+      await finish(true, reason);
+      return { outputId: cp.output };
+    });
     return true;
   }
   if (options.exportOnly || options.manualPlan) {
@@ -330,44 +345,49 @@ async function execute(run: Run, credentials: Credentials, owner: string, signal
         if (cp.checks.review.length) allowed.unshift("render_edit", "validate_edit_plan");
       }
       action = await model.action(JSON.stringify({ sourceId: run.sourceId, sourceDuration: metadata.duration, brief: run.brief, analysis: cp.analysis, currentPlan: cp.plan, render: cp.output ? { exists: true, checks: cp.checks, inspected } : null, voices: cp.voices?.map(v => ({ index: v.index, duration: v.duration })), history: cp.history, remainingSteps: AUTO_EDIT_AGENT_STEP_LIMIT - step, remainingModelCalls: AUTO_EDIT_MODEL_CALL_LIMIT - model.calls, remainingRenders: AUTO_EDIT_RENDER_LIMIT - rendered }), allowed);
-      let result: unknown;
-      switch (action.tool) {
-        case "get_media_index": result = cp.analysis; break;
-        case "update_edit_settings": {
-          if (rendered) throw new Error("Settings cannot change after rendering; revise as a new version");
-          const allowed = ["target", "audio", "aspect", "style", "captions"];
-          if (Object.keys(action.arguments).some(k => !allowed.includes(k))) throw new Error("Unknown edit setting");
-          const next = parseBrief({ ...run.brief, ...action.arguments });
-          if (next.audio === "original" && !cp.analysis!.speech.length) throw new Error("Original audio requires transcript");
-          run.brief = next; cp.plan = undefined; cp.voices = []; cp.checks = undefined; cp.output = undefined;
-          result = run.brief; break;
-        }
-        case "inspect_video_segment": {
-          if (++inspectionCount > 3) throw new Error("补充采样达到上限 / Inspection budget reached");
-          let { start, end } = action.arguments;
-          if (autonomous && typeof start === "number" && typeof end === "number" && Number.isFinite(start) && Number.isFinite(end)) {
-            const boundedStart = Math.max(0, Math.min(start, Math.max(0, metadata.duration - 0.05)));
-            start = boundedStart;
-            end = Math.min(end, metadata.duration, boundedStart + 20);
+      const selected = action;
+      const receipt = await observeToolExecution(options.observer, { stage: "agent_action", tool: selected.tool, arguments: selected.arguments }, async () => {
+        let result: unknown;
+        switch (selected.tool) {
+          case "get_media_index": result = cp.analysis; break;
+          case "update_edit_settings": {
+            if (rendered) throw new Error("Settings cannot change after rendering; revise as a new version");
+            const allowed = ["target", "audio", "aspect", "style", "captions"];
+            if (Object.keys(selected.arguments).some(k => !allowed.includes(k))) throw new Error("Unknown edit setting");
+            const next = parseBrief({ ...run.brief, ...selected.arguments });
+            if (next.audio === "original" && !cp.analysis!.speech.length) throw new Error("Original audio requires transcript");
+            run.brief = next; cp.plan = undefined; cp.voices = []; cp.checks = undefined; cp.output = undefined;
+            result = run.brief; break;
           }
-          if (typeof start !== "number" || typeof end !== "number" || !Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end > metadata.duration || end <= start || end - start > 20) throw new Error("Invalid inspection interval");
-          const images = [];
-          for (const offset of sampleTimes(end - start, 4)) images.push({ time: start + offset, url: await frameAt(file, start + offset, signal) });
-          result = await model.json(analysisPrompt(run.brief, metadata.duration, cp.analysis!.speech.filter(s => s.end >= start && s.start <= end)), images, { evaluationStage: "segment_inspection" });
-          break;
+          case "inspect_video_segment": {
+            if (++inspectionCount > 3) throw new Error("补充采样达到上限 / Inspection budget reached");
+            let { start, end } = selected.arguments;
+            if (autonomous && typeof start === "number" && typeof end === "number" && Number.isFinite(start) && Number.isFinite(end)) {
+              const boundedStart = Math.max(0, Math.min(start, Math.max(0, metadata.duration - 0.05)));
+              start = boundedStart;
+              end = Math.min(end, metadata.duration, boundedStart + 20);
+            }
+            if (typeof start !== "number" || typeof end !== "number" || !Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end > metadata.duration || end <= start || end - start > 20) throw new Error("Invalid inspection interval");
+            const images = [];
+            for (const offset of sampleTimes(end - start, 4)) images.push({ time: start + offset, url: await frameAt(file, start + offset, signal) });
+            result = await model.json(analysisPrompt(run.brief, metadata.duration, cp.analysis!.speech.filter(s => s.end >= start && s.start <= end)), images, { evaluationStage: "segment_inspection" });
+            break;
+          }
+          case "validate_edit_plan": result = selectPlan(selected.arguments.plan); inspected = false; break;
+          case "create_voiceover": result = await voiceover(); break;
+          case "render_edit": result = await render(); break;
+          case "inspect_output": result = await inspect(); break;
+          case "request_input":
+            await save("waiting_input", selected.tool, text(selected.arguments.reason));
+            await db.update(autoEditRuns).set({ status: "waiting_input", error: text(selected.arguments.reason, 600) || "请补充要求 / More information needed" }).where(scope);
+            return { value: { reason: text(selected.arguments.reason) }, outputId: cp.output };
+          case "finish": await finish(selected.arguments.needsReview === true, text(selected.arguments.reason)); break;
         }
-        case "validate_edit_plan": result = selectPlan(action.arguments.plan); inspected = false; break;
-        case "create_voiceover": result = await voiceover(); break;
-        case "render_edit": result = await render(); break;
-        case "inspect_output": result = await inspect(); break;
-        case "request_input":
-          await save("waiting_input", action.tool, text(action.arguments.reason));
-          await db.update(autoEditRuns).set({ status: "waiting_input", error: text(action.arguments.reason, 600) || "请补充要求 / More information needed" }).where(scope);
-          return;
-        case "finish": await finish(action.arguments.needsReview === true, text(action.arguments.reason)); return;
-      }
-      model.recordToolResult(result);
-      await save("planning", action.tool, JSON.stringify(result));
+        return { value: result, outputId: cp.output };
+      });
+      if (action.tool === "finish" || action.tool === "request_input") return;
+      model.recordToolResult(receipt.value);
+      await save("planning", action.tool, JSON.stringify(receipt.value));
     } catch (error) {
       signal.throwIfAborted();
       model.recordToolResult({ error: safeError(error, credentials) });
@@ -381,5 +401,5 @@ async function execute(run: Run, credentials: Credentials, owner: string, signal
   }
   if (await finishVerifiedFallback("后续优化达到执行步骤上限，已保留最近一次通过检查的成片 / Kept the latest verified render after optimization reached the step limit")) return;
   if (cp.checks?.technical && inspected) { await finish(true, "已达任务调用上限，请复核 / Budget reached; review required"); return; }
-  throw new Error("达到自动执行上限，请查看任务记录后调整 / Execution budget exhausted");
+  throw executionError("budget_exhausted", "达到自动执行上限，请查看任务记录后调整 / Execution budget exhausted");
 }

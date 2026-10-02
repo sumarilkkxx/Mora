@@ -1,0 +1,939 @@
+{
+  "version": "1",
+  "toolVersion": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+  "seed": 0,
+  "sourceArguments": [
+    "-v",
+    "error",
+    "-y",
+    "-f",
+    "lavfi",
+    "-i",
+    "color=red:s=320x180:r=30:d=10",
+    "-f",
+    "lavfi",
+    "-i",
+    "color=blue:s=320x180:r=30:d=10",
+    "-f",
+    "lavfi",
+    "-i",
+    "color=green:s=320x180:r=30:d=10",
+    "-f",
+    "lavfi",
+    "-i",
+    "sine=frequency=440:sample_rate=44100:duration=30",
+    "-filter_complex",
+    "[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]",
+    "-map",
+    "[v]",
+    "-map",
+    "3:a",
+    "-c:v",
+    "libx264",
+    "-pix_fmt",
+    "yuv420p",
+    "-c:a",
+    "aac",
+    "-movflags",
+    "+faststart",
+    "evals/agent/fixtures/regression-v1/bands-audible.mp4"
+  ],
+  "outputs": [
+    {
+      "caseId": "regression-format_timing-portrait",
+      "positive": "evals/agent/fixtures/regression-v1/portrait-positive.mp4",
+      "negative": "evals/agent/fixtures/regression-v1/portrait-negative.mp4",
+      "positiveSha256": "ee64956172183feaa7c6c5562cf156592d465a8e91b5ebfa41ba67a9fa11f715",
+      "negativeSha256": "3a495144ff557abd641f3ffb7b57ed42466d71e3bf47a2a0651cb08b22467cdd",
+      "recipe": {
+        "id": "portrait",
+        "category": "format_timing",
+        "brief": {
+          "target": 15,
+          "aspect": "9:16",
+          "audio": "muted",
+          "style": "concise",
+          "captions": false,
+          "locale": "en",
+          "instruction": "Create a 9:16 portrait with the full source visible."
+        },
+        "plan": {
+          "version": 1,
+          "title": "Controlled constraints",
+          "explanation": "Deterministic fixture; not an Agent quality judgement",
+          "clips": [
+            {
+              "sourceId": "controlled-bands-audible",
+              "start": 0,
+              "end": 15,
+              "speed": 1,
+              "fit": "contain",
+              "transition": "cut",
+              "text": "",
+              "reason": "controlled bands",
+              "evidence": "0s"
+            }
+          ]
+        },
+        "negative": {
+          "brief": {
+            "target": 15,
+            "aspect": "16:9",
+            "audio": "muted",
+            "style": "concise",
+            "captions": false,
+            "locale": "en",
+            "instruction": "Render the specified controlled bands; no invented scenes."
+          }
+        },
+        "focus": "dimensions"
+      }
+    },
+    {
+      "caseId": "regression-format_timing-landscape",
+      "positive": "evals/agent/fixtures/regression-v1/landscape-positive.mp4",
+      "negative": "evals/agent/fixtures/regression-v1/landscape-negative.mp4",
+      "positiveSha256": "3a495144ff557abd641f3ffb7b57ed42466d71e3bf47a2a0651cb08b22467cdd",
+      "negativeSha256": "6b36a411827296838964bf1fcbf5810d19793ab951daeceee578c9b61551cf3a",
+      "recipe": {
+        "id": "landscape",
+        "category": "format_timing",
+        "brief": {
+          "target": 15,
+          "aspect": "16:9",
+          "audio": "muted",
+          "style": "concise",
+          "captions": false,
+          "locale": "en",
+          "instruction": "Create a 16:9 landscape."
+        },
+        "plan": {
+          "version": 1,
+          "title": "Controlled constraints",
+          "explanation": "Deterministic fixture; not an Agent quality judgement",
+          "clips": [
+            {
+              "sourceId": "controlled-bands-audible",
+              "start": 0,
+              "end": 15,
+              "speed": 1,
+              "fit": "contain",
+              "transition": "cut",
+              "text": "",
+              "reason": "controlled bands",
+              "evidence": "0s"
+            }
+          ]
+        },
+        "negative": {
+          "brief": {
+            "target": 15,
+            "aspect": "1:1",
+            "audio": "muted",
+            "style": "concise",
+            "captions": false,
+            "locale": "en",
+            "instruction": "Render the specified controlled bands; no invented scenes."
+          }
+        },
+        "focus": "dimensions"
+      }
+    },
+    {
+      "caseId": "regression-format_timing-square",
+      "positive": "evals/agent/fixtures/regression-v1/square-positive.mp4",
+      "negative": "evals/agent/fixtures/regression-v1/square-negative.mp4",
+      "positiveSha256": "6b36a411827296838964bf1fcbf5810d19793ab951daeceee578c9b61551cf3a",
+      "negativeSha256": "3a495144ff557abd641f3ffb7b57ed42466d71e3bf47a2a0651cb08b22467cdd",
+      "recipe": {
+        "id": "square",
+        "category": "format_timing",
+        "brief": {
+          "target": 15,
+          "aspect": "1:1",
+          "audio": "muted",
+          "style": "concise",
+          "captions": false,
+          "locale": "en",
+          "instruction": "Create a square frame."
+        },
+        "plan": {
+          "version": 1,
+          "title": "Controlled constraints",
+          "explanation": "Deterministic fixture; not an Agent quality judgement",
+          "clips": [
+            {
+              "sourceId": "controlled-bands-audible",
+              "start": 0,
+              "end": 15,
+              "speed": 1,
+              "fit": "contain",
+              "transition": "cut",
+              "text": "",
+              "reason": "controlled bands",
+              "evidence": "0s"
+            }
+          ]
+        },
+        "negative": {
+          "brief": {
+            "target": 15,
+            "aspect": "16:9",
+            "audio": "muted",
+            "style": "concise",
+            "captions": false,
+            "locale": "en",
+            "instruction": "Render the specified controlled bands; no invented scenes."
+          }
+        },
+        "focus": "dimensions"
+      }
+    },
+    {
+      "caseId": "regression-format_timing-contain",
+      "positive": "evals/agent/fixtures/regression-v1/contain-positive.mp4",
+      "negative": "evals/agent/fixtures/regression-v1/contain-negative.mp4",
+      "positiveSha256": "6b36a411827296838964bf1fcbf5810d19793ab951daeceee578c9b61551cf3a",
+      "negativeSha256": "39d6796bf7ec6f22d1be764878da4f8aa7ecb9ae70f2fb8787c00bc2d9c17d4e",
+      "recipe": {
+        "id": "contain",
+        "category": "format_timing",
+        "brief": {
+          "target": 15,
+          "aspect": "1:1",
+          "audio": "muted",
+          "style": "concise",
+          "captions": false,
+          "locale": "en",
+          "instruction": "Keep the entire source and its white edge marker in a square; add letterbox space."
+        },
+        "plan": {
+          "version": 1,
+          "title": "Controlled constraints",
+          "explanation": "Deterministic fixture; not an Agent quality judgement",
+          "clips": [
+            {
+              "sourceId": "controlled-bands-audible",
+              "start": 0,
+              "end": 15,
+              "speed": 1,
+              "fit": "contain",
+              "transition": "cut",
+              "text": "",
+              "reason": "controlled bands",
+              "evidence": "0s"
+            }
+          ]
+        },
+        "negative": {
+          "plan": {
+            "version": 1,
+            "title": "Controlled constraints",
+            "explanation": "Deterministic fixture; not an Agent quality judgement",
+            "clips": [
+              {
+                "sourceId": "controlled-bands-audible",
+                "start": 0,
+                "end": 15,
+                "speed": 1,
+                "fit": "cover",
+                "transition": "cut",
+                "text": "",
+                "reason": "controlled bands",
+                "evidence": "0s"
+              }
+            ]
+          }
+        },
+        "focus": "frame",
+        "samples": [
+          {
+            "at": 2,
+            "purpose": "source"
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "regression-format_timing-cover",
+      "positive": "evals/agent/fixtures/regression-v1/cover-positive.mp4",
+      "negative": "evals/agent/fixtures/regression-v1/cover-negative.mp4",
+      "positiveSha256": "39d6796bf7ec6f22d1be764878da4f8aa7ecb9ae70f2fb8787c00bc2d9c17d4e",
+      "negativeSha256": "6b36a411827296838964bf1fcbf5810d19793ab951daeceee578c9b61551cf3a",
+      "recipe": {
+        "id": "cover",
+        "category": "format_timing",
+        "brief": {
+          "target": 15,
+          "aspect": "1:1",
+          "audio": "muted",
+          "style": "concise",
+          "captions": false,
+          "locale": "en",
+          "instruction": "Fill the square by cropping the source edges; no letterbox space."
+        },
+        "plan": {
+          "version": 1,
+          "title": "Controlled constraints",
+          "explanation": "Deterministic fixture; not an Agent quality judgement",
+          "clips": [
+            {
+              "sourceId": "controlled-bands-audible",
+              "start": 0,
+              "end": 15,
+              "speed": 1,
+              "fit": "cover",
+              "transition": "cut",
+              "text": "",
+              "reason": "controlled bands",
+              "evidence": "0s"
+            }
+          ]
+        },
+        "negative": {
+          "plan": {
+            "version": 1,
+            "title": "Controlled constraints",
+            "explanation": "Deterministic fixture; not an Agent quality judgement",
+            "clips": [
+              {
+                "sourceId": "controlled-bands-audible",
+                "start": 0,
+                "end": 15,
+                "speed": 1,
+                "fit": "contain",
+                "transition": "cut",
+                "text": "",
+                "reason": "controlled bands",
+                "evidence": "0s"
+              }
+            ]
+          }
+        },
+        "focus": "frame",
+        "samples": [
+          {
+            "at": 2,
+            "purpose": "source"
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "regression-format_timing-exact15",
+      "positive": "evals/agent/fixtures/regression-v1/exact15-positive.mp4",
+      "negative": "evals/agent/fixtures/regression-v1/exact15-negative.mp4",
+      "positiveSha256": "3a495144ff557abd641f3ffb7b57ed42466d71e3bf47a2a0651cb08b22467cdd",
+      "negativeSha256": "8b5546cf5b6902053a6b810542791a9f0aa6a6f46bd0be56320edbe8f337cd10",
+      "recipe": {
+        "id": "exact15",
+        "category": "format_timing",
+        "brief": {
+          "target": 15,
+          "aspect": "16:9",
+          "audio": "muted",
+          "style": "concise",
+          "captions": false,
+          "locale": "en",
+          "instruction": "Output exactly 15 seconds from source 0 to 15, within two frames."
+        },
+        "plan": {
+          "version": 1,
+          "title": "Controlled constraints",
+          "explanation": "Deterministic fixture; not an Agent quality judgement",
+          "clips": [
+            {
+              "sourceId": "controlled-bands-audible",
+              "start": 0,
+              "end": 15,
+              "speed": 1,
+              "fit": "contain",
+              "transition": "cut",
+              "text": "",
+              "reason": "controlled bands",
+              "evidence": "0s"
+            }
+          ]
+        },
+        "negative": {
+          "plan": {
+            "version": 1,
+            "title": "Controlled constraints",
+            "explanation": "Deterministic fixture; not an Agent quality judgement",
+            "clips": [
+              {
+                "sourceId": "controlled-bands-audible",
+                "start": 0,
+                "end": 14,
+                "speed": 1,
+                "fit": "contain",
+                "transition": "cut",
+                "text": "",
+                "reason": "controlled bands",
+                "evidence": "0s"
+              }
+            ]
+          }
+        },
+        "focus": "duration"
+      }
+    },
+    {
+      "caseId": "regression-format_timing-order20",
+      "positive": "evals/agent/fixtures/regression-v1/order20-positive.mp4",
+      "negative": "evals/agent/fixtures/regression-v1/order20-negative.mp4",
+      "positiveSha256": "cf6116c9204e0cb00ed3aaa9d6821b5f33a0ae781528251af1d59f3f20a074d5",
+      "negativeSha256": "41df560b87ada80dc97e356c9b38b40948d7f0f1d83624a40f6f806f1224e207",
+      "recipe": {
+        "id": "order20",
+        "category": "format_timing",
+        "brief": {
+          "target": 20,
+          "aspect": "16:9",
+          "audio": "muted",
+          "style": "concise",
+          "captions": false,
+          "locale": "en",
+          "instruction": "Output 20 seconds: red section 0–10 followed by blue 10–20; retain chronological order."
+        },
+        "plan": {
+          "version": 1,
+          "title": "Controlled constraints",
+          "explanation": "Deterministic fixture; not an Agent quality judgement",
+          "clips": [
+            {
+              "sourceId": "controlled-bands-audible",
+              "start": 0,
+              "end": 10,
+              "speed": 1,
+              "fit": "contain",
+              "transition": "cut",
+              "text": "",
+              "reason": "controlled bands",
+              "evidence": "0s"
+            },
+            {
+              "sourceId": "controlled-bands-audible",
+              "start": 10,
+              "end": 20,
+              "speed": 1,
+              "fit": "contain",
+              "transition": "cut",
+              "text": "",
+              "reason": "controlled bands",
+              "evidence": "10s"
+            }
+          ]
+        },
+        "negative": {
+          "plan": {
+            "version": 1,
+            "title": "Controlled constraints",
+            "explanation": "Deterministic fixture; not an Agent quality judgement",
+            "clips": [
+              {
+                "sourceId": "controlled-bands-audible",
+                "start": 10,
+                "end": 20,
+                "speed": 1,
+                "fit": "contain",
+                "transition": "cut",
+                "text": "",
+                "reason": "controlled bands",
+                "evidence": "10s"
+              },
+              {
+                "sourceId": "controlled-bands-audible",
+                "start": 0,
+                "end": 10,
+                "speed": 1,
+                "fit": "contain",
+                "transition": "cut",
+                "text": "",
+                "reason": "controlled bands",
+                "evidence": "0s"
+              }
+            ]
+          }
+        },
+        "focus": "frame",
+        "samples": [
+          {
+            "at": 2,
+            "purpose": "order"
+          },
+          {
+            "at": 12,
+            "purpose": "order"
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "regression-format_timing-trim",
+      "positive": "evals/agent/fixtures/regression-v1/trim-positive.mp4",
+      "negative": "evals/agent/fixtures/regression-v1/trim-negative.mp4",
+      "positiveSha256": "1a1724820a92df941cd89d9ffc5fc817567500d2ec7feac164d90f74b08fd4b3",
+      "negativeSha256": "3a495144ff557abd641f3ffb7b57ed42466d71e3bf47a2a0651cb08b22467cdd",
+      "recipe": {
+        "id": "trim",
+        "category": "format_timing",
+        "brief": {
+          "target": 15,
+          "aspect": "16:9",
+          "audio": "muted",
+          "style": "concise",
+          "captions": false,
+          "locale": "en",
+          "instruction": "Output only source 10–25, starting in blue and ending in green; exactly 15 seconds."
+        },
+        "plan": {
+          "version": 1,
+          "title": "Controlled constraints",
+          "explanation": "Deterministic fixture; not an Agent quality judgement",
+          "clips": [
+            {
+              "sourceId": "controlled-bands-audible",
+              "start": 10,
+              "end": 25,
+              "speed": 1,
+              "fit": "contain",
+              "transition": "cut",
+              "text": "",
+              "reason": "controlled bands",
+              "evidence": "10s"
+            }
+          ]
+        },
+        "negative": {
+          "plan": {
+            "version": 1,
+            "title": "Controlled constraints",
+            "explanation": "Deterministic fixture; not an Agent quality judgement",
+            "clips": [
+              {
+                "sourceId": "controlled-bands-audible",
+                "start": 0,
+                "end": 15,
+                "speed": 1,
+                "fit": "contain",
+                "transition": "cut",
+                "text": "",
+                "reason": "controlled bands",
+                "evidence": "0s"
+              }
+            ]
+          }
+        },
+        "focus": "frame",
+        "samples": [
+          {
+            "at": 2,
+            "purpose": "trim"
+          },
+          {
+            "at": 12,
+            "purpose": "trim"
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "regression-audio_captions-original",
+      "positive": "evals/agent/fixtures/regression-v1/original-positive.mp4",
+      "negative": "evals/agent/fixtures/regression-v1/original-negative.mp4",
+      "positiveSha256": "7a4b84149c0a1dcfcb2871cf81d7148d49c8187a8263849a074e03042716003b",
+      "negativeSha256": "3a495144ff557abd641f3ffb7b57ed42466d71e3bf47a2a0651cb08b22467cdd",
+      "recipe": {
+        "id": "original",
+        "category": "audio_captions",
+        "brief": {
+          "target": 15,
+          "aspect": "16:9",
+          "audio": "original",
+          "style": "concise",
+          "captions": false,
+          "locale": "en",
+          "instruction": "Keep the original synthetic 440Hz sound in source 0–15 unchanged."
+        },
+        "plan": {
+          "version": 1,
+          "title": "Controlled constraints",
+          "explanation": "Deterministic fixture; not an Agent quality judgement",
+          "clips": [
+            {
+              "sourceId": "controlled-bands-audible",
+              "start": 0,
+              "end": 15,
+              "speed": 1,
+              "fit": "contain",
+              "transition": "cut",
+              "text": "",
+              "reason": "controlled bands",
+              "evidence": "0s"
+            }
+          ]
+        },
+        "negative": {
+          "brief": {
+            "target": 15,
+            "aspect": "16:9",
+            "audio": "muted",
+            "style": "concise",
+            "captions": false,
+            "locale": "en",
+            "instruction": "Render the specified controlled bands; no invented scenes."
+          }
+        },
+        "focus": "waveform"
+      }
+    },
+    {
+      "caseId": "regression-audio_captions-muted",
+      "positive": "evals/agent/fixtures/regression-v1/muted-positive.mp4",
+      "negative": "evals/agent/fixtures/regression-v1/muted-negative.mp4",
+      "positiveSha256": "3a495144ff557abd641f3ffb7b57ed42466d71e3bf47a2a0651cb08b22467cdd",
+      "negativeSha256": "7a4b84149c0a1dcfcb2871cf81d7148d49c8187a8263849a074e03042716003b",
+      "recipe": {
+        "id": "muted",
+        "category": "audio_captions",
+        "brief": {
+          "target": 15,
+          "aspect": "16:9",
+          "audio": "muted",
+          "style": "concise",
+          "captions": false,
+          "locale": "en",
+          "instruction": "Remove all sound from this audible source."
+        },
+        "plan": {
+          "version": 1,
+          "title": "Controlled constraints",
+          "explanation": "Deterministic fixture; not an Agent quality judgement",
+          "clips": [
+            {
+              "sourceId": "controlled-bands-audible",
+              "start": 0,
+              "end": 15,
+              "speed": 1,
+              "fit": "contain",
+              "transition": "cut",
+              "text": "",
+              "reason": "controlled bands",
+              "evidence": "0s"
+            }
+          ]
+        },
+        "negative": {
+          "brief": {
+            "target": 15,
+            "aspect": "16:9",
+            "audio": "original",
+            "style": "concise",
+            "captions": false,
+            "locale": "en",
+            "instruction": "Render the specified controlled bands; no invented scenes."
+          }
+        },
+        "focus": "audio"
+      }
+    },
+    {
+      "caseId": "regression-audio_captions-silent-source",
+      "positive": "evals/agent/fixtures/regression-v1/silent-source-positive.mp4",
+      "negative": "evals/agent/fixtures/regression-v1/silent-source-negative.mp4",
+      "positiveSha256": "3a495144ff557abd641f3ffb7b57ed42466d71e3bf47a2a0651cb08b22467cdd",
+      "negativeSha256": "7a4b84149c0a1dcfcb2871cf81d7148d49c8187a8263849a074e03042716003b",
+      "recipe": {
+        "id": "silent-source",
+        "category": "audio_captions",
+        "brief": {
+          "target": 15,
+          "aspect": "16:9",
+          "audio": "muted",
+          "style": "concise",
+          "captions": false,
+          "locale": "en",
+          "instruction": "Keep this video-only input silent; do not invent original sound."
+        },
+        "plan": {
+          "version": 1,
+          "title": "Controlled constraints",
+          "explanation": "Deterministic fixture; not an Agent quality judgement",
+          "clips": [
+            {
+              "sourceId": "controlled-bands-audible",
+              "start": 0,
+              "end": 15,
+              "speed": 1,
+              "fit": "contain",
+              "transition": "cut",
+              "text": "",
+              "reason": "controlled bands",
+              "evidence": "0s"
+            }
+          ]
+        },
+        "sourceSilent": true,
+        "negative": {
+          "brief": {
+            "target": 15,
+            "aspect": "16:9",
+            "audio": "original",
+            "style": "concise",
+            "captions": false,
+            "locale": "en",
+            "instruction": "Render the specified controlled bands; no invented scenes."
+          },
+          "sourceSilent": false
+        },
+        "focus": "audio"
+      }
+    },
+    {
+      "caseId": "regression-audio_captions-voiceover",
+      "positive": "evals/agent/fixtures/regression-v1/voiceover-positive.mp4",
+      "negative": "evals/agent/fixtures/regression-v1/voiceover-negative.mp4",
+      "positiveSha256": "cf9f3070bc9ed3002ebdbc5e81cdbb908d9a6b8e92f9bb16034a29553df48859",
+      "negativeSha256": "21041d79d346256d87be9c1c6d9ccbd9ff6da4f21d6fec95be6d7f4f96234b71",
+      "recipe": {
+        "id": "voiceover",
+        "category": "audio_captions",
+        "brief": {
+          "target": 15,
+          "aspect": "16:9",
+          "audio": "voiceover",
+          "style": "concise",
+          "captions": false,
+          "locale": "en",
+          "instruction": "Replace source sound with the provided synthetic 880Hz narration substitute for TEST."
+        },
+        "plan": {
+          "version": 1,
+          "title": "Controlled constraints",
+          "explanation": "Deterministic fixture; not an Agent quality judgement",
+          "clips": [
+            {
+              "sourceId": "controlled-bands-audible",
+              "start": 0,
+              "end": 15,
+              "speed": 1,
+              "fit": "contain",
+              "transition": "cut",
+              "text": "TEST",
+              "reason": "controlled bands",
+              "evidence": "0s"
+            }
+          ]
+        },
+        "sourceSilent": true,
+        "negative": {
+          "voiceFrequency": 440
+        },
+        "focus": "waveform"
+      }
+    },
+    {
+      "caseId": "regression-audio_captions-captions-on",
+      "positive": "evals/agent/fixtures/regression-v1/captions-on-positive.mp4",
+      "negative": "evals/agent/fixtures/regression-v1/captions-on-negative.mp4",
+      "positiveSha256": "544ef4f7bdac51e1321da7f9592eebfbda37bcf3cceb97a40dcfbe7d6e48953a",
+      "negativeSha256": "3a495144ff557abd641f3ffb7b57ed42466d71e3bf47a2a0651cb08b22467cdd",
+      "recipe": {
+        "id": "captions-on",
+        "category": "audio_captions",
+        "brief": {
+          "target": 15,
+          "aspect": "16:9",
+          "audio": "muted",
+          "style": "concise",
+          "captions": true,
+          "locale": "en",
+          "instruction": "Display SALE in the subtitle region throughout source 0–15."
+        },
+        "plan": {
+          "version": 1,
+          "title": "Controlled constraints",
+          "explanation": "Deterministic fixture; not an Agent quality judgement",
+          "clips": [
+            {
+              "sourceId": "controlled-bands-audible",
+              "start": 0,
+              "end": 15,
+              "speed": 1,
+              "fit": "contain",
+              "transition": "cut",
+              "text": "SALE",
+              "reason": "controlled bands",
+              "evidence": "0s"
+            }
+          ]
+        },
+        "negative": {
+          "brief": {
+            "target": 15,
+            "aspect": "16:9",
+            "audio": "muted",
+            "style": "concise",
+            "captions": false,
+            "locale": "en",
+            "instruction": "Render the specified controlled bands; no invented scenes."
+          }
+        },
+        "focus": "caption"
+      }
+    },
+    {
+      "caseId": "regression-audio_captions-captions-off",
+      "positive": "evals/agent/fixtures/regression-v1/captions-off-positive.mp4",
+      "negative": "evals/agent/fixtures/regression-v1/captions-off-negative.mp4",
+      "positiveSha256": "3a495144ff557abd641f3ffb7b57ed42466d71e3bf47a2a0651cb08b22467cdd",
+      "negativeSha256": "544ef4f7bdac51e1321da7f9592eebfbda37bcf3cceb97a40dcfbe7d6e48953a",
+      "recipe": {
+        "id": "captions-off",
+        "category": "audio_captions",
+        "brief": {
+          "target": 15,
+          "aspect": "16:9",
+          "audio": "muted",
+          "style": "concise",
+          "captions": false,
+          "locale": "en",
+          "instruction": "No visible subtitle text, including the supplied SALE text."
+        },
+        "plan": {
+          "version": 1,
+          "title": "Controlled constraints",
+          "explanation": "Deterministic fixture; not an Agent quality judgement",
+          "clips": [
+            {
+              "sourceId": "controlled-bands-audible",
+              "start": 0,
+              "end": 15,
+              "speed": 1,
+              "fit": "contain",
+              "transition": "cut",
+              "text": "SALE",
+              "reason": "controlled bands",
+              "evidence": "0s"
+            }
+          ]
+        },
+        "negative": {
+          "brief": {
+            "target": 15,
+            "aspect": "16:9",
+            "audio": "muted",
+            "style": "concise",
+            "captions": true,
+            "locale": "en",
+            "instruction": "Render the specified controlled bands; no invented scenes."
+          }
+        },
+        "focus": "caption"
+      }
+    },
+    {
+      "caseId": "regression-audio_captions-caption-copy",
+      "positive": "evals/agent/fixtures/regression-v1/caption-copy-positive.mp4",
+      "negative": "evals/agent/fixtures/regression-v1/caption-copy-negative.mp4",
+      "positiveSha256": "544ef4f7bdac51e1321da7f9592eebfbda37bcf3cceb97a40dcfbe7d6e48953a",
+      "negativeSha256": "65b2273984920bdba6ad00e9892ef0aadb844388de171278d979c448ca915e1a",
+      "recipe": {
+        "id": "caption-copy",
+        "category": "audio_captions",
+        "brief": {
+          "target": 15,
+          "aspect": "16:9",
+          "audio": "muted",
+          "style": "concise",
+          "captions": true,
+          "locale": "en",
+          "instruction": "Subtitle must read SALE; do not substitute FAIL."
+        },
+        "plan": {
+          "version": 1,
+          "title": "Controlled constraints",
+          "explanation": "Deterministic fixture; not an Agent quality judgement",
+          "clips": [
+            {
+              "sourceId": "controlled-bands-audible",
+              "start": 0,
+              "end": 15,
+              "speed": 1,
+              "fit": "contain",
+              "transition": "cut",
+              "text": "SALE",
+              "reason": "controlled bands",
+              "evidence": "0s"
+            }
+          ]
+        },
+        "negative": {
+          "plan": {
+            "version": 1,
+            "title": "Controlled constraints",
+            "explanation": "Deterministic fixture; not an Agent quality judgement",
+            "clips": [
+              {
+                "sourceId": "controlled-bands-audible",
+                "start": 0,
+                "end": 15,
+                "speed": 1,
+                "fit": "contain",
+                "transition": "cut",
+                "text": "FAIL",
+                "reason": "controlled bands",
+                "evidence": "0s"
+              }
+            ]
+          }
+        },
+        "focus": "caption"
+      }
+    },
+    {
+      "caseId": "regression-audio_captions-speech-captions",
+      "positive": "evals/agent/fixtures/regression-v1/speech-captions-positive.mp4",
+      "negative": "evals/agent/fixtures/regression-v1/speech-captions-negative.mp4",
+      "positiveSha256": "c45b9d497c6606fc54846bed0286649f71bab76a8a8e5690a1704f8155f3aaeb",
+      "negativeSha256": "39b87dac186d3e5989ecd0aa1e440c77edcfd1bcc673d9a8b10696ae0f63ded2",
+      "recipe": {
+        "id": "speech-captions",
+        "category": "audio_captions",
+        "brief": {
+          "target": 15,
+          "aspect": "16:9",
+          "audio": "original",
+          "style": "concise",
+          "captions": true,
+          "locale": "en",
+          "instruction": "Keep original sound and use supplied fixture transcript HELLO between 0.5 and 4.5 seconds."
+        },
+        "plan": {
+          "version": 1,
+          "title": "Controlled constraints",
+          "explanation": "Deterministic fixture; not an Agent quality judgement",
+          "clips": [
+            {
+              "sourceId": "controlled-bands-audible",
+              "start": 0,
+              "end": 15,
+              "speed": 1,
+              "fit": "contain",
+              "transition": "cut",
+              "text": "",
+              "reason": "controlled bands",
+              "evidence": "0s"
+            }
+          ]
+        },
+        "speechText": "HELLO",
+        "negative": {
+          "speechText": "WORLD"
+        },
+        "focus": "caption"
+      }
+    }
+  ]
+}

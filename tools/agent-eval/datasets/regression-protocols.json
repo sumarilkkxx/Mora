@@ -1,0 +1,783 @@
+{
+  "version": "1",
+  "manifestFiles": [
+    {
+      "path": "tools/agent-eval/datasets/regression-base.json",
+      "sha256": "2b62c783639a9ac67cb67aa22d76a81c24b036ca435d73c8a34b942f70cd60fb"
+    },
+    {
+      "path": "tools/agent-eval/datasets/regression-constraints.json",
+      "sha256": "dfd116ae9375aee8062dd33f36d38a4ec663c4f2e4671e695b07332ad0c485e6"
+    },
+    {
+      "path": "tools/agent-eval/datasets/regression-faults.json",
+      "sha256": "13681ee24197d9f17472d501e9784c6712aae94e78771d43831ccfc64f1aa445"
+    }
+  ],
+  "caseIds": [
+    "regression-product-4465899",
+    "regression-product-6694003",
+    "regression-product-6724610",
+    "regression-product-6724612",
+    "regression-product-6724622",
+    "regression-product-6724626",
+    "regression-product-6724628",
+    "regression-product-8844354",
+    "regression-process-32653808",
+    "regression-process-3839581",
+    "regression-process-4377784",
+    "regression-process-4748911",
+    "regression-process-5101684",
+    "regression-process-5537650",
+    "regression-process-5928833",
+    "regression-process-5935503",
+    "regression-service-11440852",
+    "regression-service-7575388",
+    "regression-service-7754477",
+    "regression-service-7754509",
+    "regression-service-7754525",
+    "regression-service-7754864",
+    "regression-service-7820146",
+    "regression-service-8830115",
+    "regression-difficult-3967168",
+    "regression-difficult-6201686",
+    "regression-difficult-6828870",
+    "regression-difficult-7487702",
+    "regression-difficult-8177563",
+    "regression-difficult-854750",
+    "regression-difficult-8995595",
+    "regression-difficult-9046237",
+    "regression-format_timing-portrait",
+    "regression-format_timing-landscape",
+    "regression-format_timing-square",
+    "regression-format_timing-contain",
+    "regression-format_timing-cover",
+    "regression-format_timing-exact15",
+    "regression-format_timing-order20",
+    "regression-format_timing-trim",
+    "regression-audio_captions-original",
+    "regression-audio_captions-muted",
+    "regression-audio_captions-silent-source",
+    "regression-audio_captions-voiceover",
+    "regression-audio_captions-captions-on",
+    "regression-audio_captions-captions-off",
+    "regression-audio_captions-caption-copy",
+    "regression-audio_captions-speech-captions",
+    "regression-recovery-render-error",
+    "regression-recovery-render-timeout",
+    "regression-recovery-render-invalid",
+    "regression-recovery-inspect-error",
+    "regression-recovery-inspect-invalid",
+    "regression-recovery-invalid-plan",
+    "regression-recovery-model-error",
+    "regression-recovery-invalid-segment",
+    "regression-safe_stop-bad-input",
+    "regression-safe_stop-missing-audio",
+    "regression-safe_stop-source-changed",
+    "regression-safe_stop-authentication",
+    "regression-safe_stop-call-limit",
+    "regression-safe_stop-render-limit",
+    "regression-safe_stop-required-brand",
+    "regression-safe_stop-required-price"
+  ],
+  "quickCaseIds": [
+    "regression-product-6724612",
+    "regression-process-5101684",
+    "regression-service-8830115",
+    "regression-difficult-854750",
+    "regression-format_timing-portrait",
+    "regression-audio_captions-original",
+    "regression-recovery-render-error",
+    "regression-safe_stop-bad-input"
+  ],
+  "cases": [
+    {
+      "caseId": "regression-product-4465899",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-product-6694003",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-product-6724610",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-product-6724612",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-product-6724622",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-product-6724626",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-product-6724628",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-product-8844354",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-process-32653808",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-process-3839581",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-process-4377784",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-process-4748911",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-process-5101684",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-process-5537650",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-process-5928833",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-process-5935503",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-service-11440852",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-service-7575388",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-service-7754477",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-service-7754509",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-service-7754525",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-service-7754864",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-service-7820146",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-service-8830115",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-difficult-3967168",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-difficult-6201686",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-difficult-6828870",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-difficult-7487702",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-difficult-8177563",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-difficult-854750",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-difficult-8995595",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-difficult-9046237",
+      "kind": "agent",
+      "supportedEvidenceModes": [
+        "real_model"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "real_model execution through existing evaluation-session/startAutoEdit; provider/model/budget required"
+    },
+    {
+      "caseId": "regression-format_timing-portrait",
+      "kind": "constraint_render",
+      "recipe": "portrait",
+      "supportedEvidenceModes": [
+        "real_media"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "node node_modules/tsx/dist/cli.mjs tools/agent-eval/prepare-constraint-fixtures.ts --case=portrait"
+    },
+    {
+      "caseId": "regression-format_timing-landscape",
+      "kind": "constraint_render",
+      "recipe": "landscape",
+      "supportedEvidenceModes": [
+        "real_media"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "node node_modules/tsx/dist/cli.mjs tools/agent-eval/prepare-constraint-fixtures.ts --case=landscape"
+    },
+    {
+      "caseId": "regression-format_timing-square",
+      "kind": "constraint_render",
+      "recipe": "square",
+      "supportedEvidenceModes": [
+        "real_media"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "node node_modules/tsx/dist/cli.mjs tools/agent-eval/prepare-constraint-fixtures.ts --case=square"
+    },
+    {
+      "caseId": "regression-format_timing-contain",
+      "kind": "constraint_render",
+      "recipe": "contain",
+      "supportedEvidenceModes": [
+        "real_media"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "node node_modules/tsx/dist/cli.mjs tools/agent-eval/prepare-constraint-fixtures.ts --case=contain"
+    },
+    {
+      "caseId": "regression-format_timing-cover",
+      "kind": "constraint_render",
+      "recipe": "cover",
+      "supportedEvidenceModes": [
+        "real_media"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "node node_modules/tsx/dist/cli.mjs tools/agent-eval/prepare-constraint-fixtures.ts --case=cover"
+    },
+    {
+      "caseId": "regression-format_timing-exact15",
+      "kind": "constraint_render",
+      "recipe": "exact15",
+      "supportedEvidenceModes": [
+        "real_media"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "node node_modules/tsx/dist/cli.mjs tools/agent-eval/prepare-constraint-fixtures.ts --case=exact15"
+    },
+    {
+      "caseId": "regression-format_timing-order20",
+      "kind": "constraint_render",
+      "recipe": "order20",
+      "supportedEvidenceModes": [
+        "real_media"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "node node_modules/tsx/dist/cli.mjs tools/agent-eval/prepare-constraint-fixtures.ts --case=order20"
+    },
+    {
+      "caseId": "regression-format_timing-trim",
+      "kind": "constraint_render",
+      "recipe": "trim",
+      "supportedEvidenceModes": [
+        "real_media"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "node node_modules/tsx/dist/cli.mjs tools/agent-eval/prepare-constraint-fixtures.ts --case=trim"
+    },
+    {
+      "caseId": "regression-audio_captions-original",
+      "kind": "constraint_render",
+      "recipe": "original",
+      "supportedEvidenceModes": [
+        "real_media"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "node node_modules/tsx/dist/cli.mjs tools/agent-eval/prepare-constraint-fixtures.ts --case=original"
+    },
+    {
+      "caseId": "regression-audio_captions-muted",
+      "kind": "constraint_render",
+      "recipe": "muted",
+      "supportedEvidenceModes": [
+        "real_media"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "node node_modules/tsx/dist/cli.mjs tools/agent-eval/prepare-constraint-fixtures.ts --case=muted"
+    },
+    {
+      "caseId": "regression-audio_captions-silent-source",
+      "kind": "constraint_render",
+      "recipe": "silent-source",
+      "supportedEvidenceModes": [
+        "real_media"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "node node_modules/tsx/dist/cli.mjs tools/agent-eval/prepare-constraint-fixtures.ts --case=silent-source"
+    },
+    {
+      "caseId": "regression-audio_captions-voiceover",
+      "kind": "constraint_render",
+      "recipe": "voiceover",
+      "supportedEvidenceModes": [
+        "real_media"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "node node_modules/tsx/dist/cli.mjs tools/agent-eval/prepare-constraint-fixtures.ts --case=voiceover"
+    },
+    {
+      "caseId": "regression-audio_captions-captions-on",
+      "kind": "constraint_render",
+      "recipe": "captions-on",
+      "supportedEvidenceModes": [
+        "real_media"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "node node_modules/tsx/dist/cli.mjs tools/agent-eval/prepare-constraint-fixtures.ts --case=captions-on"
+    },
+    {
+      "caseId": "regression-audio_captions-captions-off",
+      "kind": "constraint_render",
+      "recipe": "captions-off",
+      "supportedEvidenceModes": [
+        "real_media"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "node node_modules/tsx/dist/cli.mjs tools/agent-eval/prepare-constraint-fixtures.ts --case=captions-off"
+    },
+    {
+      "caseId": "regression-audio_captions-caption-copy",
+      "kind": "constraint_render",
+      "recipe": "caption-copy",
+      "supportedEvidenceModes": [
+        "real_media"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "node node_modules/tsx/dist/cli.mjs tools/agent-eval/prepare-constraint-fixtures.ts --case=caption-copy"
+    },
+    {
+      "caseId": "regression-audio_captions-speech-captions",
+      "kind": "constraint_render",
+      "recipe": "speech-captions",
+      "supportedEvidenceModes": [
+        "real_media"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "command": "node node_modules/tsx/dist/cli.mjs tools/agent-eval/prepare-constraint-fixtures.ts --case=speech-captions"
+    },
+    {
+      "caseId": "regression-recovery-render-error",
+      "kind": "fault_runner",
+      "scenario": "render-error",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t render-error"
+    },
+    {
+      "caseId": "regression-recovery-render-timeout",
+      "kind": "fault_runner",
+      "scenario": "render-timeout",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t render-timeout"
+    },
+    {
+      "caseId": "regression-recovery-render-invalid",
+      "kind": "fault_runner",
+      "scenario": "render-invalid",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t render-invalid"
+    },
+    {
+      "caseId": "regression-recovery-inspect-error",
+      "kind": "fault_runner",
+      "scenario": "inspect-error",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t inspect-error"
+    },
+    {
+      "caseId": "regression-recovery-inspect-invalid",
+      "kind": "fault_runner",
+      "scenario": "inspect-invalid",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t inspect-invalid"
+    },
+    {
+      "caseId": "regression-recovery-invalid-plan",
+      "kind": "fault_runner",
+      "scenario": "invalid-plan",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t invalid-plan"
+    },
+    {
+      "caseId": "regression-recovery-model-error",
+      "kind": "fault_runner",
+      "scenario": "model-error",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t model-error"
+    },
+    {
+      "caseId": "regression-recovery-invalid-segment",
+      "kind": "fault_runner",
+      "scenario": "invalid-segment",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t invalid-segment"
+    },
+    {
+      "caseId": "regression-safe_stop-bad-input",
+      "kind": "fault_runner",
+      "scenario": "bad-input",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t bad-input"
+    },
+    {
+      "caseId": "regression-safe_stop-missing-audio",
+      "kind": "fault_runner",
+      "scenario": "missing-audio",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t missing-audio"
+    },
+    {
+      "caseId": "regression-safe_stop-source-changed",
+      "kind": "fault_runner",
+      "scenario": "source-changed",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t source-changed"
+    },
+    {
+      "caseId": "regression-safe_stop-authentication",
+      "kind": "fault_runner",
+      "scenario": "authentication",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t authentication"
+    },
+    {
+      "caseId": "regression-safe_stop-call-limit",
+      "kind": "fault_runner",
+      "scenario": "call-limit",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t call-limit"
+    },
+    {
+      "caseId": "regression-safe_stop-render-limit",
+      "kind": "fault_runner",
+      "scenario": "render-limit",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "autonomous",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t render-limit"
+    },
+    {
+      "caseId": "regression-safe_stop-required-brand",
+      "kind": "fault_runner",
+      "scenario": "required-brand",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "interactive",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t required-brand"
+    },
+    {
+      "caseId": "regression-safe_stop-required-price",
+      "kind": "fault_runner",
+      "scenario": "required-price",
+      "supportedEvidenceModes": [
+        "fixed_response"
+      ],
+      "quality": "720p",
+      "interactionPolicy": "interactive",
+      "scope": "one isolated in-memory DB run; tool-side adapter; no product fault state",
+      "command": "node node_modules/vitest/vitest.mjs run --config tools/agent-eval/vitest.config.ts tools/agent-eval/__tests__/fault-runner.test.ts -t required-price"
+    }
+  ]
+}

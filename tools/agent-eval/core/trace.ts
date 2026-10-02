@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import { appendFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import { calculateModelCost, CostLedger, DEFAULT_EVALUATION_ABSOLUTE_LIMIT_USD, DEFAULT_EVALUATION_STOP_LIMIT_USD, EvaluationBudgetError } from "./cost-ledger";
-import type { EvaluationTrace, ModelCallTrace, ModelPrice, ModelTokenUsage, ToolDecisionTrace } from "./types";
-import type { AutoEditObserver, ModelUsage } from "../../../src/lib/auto-edit/observer";
+import type { EvaluationTrace, ModelCallTrace, ModelPrice, ModelTokenUsage, ToolDecisionTrace, ToolExecutionTrace } from "./types";
+import type { AutoEditObserver, ModelUsage, ToolExecutionInput } from "../../../src/lib/auto-edit/observer";
 
 export interface EvaluationRecorderConfig {
   runId: string;
@@ -73,6 +73,7 @@ export class AgentEvaluationRecorder implements AutoEditObserver {
       startedAt: new Date().toISOString(),
       modelCalls: [],
       toolDecisions: [],
+      toolExecutions: [],
       budget: this.ledger.snapshot(),
       metadata: redactEvaluationValue(config.metadata ?? {}, config.secrets) as Record<string, unknown>,
     };
@@ -123,8 +124,7 @@ export class AgentEvaluationRecorder implements AutoEditObserver {
     const usage = normalizeModelUsage(rawUsage);
     if (!usage) {
       event.costStatus = "unavailable";
-      this.ledger.release(id);
-      this.ledger.lock(`model ${event.model} did not return token usage`);
+      this.ledger.markUnknown(id, `model ${event.model} did not return token usage`);
       this.syncBudget();
       return;
     }
@@ -141,8 +141,7 @@ export class AgentEvaluationRecorder implements AutoEditObserver {
     event.status = "failed";
     event.costStatus = "unavailable";
     event.error = redactedString(error instanceof Error ? error.message : String(error), this.config.secrets ?? []);
-    this.ledger.release(id);
-    this.ledger.lock(`failed model request ${id} has unavailable billing usage`);
+    this.ledger.markUnknown(id, `failed model request ${id} has unavailable billing usage`);
     this.syncBudget();
   }
 
@@ -157,6 +156,39 @@ export class AgentEvaluationRecorder implements AutoEditObserver {
       arguments: redactEvaluationValue(input.arguments, this.config.secrets),
     };
     this.trace.toolDecisions.push(event);
+  }
+
+  recordOutcome(input: { state: string; reasonCode: string; reason?: string }) {
+    this.trace.outcome = redactEvaluationValue(input, this.config.secrets) as EvaluationTrace["outcome"];
+  }
+
+  beginToolExecution(input: ToolExecutionInput) {
+    const id = randomUUID();
+    const event: ToolExecutionTrace = { kind: "tool_execution", id, sequence: ++this.sequence, stage: input.stage, tool: input.tool,
+      arguments: redactEvaluationValue(input.arguments, this.config.secrets), origin: input.origin ?? "agent", startedAt: new Date().toISOString(), status: "pending" };
+    this.trace.toolExecutions!.push(event);
+    this.started.set(id, performance.now());
+    return id;
+  }
+
+  completeToolExecution(id: string, result: unknown) {
+    const event = this.execution(id);
+    event.status = "succeeded";
+    event.durationMs = this.duration(id);
+    event.result = redactEvaluationValue(result, this.config.secrets);
+  }
+
+  failToolExecution(id: string, error: unknown) {
+    const event = this.execution(id);
+    event.status = "failed";
+    event.durationMs = this.duration(id);
+    event.error = redactedString(error instanceof Error ? error.message : String(error), this.config.secrets ?? []);
+  }
+
+  private execution(id: string) {
+    const event = this.trace.toolExecutions?.find(item => item.id === id);
+    if (!event || event.status !== "pending") throw new Error(`Unknown or settled execution ${id}`);
+    return event;
   }
 
   snapshot(complete = false): EvaluationTrace {

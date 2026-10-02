@@ -42,7 +42,7 @@ export interface StoredEvaluationSession {
 const RESULTS_ROOT = resolve(process.cwd(), "evals", "agent", "results");
 const activeLedgers = new Map<string, CostLedger>();
 const evaluationSchedule = createLimiter(2);
-const EVALUATOR_VERSION = "2";
+export const EVALUATOR_VERSION = "3";
 const FINGERPRINT_ROOTS = ["src/lib", "tools/agent-eval"] as const;
 const FINGERPRINT_FILES = ["scripts/auto-edit-asr.mjs", "package.json", "pnpm-lock.yaml"] as const;
 
@@ -128,7 +128,7 @@ export async function reconcileTerminalTraces(session: StoredEvaluationSession, 
     changed = true;
   }
   const traces = session.runIds.flatMap(runId => byRunId.get(runId) ?? []);
-  if (changed) {
+  if (changed && session.evaluatorVersion === EVALUATOR_VERSION) {
     const temporary = `${session.tracePath}.reconciling-${randomUUID()}`;
     await writeFile(temporary, traces.map(trace => JSON.stringify(trace)).join("\n") + (traces.length ? "\n" : ""), "utf8");
     await rename(temporary, session.tracePath);

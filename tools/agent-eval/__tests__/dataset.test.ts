@@ -94,7 +94,7 @@ describe("agent evaluation datasets", () => {
             outputDecodes: true, outputHasVideo: true,
             modelCalls: 1, maxModelCalls: item.expected.maxModelCalls, renders: 1, maxRenders: item.expected.maxRenders,
             spentUsd: recorder.snapshot().budget.spentUsd, stopLimitUsd: ledger.stopLimitUsd,
-            actions: item.expected.requiredTools.map(tool => ({ tool, allowed: true })),
+            actions: item.expected.requiredTools.map(tool => ({ tool, allowed: true, status: "succeeded" as const })),
           },
         };
       },

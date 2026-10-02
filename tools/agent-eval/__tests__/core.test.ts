@@ -146,7 +146,7 @@ describe("deterministic agent scorers", () => {
     requiredTools: ["validate_edit_plan", "render_edit", "inspect_output", "finish"], mustDecode: true, mustHaveVideo: true,
     outputDecodes: true, outputHasVideo: true,
     modelCalls: 4, maxModelCalls: 12, renders: 1, maxRenders: 3, spentUsd: 0.2, stopLimitUsd: 0.5,
-    actions: ["validate_edit_plan", "render_edit", "inspect_output", "finish"].map(tool => ({ tool, allowed: true })),
+    actions: ["validate_edit_plan", "render_edit", "inspect_output", "finish"].map(tool => ({ tool, allowed: true, status: "succeeded" as const })),
   };
 
   it("requires every hard gate for task success", () => {
@@ -160,7 +160,7 @@ describe("deterministic agent scorers", () => {
     const results = scoreDeterministicRun({
       ...passing,
       modelCalls: 13,
-      actions: ["render_edit", "validate_edit_plan", "inspect_output", "finish"].map(tool => ({ tool, allowed: true })),
+      actions: ["render_edit", "validate_edit_plan", "inspect_output", "finish"].map(tool => ({ tool, allowed: true, status: "succeeded" as const })),
     });
     expect(results.find(result => result.name === "sequence_compliance")?.score).toBe(0);
     expect(results.find(result => result.name === "budget_compliance")?.score).toBe(0);
@@ -195,7 +195,7 @@ describe("deterministic agent scorers", () => {
   it("rejects a technically valid output when a required tool was skipped", () => {
     const results = scoreDeterministicRun({
       ...passing,
-      actions: ["validate_edit_plan", "render_edit", "finish"].map(tool => ({ tool, allowed: true })),
+      actions: ["validate_edit_plan", "render_edit", "finish"].map(tool => ({ tool, allowed: true, status: "succeeded" as const })),
     });
     expect(Object.fromEntries(results.map(item => [item.name, item.score]))).toMatchObject({ task_success: 0, required_tools: 0 });
   });
@@ -205,7 +205,7 @@ describe("deterministic agent scorers", () => {
       ...passing,
       terminalState: "needs_review",
       completionRecorded: true,
-      actions: ["validate_edit_plan", "render_edit", "inspect_output"].map(tool => ({ tool, allowed: true })),
+      actions: ["validate_edit_plan", "render_edit", "inspect_output", "finish"].map(tool => ({ tool, allowed: true, status: "succeeded" as const })),
     });
     expect(Object.fromEntries(results.map(item => [item.name, item.score]))).toMatchObject({ task_success: 1, completion_honesty: 1 });
   });

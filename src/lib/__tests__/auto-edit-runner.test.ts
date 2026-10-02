@@ -9,6 +9,7 @@ import { join, resolve, sep } from "path";
 import { tmpdir } from "os";
 import { NextRequest } from "next/server";
 import { autoEditRuns, compositions, mediaSources, projects } from "../db/schema";
+import type { AutoEditObserver } from "../auto-edit/observer";
 import type { Action } from "../auto-edit/model";
 import type { Analysis, Checkpoint, EditBrief, EditPlan } from "../auto-edit/contract";
 import { createLimiter } from "../concurrency";
@@ -91,6 +92,24 @@ describe("persisted AI editing lifecycle with controlled model responses", () =>
     ]);
     expect(fake.db.select().from(compositions).where(eq(compositions.id, result.compositionId!)).get()?.status).toBe("done");
     expect(JSON.stringify(result)).not.toContain(credentials.llm.apiKey);
+  });
+  it("emits actual failed and successful execution receipts, including publication", async () => {
+    const begin = vi.fn().mockImplementation(() => String(begin.mock.calls.length));
+    const complete = vi.fn(), fail = vi.fn(), outcome = vi.fn(), finished = vi.fn();
+    const observer: AutoEditObserver = {
+      beginModelCall: vi.fn(), completeModelCall: vi.fn(), failModelCall: vi.fn(), recordToolDecision: vi.fn(),
+      beginToolExecution: begin, completeToolExecution: complete, failToolExecution: fail, recordOutcome: outcome,
+    };
+    fake.render.mockRejectedValueOnce(new Error("transient encoder error"));
+    const run = addRun("execution-receipts");
+    startAutoEdit(run, credentials, { observer, onFinished: finished });
+    expect((await waitRun(run.id)).status).toBe("done");
+    await vi.waitFor(() => expect(finished).toHaveBeenCalledOnce());
+    expect(begin.mock.calls.map(call => call[0].tool)).toEqual(["validate_edit_plan", "render_edit", "render_edit", "inspect_output", "finish"]);
+    expect(fail).toHaveBeenCalledWith("2", expect.any(Error));
+    expect(complete.mock.calls.map(call => call[0])).toEqual(["1", "3", "4", "5"]);
+    expect(complete.mock.calls.at(-1)?.[1].outputId).toEqual(expect.stringContaining(".mp4"));
+    expect(outcome).toHaveBeenCalledWith(expect.objectContaining({ state: "done" }));
   });
   it("rejects foreign project access and makes duplicate request IDs idempotent", async () => {
     const denied = await post({ action: "start", sourceId: "s", brief, credentials, requestId: "foreign" }, "other");

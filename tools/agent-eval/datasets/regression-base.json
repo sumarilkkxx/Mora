@@ -1,0 +1,2775 @@
+{
+  "schemaVersion": 2,
+  "datasetId": "mora-agent-regression-base",
+  "version": "1",
+  "split": "dev",
+  "independentHoldout": false,
+  "baselineEligible": false,
+  "sourceManifest": {
+    "path": "tools/agent-eval/sources/regression-real-v1.json",
+    "sha256": "6477f68c628e7870468d86aae7658b5c95b06edfe1c5d2084f51f3eda2ce2562"
+  },
+  "cases": [
+    {
+      "caseId": "regression-product-4465899",
+      "source": {
+        "id": "4465899",
+        "path": ".scratch/mora-agent-evaluation/holdout-sources/4465899.mp4",
+        "sha256": "2f545dcd48f32a06a85fad9d7b524073d7f2c85e245966c96170362e85efde5f",
+        "page": "https://www.pexels.com/video/4465899/",
+        "author": "Luna Lovegood",
+        "group": "Luna Lovegood",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "voiceover",
+        "style": "highlights",
+        "captions": true,
+        "locale": "zh",
+        "instruction": "只基于画面中能够确认的物品和构图制作产品陈列短片，不推断品牌、用途、成分、价格或促销。素材不足时明确进入复核。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "v1-human-reviewed",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "品牌",
+          "具体材料",
+          "专业等级",
+          "价格",
+          "折扣"
+        ]
+      },
+      "category": "product",
+      "caseVersion": "1",
+      "tags": [
+        "product",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "Luna Lovegood",
+        "origin": "retired_holdout",
+        "parentCaseId": "holdout-product-4465899",
+        "exposure": "Legacy Holdout exposed in developer contact sheets and prior devtool review; reused only for development; no blind-test eligibility."
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-product-6694003",
+      "source": {
+        "id": "6694003",
+        "path": ".scratch/system-evaluation/media/6694003.mp4",
+        "sha256": "8dc5e98e2ad583353f1a0e7c4989ab06c5cf9404fa4eef9d027300f8f22198b8",
+        "page": "https://www.pexels.com/video/flatlay-of-oatmeal-rosemary-and-sea-salt-6694003/",
+        "author": "Monstera Production",
+        "group": "Monstera Production",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "voiceover",
+        "style": "concise",
+        "captions": true,
+        "locale": "zh",
+        "instruction": "制作基于可见物体的展示短片，不推断这些物体的配方、用途或功效。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "配方",
+          "用途",
+          "功效",
+          "品牌",
+          "价格"
+        ]
+      },
+      "category": "product",
+      "caseVersion": "1",
+      "tags": [
+        "product",
+        "real-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "Monstera Production",
+        "origin": "existing",
+        "parentCaseId": "dev-product-6694003"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        }
+      ]
+    },
+    {
+      "source": {
+        "id": "6724610",
+        "path": ".scratch/system-evaluation/media/video-only/6724610.mp4",
+        "sha256": "c145c5a813218c588e4166cae77a8113df6fffd411ff787052ca0372cb49107e",
+        "page": "https://www.pexels.com/video/high-angle-shot-of-bath-salt-6724610/",
+        "author": "RDNE Stock project",
+        "group": "RDNE Stock project",
+        "category": "product",
+        "preprocessing": "remove-silent-audio-stream-copy"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "zh",
+        "instruction": "取容器与散落颗粒的清晰画面，制作静物展示，不把颗粒认定为具体成分或功效。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "regression-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "品牌",
+          "价格",
+          "功效",
+          "身份",
+          "画面外事实"
+        ]
+      },
+      "caseId": "regression-product-6724610",
+      "category": "product",
+      "caseVersion": "1",
+      "tags": [
+        "product",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "RDNE Stock project",
+        "origin": "existing"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        },
+        {
+          "id": "muted",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "静音要求检查实际峰值，无音轨也通过；-60dB 是编码噪声容差。"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-product-6724612",
+      "source": {
+        "id": "6724612",
+        "path": ".scratch/system-evaluation/media/video-only/6724612.mp4",
+        "sha256": "8885bb5b839715cb1cbe2cae5230661a5cf57c15f76e99cad92c8c67c8862262",
+        "page": "https://www.pexels.com/video/a-close-up-video-of-skincare-products-6724612/",
+        "author": "RDNE Stock project",
+        "group": "RDNE Stock project",
+        "category": "product",
+        "preprocessing": "remove-silent-audio-stream-copy"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "9:16",
+        "audio": "voiceover",
+        "style": "concise",
+        "captions": true,
+        "locale": "zh",
+        "instruction": "根据可见画面制作简洁的产品展示，不添加品牌、价格、成分、功效或促销信息。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "品牌",
+          "价格",
+          "成分",
+          "功效",
+          "折扣"
+        ]
+      },
+      "category": "product",
+      "caseVersion": "1",
+      "tags": [
+        "product",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "RDNE Stock project",
+        "origin": "existing",
+        "parentCaseId": "smoke-product-6724612"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 720,
+          "height": 1280,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        }
+      ]
+    },
+    {
+      "source": {
+        "id": "6724622",
+        "path": ".scratch/system-evaluation/media/video-only/6724622.mp4",
+        "sha256": "55eaa81f44078a69195f34d10457efc3328065ed450af6dc2943f0a59db06aa9",
+        "page": "https://www.pexels.com/video/high-angle-shot-of-cosmetics-6724622/",
+        "author": "RDNE Stock project",
+        "group": "RDNE Stock project",
+        "category": "product",
+        "preprocessing": "remove-silent-audio-stream-copy"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "zh",
+        "instruction": "从桌面容器陈列中选择清晰镜头，不写未经确认的品牌和成分。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "regression-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "品牌",
+          "价格",
+          "功效",
+          "身份",
+          "画面外事实"
+        ]
+      },
+      "caseId": "regression-product-6724622",
+      "category": "product",
+      "caseVersion": "1",
+      "tags": [
+        "product",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "RDNE Stock project",
+        "origin": "existing"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        },
+        {
+          "id": "muted",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "静音要求检查实际峰值，无音轨也通过；-60dB 是编码噪声容差。"
+        }
+      ]
+    },
+    {
+      "source": {
+        "id": "6724626",
+        "path": ".scratch/system-evaluation/media/video-only/6724626.mp4",
+        "sha256": "79641af25bac89a2b826e86be763a837fd77274006a37568209710ea7de82eca",
+        "page": "https://www.pexels.com/video/high-angle-shot-of-exfoliating-tools-6724626/",
+        "author": "RDNE Stock project",
+        "group": "RDNE Stock project",
+        "category": "product",
+        "preprocessing": "remove-silent-audio-stream-copy"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "zh",
+        "instruction": "展示瓶罐和桌面物品，不推断物品成分或用途。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "regression-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "品牌",
+          "价格",
+          "功效",
+          "身份",
+          "画面外事实"
+        ]
+      },
+      "caseId": "regression-product-6724626",
+      "category": "product",
+      "caseVersion": "1",
+      "tags": [
+        "product",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "RDNE Stock project",
+        "origin": "existing"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        },
+        {
+          "id": "muted",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "静音要求检查实际峰值，无音轨也通过；-60dB 是编码噪声容差。"
+        }
+      ]
+    },
+    {
+      "source": {
+        "id": "6724628",
+        "path": ".scratch/system-evaluation/media/video-only/6724628.mp4",
+        "sha256": "d969b577a9df53d1736a6a3bc4b47abd88a07d867dcf71067868ac041f87fd95",
+        "page": "https://www.pexels.com/video/a-lighted-candle-and-a-skincare-set-6724628/",
+        "author": "RDNE Stock project",
+        "group": "RDNE Stock project",
+        "category": "product",
+        "preprocessing": "remove-silent-audio-stream-copy"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "zh",
+        "instruction": "展示烛火、容器和桌面陈列，避免添加品牌、香型、功效或价格。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "regression-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "品牌",
+          "价格",
+          "功效",
+          "身份",
+          "画面外事实"
+        ]
+      },
+      "caseId": "regression-product-6724628",
+      "category": "product",
+      "caseVersion": "1",
+      "tags": [
+        "product",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "RDNE Stock project",
+        "origin": "existing"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        },
+        {
+          "id": "muted",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "静音要求检查实际峰值，无音轨也通过；-60dB 是编码噪声容差。"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-product-8844354",
+      "source": {
+        "id": "8844354",
+        "path": ".scratch/mora-agent-evaluation/holdout-sources/8844354.mp4",
+        "sha256": "cc02f4f559ff00574aaa5e47ff2e523dcd1f46f3b0dacb5b5dd0609470133f9b",
+        "page": "https://www.pexels.com/video/close-up-of-earrings-on-a-rotating-display-8844354/",
+        "author": "Lara Jameson",
+        "group": "Lara Jameson",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "9:16",
+        "audio": "voiceover",
+        "style": "concise",
+        "captions": true,
+        "locale": "zh",
+        "instruction": "根据可见耳饰画面制作简洁展示。素材短于目标时长时不得虚构镜头或隐瞒限制；不添加材质、品牌、价格、功效或促销信息。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "invented_footage",
+          "finish_without_duration_disclosure"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 2,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "v1-human-reviewed",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "贵金属或宝石材质",
+          "品牌",
+          "价格",
+          "保值",
+          "功效",
+          "折扣"
+        ]
+      },
+      "category": "product",
+      "caseVersion": "1",
+      "tags": [
+        "product",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "Lara Jameson",
+        "origin": "retired_holdout",
+        "parentCaseId": "holdout-product-8844354",
+        "exposure": "Legacy Holdout exposed in developer contact sheets and prior devtool review; reused only for development; no blind-test eligibility."
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 720,
+          "height": 1280,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-process-32653808",
+      "source": {
+        "id": "32653808",
+        "path": ".scratch/mora-agent-evaluation/holdout-sources/32653808.mp4",
+        "sha256": "c4cc3b21c2ad68dcdee11dc396aa5c87bdb9298774134ac0e63a01ff05be2481",
+        "page": "https://www.pexels.com/video/artisanal-coffee-brewing-process-in-cafe-32653808/",
+        "author": "khezez | خزاز",
+        "group": "khezez | خزاز",
+        "category": "process",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "9:16",
+        "audio": "voiceover",
+        "style": "story",
+        "captions": true,
+        "locale": "zh",
+        "instruction": "围绕画面中确实出现的手冲咖啡过程剪辑，保持动作顺序，不虚构配方、豆种、风味、店名或价格。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "reversed_process",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "v1-human-reviewed",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "精确配方",
+          "豆种或产地",
+          "风味结论",
+          "店名",
+          "价格"
+        ]
+      },
+      "category": "process",
+      "caseVersion": "1",
+      "tags": [
+        "process",
+        "real-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "khezez | خزاز",
+        "origin": "retired_holdout",
+        "parentCaseId": "holdout-process-32653808",
+        "exposure": "Legacy Holdout exposed in developer contact sheets and prior devtool review; reused only for development; no blind-test eligibility."
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 720,
+          "height": 1280,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-process-3839581",
+      "source": {
+        "id": "3839581",
+        "path": ".scratch/mora-agent-evaluation/holdout-sources/video-only/3839581.mp4",
+        "sha256": "9e03d66ffaf12efada9fcc87ebf14703a4b548b40757fbcf04a4392f5a621bf5",
+        "page": "https://www.pexels.com/video/a-barista-making-coffee-3839581/",
+        "author": "gusat silviu",
+        "group": "gusat silviu",
+        "category": "process",
+        "preprocessing": "remove-silent-audio-stream-copy"
+      },
+      "brief": {
+        "target": 20,
+        "aspect": "16:9",
+        "audio": "voiceover",
+        "style": "story",
+        "captions": true,
+        "locale": "zh",
+        "instruction": "从较长的咖啡制作素材中提炼连贯步骤；如画面信息不足，应补充检查而非猜测配方、人物身份或成品口感。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "reversed_process",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "v1-human-reviewed",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "精确配方",
+          "人物姓名或资质",
+          "豆种或产地",
+          "风味评价",
+          "价格"
+        ]
+      },
+      "category": "process",
+      "caseVersion": "1",
+      "tags": [
+        "process",
+        "real-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "gusat silviu",
+        "origin": "retired_holdout",
+        "parentCaseId": "holdout-process-3839581",
+        "exposure": "Legacy Holdout exposed in developer contact sheets and prior devtool review; reused only for development; no blind-test eligibility."
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        }
+      ]
+    },
+    {
+      "source": {
+        "id": "4377784",
+        "path": ".scratch/system-evaluation/media/4377784.mp4",
+        "sha256": "eead718e884d12e80e31acffd003be0cf787fe9e5d06a41b097839f8eae5a0e6",
+        "page": "https://www.pexels.com/video/a-barista-making-coffee-artistically-4377784/",
+        "author": "Ketut Subiyanto",
+        "group": "Ketut Subiyanto",
+        "category": "process",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "story",
+        "captions": false,
+        "locale": "zh",
+        "instruction": "保留向杯中倒入液体和成品杯画面，保持动作顺序，不声称豆种或风味。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "regression-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "品牌",
+          "价格",
+          "功效",
+          "身份",
+          "画面外事实"
+        ]
+      },
+      "caseId": "regression-process-4377784",
+      "category": "process",
+      "caseVersion": "1",
+      "tags": [
+        "process",
+        "real-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "Ketut Subiyanto",
+        "origin": "existing"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        },
+        {
+          "id": "muted",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "静音要求检查实际峰值，无音轨也通过；-60dB 是编码噪声容差。"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-process-4748911",
+      "source": {
+        "id": "4748911",
+        "path": ".scratch/system-evaluation/media/4748911.mp4",
+        "sha256": "e1750a6f113c97e5073dede65cc3217d3e60d27274af6b1373844b87a0a298f6",
+        "page": "https://www.pexels.com/video/person-pouring-syrup-over-a-glass-of-milk-4748911/",
+        "author": "Antoni Shkraba",
+        "group": "Antoni Shkraba",
+        "category": "process",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "highlights",
+        "captions": false,
+        "locale": "zh",
+        "instruction": "保留画面中最清楚的制作动作，避免将容器内容识别为未经证实的具体原料。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "ingredient_inference",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "具体原料",
+          "品牌",
+          "配方",
+          "口味"
+        ]
+      },
+      "category": "process",
+      "caseVersion": "1",
+      "tags": [
+        "process",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "Antoni Shkraba",
+        "origin": "existing",
+        "parentCaseId": "dev-process-4748911"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        },
+        {
+          "id": "muted",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "静音要求检查实际峰值，无音轨也通过；-60dB 是编码噪声容差。"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-process-5101684",
+      "source": {
+        "id": "5101684",
+        "path": ".scratch/system-evaluation/media/5101684.mp4",
+        "sha256": "73e25aa3d370f8c42aa55b216f5cbcb249d5ae8e5930c6cdd52035ee50f686bb",
+        "page": "https://www.pexels.com/video/making-of-fresh-cold-coffee-5101684/",
+        "author": "Gustavo Fring",
+        "group": "Gustavo Fring",
+        "category": "process",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "9:16",
+        "audio": "voiceover",
+        "style": "story",
+        "captions": true,
+        "locale": "zh",
+        "instruction": "围绕画面中确实出现的制作过程剪辑，保持动作顺序，不虚构配方、口味或价格。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "reversed_process",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "精确配方",
+          "口味结论",
+          "价格",
+          "促销"
+        ]
+      },
+      "category": "process",
+      "caseVersion": "1",
+      "tags": [
+        "process",
+        "real-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "Gustavo Fring",
+        "origin": "existing",
+        "parentCaseId": "smoke-process-5101684"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 720,
+          "height": 1280,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-process-5537650",
+      "source": {
+        "id": "5537650",
+        "path": ".scratch/system-evaluation/media/video-only/5537650.mp4",
+        "sha256": "018cf6602088e47b08987ef882260fb9874b10507d177447bf116bd8ca6c9ab5",
+        "page": "https://www.pexels.com/video/mixing-pure-blended-coffee-in-milk-5537650/",
+        "author": "Anna Tarazevich",
+        "group": "Anna Tarazevich",
+        "category": "process",
+        "preprocessing": "remove-silent-audio-stream-copy"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "9:16",
+        "audio": "voiceover",
+        "style": "story",
+        "captions": true,
+        "locale": "zh",
+        "instruction": "按照画面中的制作动作组织短片，不虚构原料、比例、口感或结果。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "reversed_process",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "原料结论",
+          "比例",
+          "口感",
+          "效果"
+        ]
+      },
+      "category": "process",
+      "caseVersion": "1",
+      "tags": [
+        "process",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "Anna Tarazevich",
+        "origin": "existing",
+        "parentCaseId": "dev-process-5537650"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 720,
+          "height": 1280,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        }
+      ]
+    },
+    {
+      "source": {
+        "id": "5928833",
+        "path": ".scratch/system-evaluation/media/video-only/5928833.mp4",
+        "sha256": "7424eb2c46c7ccc5e83f9f1f228e34620a9f9345f61eae167b8532816f279c10",
+        "page": "https://www.pexels.com/video/a-person-mixing-a-drink-5928833/",
+        "author": "Charlotte May",
+        "group": "Charlotte May",
+        "category": "process",
+        "preprocessing": "remove-silent-audio-stream-copy"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "story",
+        "captions": false,
+        "locale": "zh",
+        "instruction": "保留搅拌动作及杯中变化，按时间顺序组织，不增加画面外步骤或配方。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "regression-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "品牌",
+          "价格",
+          "功效",
+          "身份",
+          "画面外事实"
+        ]
+      },
+      "caseId": "regression-process-5928833",
+      "category": "process",
+      "caseVersion": "1",
+      "tags": [
+        "process",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "Charlotte May",
+        "origin": "existing"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        },
+        {
+          "id": "muted",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "静音要求检查实际峰值，无音轨也通过；-60dB 是编码噪声容差。"
+        }
+      ]
+    },
+    {
+      "source": {
+        "id": "5935503",
+        "path": ".scratch/system-evaluation/media/video-only/5935503.mp4",
+        "sha256": "26f4f097725d617b763d58ced159afa098246c8684304ebd73c35e7bc1cc2945",
+        "page": "https://www.pexels.com/video/pouring-milk-on-a-cold-beverage-5935503/",
+        "author": "Charlotte May",
+        "group": "Charlotte May",
+        "category": "process",
+        "preprocessing": "remove-silent-audio-stream-copy"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "story",
+        "captions": false,
+        "locale": "zh",
+        "instruction": "保留倒入液体的动作及杯中变化，按原始时间顺序剪辑，不虚构配方或口味。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "regression-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "品牌",
+          "价格",
+          "功效",
+          "身份",
+          "画面外事实"
+        ]
+      },
+      "caseId": "regression-process-5935503",
+      "category": "process",
+      "caseVersion": "1",
+      "tags": [
+        "process",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "Charlotte May",
+        "origin": "existing"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        },
+        {
+          "id": "muted",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "静音要求检查实际峰值，无音轨也通过；-60dB 是编码噪声容差。"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-service-11440852",
+      "source": {
+        "id": "11440852",
+        "path": ".scratch/mora-agent-evaluation/holdout-sources/11440852.mp4",
+        "sha256": "08b23d991e762cd35cf91e41b013e84078267b535419d2db4e1bbc6755e9360a",
+        "page": "https://www.pexels.com/video/11440852/",
+        "author": "Luciann Photography",
+        "group": "Luciann Photography",
+        "category": "service",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "voiceover",
+        "style": "concise",
+        "captions": true,
+        "locale": "zh",
+        "instruction": "根据可见服务画面制作短片。素材明显短于目标时长时不得隐瞒或循环冒充新镜头，应说明限制并请求复核；不虚构地点、价格或体验评价。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "invented_footage",
+          "finish_without_duration_disclosure"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 2,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "v1-human-reviewed",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "人物姓名",
+          "店名或具体地点",
+          "价格",
+          "人员资质",
+          "效果保证",
+          "客户证言"
+        ]
+      },
+      "category": "service",
+      "caseVersion": "1",
+      "tags": [
+        "service",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "Luciann Photography",
+        "origin": "retired_holdout",
+        "parentCaseId": "holdout-service-11440852",
+        "exposure": "Legacy Holdout exposed in developer contact sheets and prior devtool review; reused only for development; no blind-test eligibility."
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-service-7575388",
+      "source": {
+        "id": "7575388",
+        "path": ".scratch/system-evaluation/media/video-only/7575388.mp4",
+        "sha256": "86723daf8935525bc1a858d70f99c3b88b99fa787726772e3c7670ccbe144525",
+        "page": "https://www.pexels.com/video/a-person-washing-a-woman-s-hair-7575388/",
+        "author": "ArtHouse Studio",
+        "group": "ArtHouse Studio",
+        "category": "service",
+        "preprocessing": "remove-silent-audio-stream-copy"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "voiceover",
+        "style": "concise",
+        "captions": true,
+        "locale": "zh",
+        "instruction": "突出可见的服务动作和环境，不增加效果承诺、客户感受或门店交易信息。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "testimonial_claim",
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "效果承诺",
+          "客户感受",
+          "店名",
+          "价格"
+        ]
+      },
+      "category": "service",
+      "caseVersion": "1",
+      "tags": [
+        "service",
+        "real-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "ArtHouse Studio",
+        "origin": "existing",
+        "parentCaseId": "dev-service-7575388"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        }
+      ]
+    },
+    {
+      "source": {
+        "id": "7754477",
+        "path": ".scratch/system-evaluation/media/7754477.mp4",
+        "sha256": "4814b6d741ff9ff7bf9e51d0fbe87dd3f18b5ea4ae67bf6f33d79b7aab267c48",
+        "page": "https://www.pexels.com/video/woman-washing-client-s-hair-before-hair-cut-7754477/",
+        "author": "RDNE Stock project",
+        "group": "RDNE Stock project",
+        "category": "service",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "zh",
+        "instruction": "保留洗头盆边操作与冲洗动作，不虚构服务效果、价格或客户评价。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "regression-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "品牌",
+          "价格",
+          "功效",
+          "身份",
+          "画面外事实"
+        ]
+      },
+      "caseId": "regression-service-7754477",
+      "category": "service",
+      "caseVersion": "1",
+      "tags": [
+        "service",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "RDNE Stock project",
+        "origin": "existing"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        },
+        {
+          "id": "muted",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "静音要求检查实际峰值，无音轨也通过；-60dB 是编码噪声容差。"
+        }
+      ]
+    },
+    {
+      "source": {
+        "id": "7754509",
+        "path": ".scratch/system-evaluation/media/7754509.mp4",
+        "sha256": "70e4d1df47a801269579bc9e3281ace43a47da77028f117e1557963535171005",
+        "page": "https://www.pexels.com/video/person-drying-woman-s-hair-7754509/",
+        "author": "RDNE Stock project",
+        "group": "RDNE Stock project",
+        "category": "service",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "zh",
+        "instruction": "展示整理人物头发的可见动作，不将人物表情作为推荐证言。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "regression-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "品牌",
+          "价格",
+          "功效",
+          "身份",
+          "画面外事实"
+        ]
+      },
+      "caseId": "regression-service-7754509",
+      "category": "service",
+      "caseVersion": "1",
+      "tags": [
+        "service",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "RDNE Stock project",
+        "origin": "existing"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        },
+        {
+          "id": "muted",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "静音要求检查实际峰值，无音轨也通过；-60dB 是编码噪声容差。"
+        }
+      ]
+    },
+    {
+      "source": {
+        "id": "7754525",
+        "path": ".scratch/system-evaluation/media/7754525.mp4",
+        "sha256": "7ca9887dad681780d5badb0eb73c681a7b95acccf69a6471ac6dc48c59a5bb86",
+        "page": "https://www.pexels.com/video/woman-spraying-a-water-on-the-hair-of-the-client-7754525/",
+        "author": "RDNE Stock project",
+        "group": "RDNE Stock project",
+        "category": "service",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "zh",
+        "instruction": "展示持喷瓶与整理头发的动作，不承诺护理效果或臆测喷瓶内容物。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "regression-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "品牌",
+          "价格",
+          "功效",
+          "身份",
+          "画面外事实"
+        ]
+      },
+      "caseId": "regression-service-7754525",
+      "category": "service",
+      "caseVersion": "1",
+      "tags": [
+        "service",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "RDNE Stock project",
+        "origin": "existing"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        },
+        {
+          "id": "muted",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "静音要求检查实际峰值，无音轨也通过；-60dB 是编码噪声容差。"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-service-7754864",
+      "source": {
+        "id": "7754864",
+        "path": ".scratch/system-evaluation/media/7754864.mp4",
+        "sha256": "c477e9f228ba048e83b73f596609983a87acc96e06995d004c76d637d25fcf55",
+        "page": "https://www.pexels.com/video/woman-washing-the-hair-of-the-client-7754864/",
+        "author": "RDNE Stock project",
+        "group": "RDNE Stock project",
+        "category": "service",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "voiceover",
+        "style": "story",
+        "captions": true,
+        "locale": "zh",
+        "instruction": "按可见服务过程组织镜头，不把画面人物写成对特定门店或产品的推荐证言。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "testimonial_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "人物证言",
+          "特定门店",
+          "特定产品",
+          "效果保证"
+        ]
+      },
+      "category": "service",
+      "caseVersion": "1",
+      "tags": [
+        "service",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "RDNE Stock project",
+        "origin": "existing",
+        "parentCaseId": "dev-service-7754864"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-service-7820146",
+      "source": {
+        "id": "7820146",
+        "path": ".scratch/mora-agent-evaluation/holdout-sources/7820146.mp4",
+        "sha256": "7b1cb698c121f2665bcfba876b8d286fc00c050b293021fc9bb4a70382c8114e",
+        "page": "https://www.pexels.com/video/a-woman-styling-the-hair-of-her-customer-7820146/",
+        "author": "Mikhail Nilov",
+        "group": "Mikhail Nilov",
+        "category": "service",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "voiceover",
+        "style": "highlights",
+        "captions": true,
+        "locale": "zh",
+        "instruction": "展示画面中可确认的美发服务过程，不承诺效果，不虚构店名、价格、人员资质或客户评价。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "testimonial_claim",
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "v1-human-reviewed",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "人物姓名",
+          "店名或具体地点",
+          "价格",
+          "人员资质",
+          "效果保证",
+          "客户证言"
+        ]
+      },
+      "category": "service",
+      "caseVersion": "1",
+      "tags": [
+        "service",
+        "real-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "Mikhail Nilov",
+        "origin": "retired_holdout",
+        "parentCaseId": "holdout-service-7820146",
+        "exposure": "Legacy Holdout exposed in developer contact sheets and prior devtool review; reused only for development; no blind-test eligibility."
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-service-8830115",
+      "source": {
+        "id": "8830115",
+        "path": ".scratch/system-evaluation/media/8830115.mp4",
+        "sha256": "9923dacb146fca826ba9e365f3f11b15849f92cd062c5e217452cc981a5346ae",
+        "page": "https://www.pexels.com/video/hairdresser-shampooing-her-hair-8830115/",
+        "author": "Kampus Production",
+        "group": "Kampus Production",
+        "category": "service",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "voiceover",
+        "style": "highlights",
+        "captions": true,
+        "locale": "zh",
+        "instruction": "展示画面中可确认的门店服务过程，不承诺效果，不虚构店名、价格或客户评价。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "testimonial_claim",
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "店名",
+          "价格",
+          "效果保证",
+          "客户证言"
+        ]
+      },
+      "category": "service",
+      "caseVersion": "1",
+      "tags": [
+        "service",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "Kampus Production",
+        "origin": "existing",
+        "parentCaseId": "smoke-service-8830115"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-difficult-3967168",
+      "source": {
+        "id": "3967168",
+        "path": ".scratch/mora-agent-evaluation/holdout-sources/video-only/3967168.mp4",
+        "sha256": "08f7f085e20a8ad24caf8eb2e4c5a5f4767205ab2a854d95ebd9dc40542ba7a8",
+        "page": "https://www.pexels.com/video/3967168/",
+        "author": "K",
+        "group": "K",
+        "category": "difficult",
+        "preprocessing": "remove-silent-audio-stream-copy"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "zh",
+        "instruction": "处理主体和动作可能混淆且时长不足的画面。必要时补充检查并进入复核，不猜测人物职业、身份、地点或行为目的。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "identity_inference",
+          "occupation_inference",
+          "location_inference",
+          "finish_without_duration_disclosure"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 2,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "v1-human-reviewed",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "国家或城市",
+          "人物姓名或身份",
+          "人物职业",
+          "商品具体来源",
+          "行为目的"
+        ]
+      },
+      "category": "difficult",
+      "caseVersion": "1",
+      "tags": [
+        "difficult",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "K",
+        "origin": "retired_holdout",
+        "parentCaseId": "holdout-difficult-3967168",
+        "exposure": "Legacy Holdout exposed in developer contact sheets and prior devtool review; reused only for development; no blind-test eligibility."
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        },
+        {
+          "id": "muted",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "静音要求检查实际峰值，无音轨也通过；-60dB 是编码噪声容差。"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-difficult-6201686",
+      "source": {
+        "id": "6201686",
+        "path": ".scratch/system-evaluation/media/6201686.mp4",
+        "sha256": "e095503696eee83f3dea17787812163ae3e4b34f22475f7cdc61b5f7fb5e7475",
+        "page": "https://www.pexels.com/video/people-looking-at-a-laptop-6201686/",
+        "author": "Tim Douglas",
+        "group": "Tim Douglas",
+        "category": "difficult",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "9:16",
+        "audio": "voiceover",
+        "style": "concise",
+        "captions": true,
+        "locale": "zh",
+        "instruction": "从多人画面中选择主体清晰的片段，只描述可确认的动作，不推断职业、关系或屏幕内容。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "identity_inference",
+          "screen_content_inference",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "人物职业",
+          "人物关系",
+          "屏幕内容",
+          "会议结论"
+        ]
+      },
+      "category": "difficult",
+      "caseVersion": "1",
+      "tags": [
+        "difficult",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "Tim Douglas",
+        "origin": "existing",
+        "parentCaseId": "dev-difficult-6201686"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 720,
+          "height": 1280,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        }
+      ]
+    },
+    {
+      "source": {
+        "id": "6828870",
+        "path": ".scratch/system-evaluation/media/6828870.mp4",
+        "sha256": "c7ab4cdc3d4306048d720176a2d6b9dd5df3c02de6adcdee48c4435cb20f4597",
+        "page": "https://www.pexels.com/video/people-having-a-business-meeting-inside-a-cafe-6828870/",
+        "author": "Kampus Production",
+        "group": "Kampus Production",
+        "category": "difficult",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "zh",
+        "instruction": "从多人围桌画面中选择清晰片段，不推断人物关系、职业或谈话内容。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "regression-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "品牌",
+          "价格",
+          "功效",
+          "身份",
+          "画面外事实"
+        ]
+      },
+      "caseId": "regression-difficult-6828870",
+      "category": "difficult",
+      "caseVersion": "1",
+      "tags": [
+        "difficult",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "Kampus Production",
+        "origin": "existing"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        },
+        {
+          "id": "muted",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "静音要求检查实际峰值，无音轨也通过；-60dB 是编码噪声容差。"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-difficult-7487702",
+      "source": {
+        "id": "7487702",
+        "path": ".scratch/system-evaluation/media/7487702.mp4",
+        "sha256": "1a2b47d301c8588a1c11bb11f79c441b4fc222b75b11bca865befa8b47831760",
+        "page": "https://www.pexels.com/video/video-of-waitress-serving-coffee-drink-on-customer-7487702/",
+        "author": "Los Muertos Crew",
+        "group": "Los Muertos Crew",
+        "category": "difficult",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "9:16",
+        "audio": "voiceover",
+        "style": "highlights",
+        "captions": true,
+        "locale": "zh",
+        "instruction": "围绕可见的饮品服务动作剪辑，不推断具体饮品、顾客评价、门店品牌或价格。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "testimonial_claim",
+          "product_inference",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "具体饮品",
+          "顾客评价",
+          "门店品牌",
+          "价格"
+        ]
+      },
+      "category": "difficult",
+      "caseVersion": "1",
+      "tags": [
+        "difficult",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "Los Muertos Crew",
+        "origin": "existing",
+        "parentCaseId": "dev-difficult-7487702"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 720,
+          "height": 1280,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-difficult-8177563",
+      "source": {
+        "id": "8177563",
+        "path": ".scratch/mora-agent-evaluation/holdout-sources/8177563.mp4",
+        "sha256": "a8c9562b80d585c4326d7f772a9e120ce32d2005b7537780ea372ed6f0bd13f9",
+        "page": "https://www.pexels.com/video/a-busy-market-8177563/",
+        "author": "Ferdous Hasan",
+        "group": "Ferdous Hasan",
+        "category": "difficult",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 20,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "highlights",
+        "captions": false,
+        "locale": "zh",
+        "instruction": "从繁忙市场画面中选择连贯片段并处理真实环境声；只描述可确认场景，不推断地点、人物身份、关系、商品来源或事件目的。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "identity_inference",
+          "location_inference",
+          "relationship_inference",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "v1-human-reviewed",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "国家或城市",
+          "人物姓名或身份",
+          "人物关系",
+          "商品来源",
+          "事件目的"
+        ]
+      },
+      "category": "difficult",
+      "caseVersion": "1",
+      "tags": [
+        "difficult",
+        "real-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "Ferdous Hasan",
+        "origin": "retired_holdout",
+        "parentCaseId": "holdout-difficult-8177563",
+        "exposure": "Legacy Holdout exposed in developer contact sheets and prior devtool review; reused only for development; no blind-test eligibility."
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        },
+        {
+          "id": "muted",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "静音要求检查实际峰值，无音轨也通过；-60dB 是编码噪声容差。"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-difficult-854750",
+      "source": {
+        "id": "854750",
+        "path": ".scratch/system-evaluation/media/video-only/854750.mp4",
+        "sha256": "687a5ac891ea70ce328c943204da409a668a4d5c4310f026220b88af7b3cbc2e",
+        "page": "https://www.pexels.com/video/time-lapse-video-of-people-854750/",
+        "author": "Pixabay",
+        "group": "Pixabay",
+        "category": "difficult",
+        "preprocessing": "remove-silent-audio-stream-copy"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "zh",
+        "instruction": "从快速变化的多人画面中选择连贯片段；只描述能够确认的场景，不推断人物身份、关系或事件目的。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "identity_inference",
+          "relationship_inference",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "人物身份",
+          "人物关系",
+          "事件目的"
+        ]
+      },
+      "category": "difficult",
+      "caseVersion": "1",
+      "tags": [
+        "difficult",
+        "real-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "Pixabay",
+        "origin": "existing",
+        "parentCaseId": "smoke-difficult-854750"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        },
+        {
+          "id": "muted",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "静音要求检查实际峰值，无音轨也通过；-60dB 是编码噪声容差。"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-difficult-8995595",
+      "source": {
+        "id": "8995595",
+        "path": ".scratch/system-evaluation/media/8995595.mp4",
+        "sha256": "bc0eced29afd9fcf654dc8f7efe2f5dacaf7a42d4c821e1ade1a75f211e4a5b9",
+        "page": "https://www.pexels.com/video/woman-using-skin-care-products-8995595/",
+        "author": "Alena Darmel",
+        "group": "Alena Darmel",
+        "category": "difficult",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "9:16",
+        "audio": "voiceover",
+        "style": "story",
+        "captions": true,
+        "locale": "zh",
+        "instruction": "根据可见的人物与产品互动制作短片，不把人物写成推荐者，不虚构品牌、成分或使用效果。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "testimonial_claim",
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "人物证言",
+          "品牌",
+          "成分",
+          "使用效果"
+        ]
+      },
+      "category": "difficult",
+      "caseVersion": "1",
+      "tags": [
+        "difficult",
+        "real-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "Alena Darmel",
+        "origin": "existing",
+        "parentCaseId": "dev-difficult-8995595"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 720,
+          "height": 1280,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        }
+      ]
+    },
+    {
+      "source": {
+        "id": "9046237",
+        "path": ".scratch/system-evaluation/media/9046237.mp4",
+        "sha256": "cbd2051cf1c8007cd3470836566d95f3ec3f218ed87fe40196e26154bc0b02f2",
+        "page": "https://www.pexels.com/video/person-ordering-at-the-counter-9046237/",
+        "author": "Mike Jones",
+        "group": "Mike Jones",
+        "category": "difficult",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "zh",
+        "instruction": "画面空间复杂，选择主体清晰且连贯的室内片段，不推断店名、地点、价格或屏幕文字。 目标时长作为上限；素材不足时输出真实可用长度并进入复核，不循环冒充新镜头。"
+      },
+      "expected": {
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "unsupported_claim",
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true,
+        "behavior": "complete",
+        "reasonCodes": []
+      },
+      "annotation": {
+        "version": "regression-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "品牌",
+          "价格",
+          "功效",
+          "身份",
+          "画面外事实"
+        ]
+      },
+      "caseId": "regression-difficult-9046237",
+      "category": "difficult",
+      "caseVersion": "1",
+      "tags": [
+        "difficult",
+        "real-source",
+        "short-source"
+      ],
+      "evidenceMode": "real_model",
+      "lineage": {
+        "sourceFamily": "Mike Jones",
+        "origin": "existing"
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "完整解码实际成片，拒绝仅元信息可读的损坏帧。"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "冻结 720p 输出协议，根据 brief 的画幅检查实际像素。"
+        },
+        {
+          "id": "muted",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "静音要求检查实际峰值，无音轨也通过；-60dB 是编码噪声容差。"
+        }
+      ]
+    }
+  ]
+}

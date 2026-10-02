@@ -1,0 +1,1867 @@
+{
+  "schemaVersion": 2,
+  "datasetId": "mora-agent-regression-constraints",
+  "version": "1",
+  "split": "dev",
+  "independentHoldout": false,
+  "baselineEligible": false,
+  "sourceManifest": {
+    "path": "tools/agent-eval/sources/regression-fixtures-v1.json",
+    "sha256": "d320b14620ac8e16ef29f5f56fd917ea58cc5465e69079b676b92ead3d110c7b"
+  },
+  "cases": [
+    {
+      "caseId": "regression-format_timing-portrait",
+      "category": "format_timing",
+      "caseVersion": "1",
+      "tags": [
+        "format_timing",
+        "dimensions",
+        "controlled-fixture"
+      ],
+      "evidenceMode": "real_media",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-product-6724612"
+      },
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "portrait",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]"
+        }
+      },
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "9:16",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Create a 9:16 portrait with the full source visible."
+      },
+      "expected": {
+        "behavior": "complete",
+        "reasonCodes": [],
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "natural speech recognition",
+          "real model ability"
+        ]
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "All rendered frames and sound must decode"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 720,
+          "height": 1280,
+          "rationale": "720p render protocol and brief aspect"
+        },
+        {
+          "id": "duration",
+          "kind": "duration",
+          "seconds": 15,
+          "toleranceSeconds": 0.07,
+          "rationale": "Plan source intervals at 30fps; at most two frames of container rounding"
+        },
+        {
+          "id": "audio",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "Fixture has a known audible sine; muted permits only encoding noise below -60dB"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-format_timing-landscape",
+      "category": "format_timing",
+      "caseVersion": "1",
+      "tags": [
+        "format_timing",
+        "dimensions",
+        "controlled-fixture"
+      ],
+      "evidenceMode": "real_media",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-product-6724612"
+      },
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "landscape",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]"
+        }
+      },
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Create a 16:9 landscape."
+      },
+      "expected": {
+        "behavior": "complete",
+        "reasonCodes": [],
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "natural speech recognition",
+          "real model ability"
+        ]
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "All rendered frames and sound must decode"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "720p render protocol and brief aspect"
+        },
+        {
+          "id": "duration",
+          "kind": "duration",
+          "seconds": 15,
+          "toleranceSeconds": 0.07,
+          "rationale": "Plan source intervals at 30fps; at most two frames of container rounding"
+        },
+        {
+          "id": "audio",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "Fixture has a known audible sine; muted permits only encoding noise below -60dB"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-format_timing-square",
+      "category": "format_timing",
+      "caseVersion": "1",
+      "tags": [
+        "format_timing",
+        "dimensions",
+        "controlled-fixture"
+      ],
+      "evidenceMode": "real_media",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-product-6724612"
+      },
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "square",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]"
+        }
+      },
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "1:1",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Create a square frame."
+      },
+      "expected": {
+        "behavior": "complete",
+        "reasonCodes": [],
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "natural speech recognition",
+          "real model ability"
+        ]
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "All rendered frames and sound must decode"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 720,
+          "height": 720,
+          "rationale": "720p render protocol and brief aspect"
+        },
+        {
+          "id": "duration",
+          "kind": "duration",
+          "seconds": 15,
+          "toleranceSeconds": 0.07,
+          "rationale": "Plan source intervals at 30fps; at most two frames of container rounding"
+        },
+        {
+          "id": "audio",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "Fixture has a known audible sine; muted permits only encoding noise below -60dB"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-format_timing-contain",
+      "category": "format_timing",
+      "caseVersion": "1",
+      "tags": [
+        "format_timing",
+        "frame",
+        "controlled-fixture"
+      ],
+      "evidenceMode": "real_media",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-product-6724612"
+      },
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "contain",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]"
+        }
+      },
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "1:1",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Keep the entire source and its white edge marker in a square; add letterbox space."
+      },
+      "expected": {
+        "behavior": "complete",
+        "reasonCodes": [],
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "natural speech recognition",
+          "real model ability"
+        ]
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "All rendered frames and sound must decode"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 720,
+          "height": 720,
+          "rationale": "720p render protocol and brief aspect"
+        },
+        {
+          "id": "duration",
+          "kind": "duration",
+          "seconds": 15,
+          "toleranceSeconds": 0.07,
+          "rationale": "Plan source intervals at 30fps; at most two frames of container rounding"
+        },
+        {
+          "id": "audio",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "Fixture has a known audible sine; muted permits only encoding noise below -60dB"
+        },
+        {
+          "id": "pixels-0",
+          "kind": "frame_match",
+          "purpose": "source",
+          "atSeconds": 2,
+          "referenceAtSeconds": 2,
+          "referencePath": "evals/agent/fixtures/regression-v1/contain-positive.mp4",
+          "referenceSha256": "6b36a411827296838964bf1fcbf5810d19793ab951daeceee578c9b61551cf3a",
+          "maxMeanError": 1,
+          "rationale": "Known renderer ground truth; 64x64 RGB mean error; controlled pixels only, not universal OCR"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-format_timing-cover",
+      "category": "format_timing",
+      "caseVersion": "1",
+      "tags": [
+        "format_timing",
+        "frame",
+        "controlled-fixture"
+      ],
+      "evidenceMode": "real_media",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-product-6724612"
+      },
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "cover",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]"
+        }
+      },
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "1:1",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Fill the square by cropping the source edges; no letterbox space."
+      },
+      "expected": {
+        "behavior": "complete",
+        "reasonCodes": [],
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "natural speech recognition",
+          "real model ability"
+        ]
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "All rendered frames and sound must decode"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 720,
+          "height": 720,
+          "rationale": "720p render protocol and brief aspect"
+        },
+        {
+          "id": "duration",
+          "kind": "duration",
+          "seconds": 15,
+          "toleranceSeconds": 0.07,
+          "rationale": "Plan source intervals at 30fps; at most two frames of container rounding"
+        },
+        {
+          "id": "audio",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "Fixture has a known audible sine; muted permits only encoding noise below -60dB"
+        },
+        {
+          "id": "pixels-0",
+          "kind": "frame_match",
+          "purpose": "source",
+          "atSeconds": 2,
+          "referenceAtSeconds": 2,
+          "referencePath": "evals/agent/fixtures/regression-v1/cover-positive.mp4",
+          "referenceSha256": "39d6796bf7ec6f22d1be764878da4f8aa7ecb9ae70f2fb8787c00bc2d9c17d4e",
+          "maxMeanError": 1,
+          "rationale": "Known renderer ground truth; 64x64 RGB mean error; controlled pixels only, not universal OCR"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-format_timing-exact15",
+      "category": "format_timing",
+      "caseVersion": "1",
+      "tags": [
+        "format_timing",
+        "duration",
+        "controlled-fixture"
+      ],
+      "evidenceMode": "real_media",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-product-6724612"
+      },
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "exact15",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]"
+        }
+      },
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Output exactly 15 seconds from source 0 to 15, within two frames."
+      },
+      "expected": {
+        "behavior": "complete",
+        "reasonCodes": [],
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "natural speech recognition",
+          "real model ability"
+        ]
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "All rendered frames and sound must decode"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "720p render protocol and brief aspect"
+        },
+        {
+          "id": "duration",
+          "kind": "duration",
+          "seconds": 15,
+          "toleranceSeconds": 0.07,
+          "rationale": "Plan source intervals at 30fps; at most two frames of container rounding"
+        },
+        {
+          "id": "audio",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "Fixture has a known audible sine; muted permits only encoding noise below -60dB"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-format_timing-order20",
+      "category": "format_timing",
+      "caseVersion": "1",
+      "tags": [
+        "format_timing",
+        "frame",
+        "controlled-fixture"
+      ],
+      "evidenceMode": "real_media",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-product-6724612"
+      },
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "order20",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]"
+        }
+      },
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 20,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Output 20 seconds: red section 0–10 followed by blue 10–20; retain chronological order."
+      },
+      "expected": {
+        "behavior": "complete",
+        "reasonCodes": [],
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "natural speech recognition",
+          "real model ability"
+        ]
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "All rendered frames and sound must decode"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "720p render protocol and brief aspect"
+        },
+        {
+          "id": "duration",
+          "kind": "duration",
+          "seconds": 20,
+          "toleranceSeconds": 0.07,
+          "rationale": "Plan source intervals at 30fps; at most two frames of container rounding"
+        },
+        {
+          "id": "audio",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "Fixture has a known audible sine; muted permits only encoding noise below -60dB"
+        },
+        {
+          "id": "pixels-0",
+          "kind": "frame_match",
+          "purpose": "order",
+          "atSeconds": 2,
+          "referenceAtSeconds": 2,
+          "referencePath": "evals/agent/fixtures/regression-v1/order20-positive.mp4",
+          "referenceSha256": "cf6116c9204e0cb00ed3aaa9d6821b5f33a0ae781528251af1d59f3f20a074d5",
+          "maxMeanError": 1,
+          "rationale": "Known renderer ground truth; 64x64 RGB mean error; controlled pixels only, not universal OCR"
+        },
+        {
+          "id": "pixels-1",
+          "kind": "frame_match",
+          "purpose": "order",
+          "atSeconds": 12,
+          "referenceAtSeconds": 12,
+          "referencePath": "evals/agent/fixtures/regression-v1/order20-positive.mp4",
+          "referenceSha256": "cf6116c9204e0cb00ed3aaa9d6821b5f33a0ae781528251af1d59f3f20a074d5",
+          "maxMeanError": 1,
+          "rationale": "Known renderer ground truth; 64x64 RGB mean error; controlled pixels only, not universal OCR"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-format_timing-trim",
+      "category": "format_timing",
+      "caseVersion": "1",
+      "tags": [
+        "format_timing",
+        "frame",
+        "controlled-fixture"
+      ],
+      "evidenceMode": "real_media",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-product-6724612"
+      },
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "trim",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]"
+        }
+      },
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Output only source 10–25, starting in blue and ending in green; exactly 15 seconds."
+      },
+      "expected": {
+        "behavior": "complete",
+        "reasonCodes": [],
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "natural speech recognition",
+          "real model ability"
+        ]
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "All rendered frames and sound must decode"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "720p render protocol and brief aspect"
+        },
+        {
+          "id": "duration",
+          "kind": "duration",
+          "seconds": 15,
+          "toleranceSeconds": 0.07,
+          "rationale": "Plan source intervals at 30fps; at most two frames of container rounding"
+        },
+        {
+          "id": "audio",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "Fixture has a known audible sine; muted permits only encoding noise below -60dB"
+        },
+        {
+          "id": "pixels-0",
+          "kind": "frame_match",
+          "purpose": "trim",
+          "atSeconds": 2,
+          "referenceAtSeconds": 2,
+          "referencePath": "evals/agent/fixtures/regression-v1/trim-positive.mp4",
+          "referenceSha256": "1a1724820a92df941cd89d9ffc5fc817567500d2ec7feac164d90f74b08fd4b3",
+          "maxMeanError": 1,
+          "rationale": "Known renderer ground truth; 64x64 RGB mean error; controlled pixels only, not universal OCR"
+        },
+        {
+          "id": "pixels-1",
+          "kind": "frame_match",
+          "purpose": "trim",
+          "atSeconds": 12,
+          "referenceAtSeconds": 12,
+          "referencePath": "evals/agent/fixtures/regression-v1/trim-positive.mp4",
+          "referenceSha256": "1a1724820a92df941cd89d9ffc5fc817567500d2ec7feac164d90f74b08fd4b3",
+          "maxMeanError": 1,
+          "rationale": "Known renderer ground truth; 64x64 RGB mean error; controlled pixels only, not universal OCR"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-audio_captions-original",
+      "category": "audio_captions",
+      "caseVersion": "1",
+      "tags": [
+        "audio_captions",
+        "waveform",
+        "controlled-fixture"
+      ],
+      "evidenceMode": "real_media",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-product-6724612"
+      },
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "original",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]"
+        }
+      },
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "original",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Keep the original synthetic 440Hz sound in source 0–15 unchanged."
+      },
+      "expected": {
+        "behavior": "complete",
+        "reasonCodes": [],
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "natural speech recognition",
+          "real model ability"
+        ]
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "All rendered frames and sound must decode"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "720p render protocol and brief aspect"
+        },
+        {
+          "id": "duration",
+          "kind": "duration",
+          "seconds": 15,
+          "toleranceSeconds": 0.07,
+          "rationale": "Plan source intervals at 30fps; at most two frames of container rounding"
+        },
+        {
+          "id": "audio",
+          "kind": "audio",
+          "mode": "audible",
+          "thresholdDb": -60,
+          "rationale": "Fixture has a known audible sine; muted permits only encoding noise below -60dB"
+        },
+        {
+          "id": "waveform",
+          "kind": "audio_match",
+          "atSeconds": 2,
+          "referencePath": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+          "referenceSha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+          "referenceAtSeconds": 2,
+          "seconds": 1,
+          "maxMeanError": 0.03,
+          "rationale": "Known 0.125-amplitude synthetic waveform; mono 8kHz error ≤ .03 allows mono-to-stereo gain (-3dB, measured error .0233) and AAC loss; wrong 440/880Hz sound is rejected; one sampled second only"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-audio_captions-muted",
+      "category": "audio_captions",
+      "caseVersion": "1",
+      "tags": [
+        "audio_captions",
+        "audio",
+        "controlled-fixture"
+      ],
+      "evidenceMode": "real_media",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-product-6724612"
+      },
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "muted",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]"
+        }
+      },
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Remove all sound from this audible source."
+      },
+      "expected": {
+        "behavior": "complete",
+        "reasonCodes": [],
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "natural speech recognition",
+          "real model ability"
+        ]
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "All rendered frames and sound must decode"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "720p render protocol and brief aspect"
+        },
+        {
+          "id": "duration",
+          "kind": "duration",
+          "seconds": 15,
+          "toleranceSeconds": 0.07,
+          "rationale": "Plan source intervals at 30fps; at most two frames of container rounding"
+        },
+        {
+          "id": "audio",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "Fixture has a known audible sine; muted permits only encoding noise below -60dB"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-audio_captions-silent-source",
+      "category": "audio_captions",
+      "caseVersion": "1",
+      "tags": [
+        "audio_captions",
+        "audio",
+        "controlled-fixture"
+      ],
+      "evidenceMode": "real_media",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-product-6724612"
+      },
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "silent-source",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]"
+        }
+      },
+      "source": {
+        "id": "controlled-bands-silent",
+        "path": "evals/agent/fixtures/regression-v1/bands-silent.mp4",
+        "sha256": "785912355102ea392e0e8d8a44c22f62f7caf7c1137e4015705083f71d911e4c",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Keep this video-only input silent; do not invent original sound."
+      },
+      "expected": {
+        "behavior": "complete",
+        "reasonCodes": [],
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "natural speech recognition",
+          "real model ability"
+        ]
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "All rendered frames and sound must decode"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "720p render protocol and brief aspect"
+        },
+        {
+          "id": "duration",
+          "kind": "duration",
+          "seconds": 15,
+          "toleranceSeconds": 0.07,
+          "rationale": "Plan source intervals at 30fps; at most two frames of container rounding"
+        },
+        {
+          "id": "audio",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "Fixture has a known audible sine; muted permits only encoding noise below -60dB"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-audio_captions-voiceover",
+      "category": "audio_captions",
+      "caseVersion": "1",
+      "tags": [
+        "audio_captions",
+        "waveform",
+        "controlled-fixture"
+      ],
+      "evidenceMode": "real_media",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-product-6724612"
+      },
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "voiceover",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]"
+        }
+      },
+      "source": {
+        "id": "controlled-bands-silent",
+        "path": "evals/agent/fixtures/regression-v1/bands-silent.mp4",
+        "sha256": "785912355102ea392e0e8d8a44c22f62f7caf7c1137e4015705083f71d911e4c",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "voiceover",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "Replace source sound with the provided synthetic 880Hz narration substitute for TEST."
+      },
+      "expected": {
+        "behavior": "complete",
+        "reasonCodes": [],
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "create_voiceover",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "natural speech recognition",
+          "real model ability"
+        ]
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "All rendered frames and sound must decode"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "720p render protocol and brief aspect"
+        },
+        {
+          "id": "duration",
+          "kind": "duration",
+          "seconds": 15,
+          "toleranceSeconds": 0.07,
+          "rationale": "Plan source intervals at 30fps; at most two frames of container rounding"
+        },
+        {
+          "id": "audio",
+          "kind": "audio",
+          "mode": "audible",
+          "thresholdDb": -60,
+          "rationale": "Fixture has a known audible sine; muted permits only encoding noise below -60dB"
+        },
+        {
+          "id": "waveform",
+          "kind": "audio_match",
+          "atSeconds": 2,
+          "referencePath": "evals/agent/fixtures/regression-v1/voice-880.wav",
+          "referenceSha256": "f25fe428be9bc7475f775d4ad33d86dcf3850aaf1b7246e930bcb5f823376484",
+          "referenceAtSeconds": 2,
+          "seconds": 1,
+          "maxMeanError": 0.03,
+          "rationale": "Known 0.125-amplitude synthetic waveform; mono 8kHz error ≤ .03 allows mono-to-stereo gain (-3dB, measured error .0233) and AAC loss; wrong 440/880Hz sound is rejected; one sampled second only"
+        }
+      ]
+    },
+    {
+      "caseId": "regression-audio_captions-captions-on",
+      "category": "audio_captions",
+      "caseVersion": "1",
+      "tags": [
+        "audio_captions",
+        "caption",
+        "controlled-fixture"
+      ],
+      "evidenceMode": "real_media",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-product-6724612"
+      },
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "captions-on",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]"
+        }
+      },
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": true,
+        "locale": "en",
+        "instruction": "Display SALE in the subtitle region throughout source 0–15."
+      },
+      "expected": {
+        "behavior": "complete",
+        "reasonCodes": [],
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "natural speech recognition",
+          "real model ability"
+        ]
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "All rendered frames and sound must decode"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "720p render protocol and brief aspect"
+        },
+        {
+          "id": "duration",
+          "kind": "duration",
+          "seconds": 15,
+          "toleranceSeconds": 0.07,
+          "rationale": "Plan source intervals at 30fps; at most two frames of container rounding"
+        },
+        {
+          "id": "audio",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "Fixture has a known audible sine; muted permits only encoding noise below -60dB"
+        },
+        {
+          "id": "pixels-0",
+          "kind": "frame_match",
+          "purpose": "caption",
+          "atSeconds": 2,
+          "referenceAtSeconds": 2,
+          "referencePath": "evals/agent/fixtures/regression-v1/captions-on-positive.mp4",
+          "referenceSha256": "544ef4f7bdac51e1321da7f9592eebfbda37bcf3cceb97a40dcfbe7d6e48953a",
+          "maxMeanError": 0.15,
+          "rationale": "Known renderer ground truth; 64x64 RGB mean error; controlled pixels only, not universal OCR",
+          "region": {
+            "x": 0,
+            "y": 500,
+            "width": 1280,
+            "height": 220
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "regression-audio_captions-captions-off",
+      "category": "audio_captions",
+      "caseVersion": "1",
+      "tags": [
+        "audio_captions",
+        "caption",
+        "controlled-fixture"
+      ],
+      "evidenceMode": "real_media",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-product-6724612"
+      },
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "captions-off",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]"
+        }
+      },
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": false,
+        "locale": "en",
+        "instruction": "No visible subtitle text, including the supplied SALE text."
+      },
+      "expected": {
+        "behavior": "complete",
+        "reasonCodes": [],
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "natural speech recognition",
+          "real model ability"
+        ]
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "All rendered frames and sound must decode"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "720p render protocol and brief aspect"
+        },
+        {
+          "id": "duration",
+          "kind": "duration",
+          "seconds": 15,
+          "toleranceSeconds": 0.07,
+          "rationale": "Plan source intervals at 30fps; at most two frames of container rounding"
+        },
+        {
+          "id": "audio",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "Fixture has a known audible sine; muted permits only encoding noise below -60dB"
+        },
+        {
+          "id": "pixels-0",
+          "kind": "frame_match",
+          "purpose": "caption",
+          "atSeconds": 2,
+          "referenceAtSeconds": 2,
+          "referencePath": "evals/agent/fixtures/regression-v1/captions-off-positive.mp4",
+          "referenceSha256": "3a495144ff557abd641f3ffb7b57ed42466d71e3bf47a2a0651cb08b22467cdd",
+          "maxMeanError": 0.15,
+          "rationale": "Known renderer ground truth; 64x64 RGB mean error; controlled pixels only, not universal OCR",
+          "region": {
+            "x": 0,
+            "y": 500,
+            "width": 1280,
+            "height": 220
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "regression-audio_captions-caption-copy",
+      "category": "audio_captions",
+      "caseVersion": "1",
+      "tags": [
+        "audio_captions",
+        "caption",
+        "controlled-fixture"
+      ],
+      "evidenceMode": "real_media",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-product-6724612"
+      },
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "caption-copy",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]"
+        }
+      },
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "muted",
+        "style": "concise",
+        "captions": true,
+        "locale": "en",
+        "instruction": "Subtitle must read SALE; do not substitute FAIL."
+      },
+      "expected": {
+        "behavior": "complete",
+        "reasonCodes": [],
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "natural speech recognition",
+          "real model ability"
+        ]
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "All rendered frames and sound must decode"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "720p render protocol and brief aspect"
+        },
+        {
+          "id": "duration",
+          "kind": "duration",
+          "seconds": 15,
+          "toleranceSeconds": 0.07,
+          "rationale": "Plan source intervals at 30fps; at most two frames of container rounding"
+        },
+        {
+          "id": "audio",
+          "kind": "audio",
+          "mode": "silent",
+          "thresholdDb": -60,
+          "rationale": "Fixture has a known audible sine; muted permits only encoding noise below -60dB"
+        },
+        {
+          "id": "pixels-0",
+          "kind": "frame_match",
+          "purpose": "caption",
+          "atSeconds": 2,
+          "referenceAtSeconds": 2,
+          "referencePath": "evals/agent/fixtures/regression-v1/caption-copy-positive.mp4",
+          "referenceSha256": "544ef4f7bdac51e1321da7f9592eebfbda37bcf3cceb97a40dcfbe7d6e48953a",
+          "maxMeanError": 0.15,
+          "rationale": "Known renderer ground truth; 64x64 RGB mean error; controlled pixels only, not universal OCR",
+          "region": {
+            "x": 0,
+            "y": 500,
+            "width": 1280,
+            "height": 220
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "regression-audio_captions-speech-captions",
+      "category": "audio_captions",
+      "caseVersion": "1",
+      "tags": [
+        "audio_captions",
+        "caption",
+        "controlled-fixture"
+      ],
+      "evidenceMode": "real_media",
+      "lineage": {
+        "sourceFamily": "controlled-bands-v1",
+        "origin": "synthetic",
+        "parentCaseId": "regression-product-6724612"
+      },
+      "fixture": {
+        "generator": "ffmpeg",
+        "version": "ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers",
+        "seed": 0,
+        "parameters": {
+          "recipe": "speech-captions",
+          "source": "red,blue,green 10s each, 320x180@30, white edge marker; 440Hz AAC or no audio",
+          "renderer": "Mora renderAutoEdit 720p",
+          "voice": "880Hz 14s WAV synthetic narration substitute; no TTS/provider",
+          "regeneration": "tsx tools/agent-eval/prepare-constraint-fixtures.ts",
+          "sourceArguments": "[\"-v\",\"error\",\"-y\",\"-f\",\"lavfi\",\"-i\",\"color=red:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=blue:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"color=green:s=320x180:r=30:d=10\",\"-f\",\"lavfi\",\"-i\",\"sine=frequency=440:sample_rate=44100:duration=30\",\"-filter_complex\",\"[0:v][1:v][2:v]concat=n=3:v=1:a=0,drawbox=x=0:y=0:w=24:h=180:color=white:t=fill[v]\",\"-map\",\"[v]\",\"-map\",\"3:a\",\"-c:v\",\"libx264\",\"-pix_fmt\",\"yuv420p\",\"-c:a\",\"aac\",\"-movflags\",\"+faststart\"]"
+        }
+      },
+      "source": {
+        "id": "controlled-bands-audible",
+        "path": "evals/agent/fixtures/regression-v1/bands-audible.mp4",
+        "sha256": "b834c914f91067e92da831e8f2a58bc7f81c50caad8877399e43afcc7518a51d",
+        "page": "local:controlled-bands-v1",
+        "author": "Mora deterministic fixture",
+        "group": "controlled-bands-v1",
+        "category": "product",
+        "preprocessing": "none"
+      },
+      "brief": {
+        "target": 15,
+        "aspect": "16:9",
+        "audio": "original",
+        "style": "concise",
+        "captions": true,
+        "locale": "en",
+        "instruction": "Keep original sound and use supplied fixture transcript HELLO between 0.5 and 4.5 seconds."
+      },
+      "expected": {
+        "behavior": "complete",
+        "reasonCodes": [],
+        "terminalStates": [
+          "done",
+          "needs_review"
+        ],
+        "requiredTools": [
+          "validate_edit_plan",
+          "render_edit",
+          "inspect_output",
+          "finish"
+        ],
+        "forbiddenBehaviors": [
+          "finish_before_inspection"
+        ],
+        "maxModelCalls": 28,
+        "maxRenders": 3,
+        "mustDecode": true,
+        "mustHaveVideo": true
+      },
+      "annotation": {
+        "version": "fixture-v1",
+        "status": "pending-human-review",
+        "visibleFacts": [],
+        "forbiddenClaims": [
+          "natural speech recognition",
+          "real model ability"
+        ]
+      },
+      "checks": [
+        {
+          "id": "decode",
+          "kind": "decode",
+          "rationale": "All rendered frames and sound must decode"
+        },
+        {
+          "id": "dimensions",
+          "kind": "dimensions",
+          "width": 1280,
+          "height": 720,
+          "rationale": "720p render protocol and brief aspect"
+        },
+        {
+          "id": "duration",
+          "kind": "duration",
+          "seconds": 15,
+          "toleranceSeconds": 0.07,
+          "rationale": "Plan source intervals at 30fps; at most two frames of container rounding"
+        },
+        {
+          "id": "audio",
+          "kind": "audio",
+          "mode": "audible",
+          "thresholdDb": -60,
+          "rationale": "Fixture has a known audible sine; muted permits only encoding noise below -60dB"
+        },
+        {
+          "id": "pixels-0",
+          "kind": "frame_match",
+          "purpose": "caption",
+          "atSeconds": 2,
+          "referenceAtSeconds": 2,
+          "referencePath": "evals/agent/fixtures/regression-v1/speech-captions-positive.mp4",
+          "referenceSha256": "c45b9d497c6606fc54846bed0286649f71bab76a8a8e5690a1704f8155f3aaeb",
+          "maxMeanError": 0.15,
+          "rationale": "Known renderer ground truth; 64x64 RGB mean error; controlled pixels only, not universal OCR",
+          "region": {
+            "x": 0,
+            "y": 500,
+            "width": 1280,
+            "height": 220
+          }
+        }
+      ]
+    }
+  ]
+}
